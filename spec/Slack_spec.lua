@@ -1,29 +1,17 @@
-buildHsMock = require('spec.hs_mock')
+buildFakeMacOs = require('spec.fake_mac_os')
 
 Slack = loadfile('Slack.spoon/init.lua')()
 
-function expectCalls(...)
-  local expectedCalls = table.pack(...)
-  expectedCalls.n = nil
-
-  assert.same(
-    expectedCalls,
-    calls
-  )
-end
-
 describe('Slack.spoon', function()
   before_each(function()
-    _G.hs, calls = buildHsMock()
+    _G.fakeMacOs = buildFakeMacOs()
   end)
 
   describe('focus()', function()
     it('focuses Slack', function()
       Slack:focus()
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'}
-      )
+      assert.are.equal(fakeMacOs:getApplication('Slack'), fakeMacOs.focusedApplication)
     end)
   end)
 
@@ -31,12 +19,9 @@ describe('Slack.spoon', function()
     it('focuses Slack and opens the correct channel', function()
       Slack:openChannel('general')
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'general'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('general', slack.currentChannel)
     end)
   end)
 
@@ -44,14 +29,12 @@ describe('Slack.spoon', function()
     it('opens the correct channel and sends message', function()
       Slack:sendMessageToChannel('general', 'Hello')
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'general'},
-        {'hs.eventtap.keyStroke', {}, 'return'},
-        {'hs.eventtap.keyStrokes', 'Hello'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('general', slack.currentChannel)
+      channel = slack:getChannel('general')
+      assert.are.equal(1, #channel.messages)
+      assert.are.equal('Hello', channel.messages[1])
     end)
   end)
 
@@ -59,15 +42,12 @@ describe('Slack.spoon', function()
     it('opens the Slackbot channel and sends the slash command', function()
       Slack:sendSlackbotCommand('remind me')
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'Slackbot'},
-        {'hs.eventtap.keyStroke', {}, 'return'},
-        {'hs.eventtap.keyStroke', {}, '/'},
-        {'hs.eventtap.keyStrokes', 'remind me'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('Slackbot', slack.currentChannel)
+      channel = slack:getChannel('Slackbot')
+      assert.are.equal(1, #channel.messages)
+      assert.are.equal('/remind me', channel.messages[1])
     end)
   end)
 
@@ -75,15 +55,12 @@ describe('Slack.spoon', function()
     it('sends the /away command', function()
       Slack:toggleAway()
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'Slackbot'},
-        {'hs.eventtap.keyStroke', {}, 'return'},
-        {'hs.eventtap.keyStroke', {}, '/'},
-        {'hs.eventtap.keyStrokes', 'away'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('Slackbot', slack.currentChannel)
+      channel = slack:getChannel('Slackbot')
+      assert.are.equal(1, #channel.messages)
+      assert.are.equal('/away', channel.messages[1])
     end)
   end)
 
@@ -91,29 +68,23 @@ describe('Slack.spoon', function()
     it('can set a status without emote', function()
       Slack:setStatus('Lunch')
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'Slackbot'},
-        {'hs.eventtap.keyStroke', {}, 'return'},
-        {'hs.eventtap.keyStroke', {}, '/'},
-        {'hs.eventtap.keyStrokes', 'status Lunch'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('Slackbot', slack.currentChannel)
+      channel = slack:getChannel('Slackbot')
+      assert.are.equal(1, #channel.messages)
+      assert.are.equal('/status Lunch', channel.messages[1])
     end)
 
     it('can set a status with emote', function()
       Slack:setStatus('Lunch', ':bento:')
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'Slackbot'},
-        {'hs.eventtap.keyStroke', {}, 'return'},
-        {'hs.eventtap.keyStroke', {}, '/'},
-        {'hs.eventtap.keyStrokes', 'status :bento: Lunch'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('Slackbot', slack.currentChannel)
+      channel = slack:getChannel('Slackbot')
+      assert.are.equal(1, #channel.messages)
+      assert.are.equal('/status :bento: Lunch', channel.messages[1])
     end)
   end)
 
@@ -121,15 +92,12 @@ describe('Slack.spoon', function()
     it('sends the /clear command', function()
       Slack:clearStatus()
 
-      expectCalls(
-        {'hs.application.launchOrFocus', 'Slack'},
-        {'hs.eventtap.keyStroke', {'cmd'}, 'K'},
-        {'hs.eventtap.keyStrokes', 'Slackbot'},
-        {'hs.eventtap.keyStroke', {}, 'return'},
-        {'hs.eventtap.keyStroke', {}, '/'},
-        {'hs.eventtap.keyStrokes', 'clear'},
-        {'hs.eventtap.keyStroke', {}, 'return'}
-      )
+      slack = fakeMacOs:getApplication('Slack')
+      assert.are.equal(slack, fakeMacOs.focusedApplication)
+      assert.are.equal('Slackbot', slack.currentChannel)
+      channel = slack:getChannel('Slackbot')
+      assert.are.equal(1, #channel.messages)
+      assert.are.equal('/clear', channel.messages[1])
     end)
   end)
 end)
