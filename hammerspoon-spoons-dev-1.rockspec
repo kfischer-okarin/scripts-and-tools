@@ -1,3 +1,4 @@
+rockspec_format = "3.0"
 package = "hammerspoon-spoons"
 version = "dev-1"
 source = {
@@ -10,4 +11,10 @@ description = {
 build = {
    type = "builtin",
    modules = {}
+}
+test = {
+   type = "busted",
+}
+test_dependencies = {
+   "busted ~> 2"
 }
