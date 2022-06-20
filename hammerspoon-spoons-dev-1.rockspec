@@ -4,8 +4,8 @@ source = {
    url = "git+ssh://git@github.com/kfischer-okarin/hammerspoon-spoons.git"
 }
 description = {
-   homepage = "*** please enter a project homepage ***",
-   license = "*** please specify a license ***"
+   homepage = "https://github.com/kfischer-okarin/hammerspoon-spoons",
+   license = "MIT"
 }
 build = {
    type = "builtin",
