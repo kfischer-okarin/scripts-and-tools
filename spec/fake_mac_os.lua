@@ -1,82 +1,110 @@
-local function buildFakeSlack()
-  local fakeSlack = {
-    currentChannel = nil,
-    channels = {}
+-- Factory methods for creating Slack simulator.
+local FakeSlack = {}
+
+function FakeSlack:buildChannel(name)
+  local channel = {
+    name = name,
+    messages = {},
+    inputValue = ''
   }
 
-  function fakeSlack:getChannel(name)
-    if not self.channels[name] then
-      self.channels[name] = self:buildChannel(name)
+  function channel:keyStroke(modifiers, key)
+    if #modifiers == 0 then
+      if key == 'return' then
+        table.insert(self.messages, self.inputValue)
+        self.inputValue = ''
+      else
+        self.inputValue = self.inputValue .. key
+      end
     end
-
-    return self.channels[name]
   end
 
-  local nothingFocused = {}
-  function nothingFocused:keyStroke(modifiers, key)
+  return channel
+end
+
+function FakeSlack:buildInitialUI(slack)
+  local initialUI = {}
+
+  function initialUI:keyStroke(modifiers, key)
     if #modifiers == 1 and modifiers[1] == 'cmd' and key == 'K' then
-      fakeSlack.currentUI = fakeSlack:buildChannelSelector()
+      slack.currentUI = FakeSlack:buildChannelSelectorUI(slack)
     end
   end
 
-  function fakeSlack:buildChannelSelector()
-    local inputValue = ''
+  return initialUI
+end
 
-    local channelSelector = {}
-    function channelSelector:keyStroke(modifiers, key)
-      if #modifiers == 0 then
-        if key == 'return' then
-          fakeSlack.currentChannel = inputValue
-          fakeSlack.currentUI = fakeSlack:getChannel(inputValue)
-        else
-          inputValue = inputValue .. key
-        end
+function FakeSlack:buildChannelSelectorUI(slack)
+  local inputValue = ''
+
+  local channelSelectorUI = {}
+  function channelSelectorUI:keyStroke(modifiers, key)
+    if #modifiers == 0 then
+      if key == 'return' then
+        slack.currentChannel = inputValue
+        slack.currentUI = slack:getChannel(inputValue)
+      else
+        inputValue = inputValue .. key
       end
     end
-
-    return channelSelector
   end
 
-  function fakeSlack:buildChannel(name)
-    local channel = {
-      name = name,
-      messages = {},
-      inputValue = ''
-    }
+  return channelSelectorUI
+end
 
-    function channel:keyStroke(modifiers, key)
-      if #modifiers == 0 then
-        if key == 'return' then
-          table.insert(self.messages, self.inputValue)
-          self.inputValue = ''
-        else
-          self.inputValue = self.inputValue .. key
-        end
-      end
+function FakeSlack:build()
+  local channels = {}
+
+  local slack = {
+    currentChannel = nil
+  }
+
+  slack.currentUI = self:buildInitialUI(slack)
+
+  function slack:getChannel(name)
+    if not channels[name] then
+      channels[name] = FakeSlack:buildChannel(name)
     end
 
-    return channel
+    return channels[name]
   end
 
-  fakeSlack.currentUI = nothingFocused
-
-  function fakeSlack:keyStroke(modifiers, key)
+  function slack:keyStroke(modifiers, key)
     self.currentUI:keyStroke(modifiers, key)
   end
 
-  function fakeSlack:keyStrokes(key)
+  function slack:keyStrokes(key)
     for i = 1, #key do
       self:keyStroke({}, key:sub(i, i))
     end
   end
 
-  return fakeSlack
+  return slack
 end
 
+FakeHammerspoon = {}
+
+function FakeHammerspoon:build(macOs)
+  return {
+    application = {
+      launchOrFocus = function(appName)
+        macOs.focusedApplication = macOs:getApplication(appName)
+      end
+    },
+    eventtap = {
+      keyStroke = function(modifiers, key)
+        macOs.focusedApplication:keyStroke(modifiers, key)
+      end,
+      keyStrokes = function(keys)
+        macOs.focusedApplication:keyStrokes(keys)
+      end
+    }
+  }
+end
 
 local function buildFakeMacOs()
   local applications = {
-    Slack = buildFakeSlack()
+    Slack = FakeSlack:build()
   }
 
   local fakeMacOs = {
@@ -87,21 +115,7 @@ local function buildFakeMacOs()
     return applications[application]
   end
 
-  _G.hs = {
-    application = {
-      launchOrFocus = function(appName)
-        fakeMacOs.focusedApplication = fakeMacOs:getApplication(appName)
-      end
-    },
-    eventtap = {
-      keyStroke = function(modifiers, key)
-        fakeMacOs.focusedApplication:keyStroke(modifiers, key)
-      end,
-      keyStrokes = function(keys)
-        fakeMacOs.focusedApplication:keyStrokes(keys)
-      end
-    }
-  }
+  _G.hs = FakeHammerspoon:build(fakeMacOs)
 
   return fakeMacOs
 end
