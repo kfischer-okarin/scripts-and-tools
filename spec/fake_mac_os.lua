@@ -105,10 +105,22 @@ function FakeHammerspoon:build(macOs)
     },
     eventtap = {
       keyStroke = function(modifiers, key)
-        macOs.focusedApplication:keyStroke(modifiers, key)
+        if listEqual(modifiers, {'cmd'}) and key == 'V' then
+          macOs.focusedApplication:keyStrokes(macOs.clipboard)
+        else
+          macOs.focusedApplication:keyStroke(modifiers, key)
+        end
       end,
       keyStrokes = function(keys)
         macOs.focusedApplication:keyStrokes(keys)
+      end
+    },
+    pasteboard = {
+      setContents = function(contents)
+        macOs.clipboard = contents
+      end,
+      getContents = function()
+        return macOs.clipboard
       end
     }
   }
@@ -121,6 +133,7 @@ local function buildFakeMacOs()
 
   local fakeMacOs = {
     focusedApplication = nil,
+    clipboard = nil
   }
 
   function fakeMacOs:getApplication(application)

@@ -13,6 +13,13 @@ local function waitForUI()
   os.execute('sleep ' .. Slack.settings.uiTimeout)
 end
 
+local function pasteValue(value)
+  originalClipboardContent = hs.pasteboard.getContents()
+  hs.pasteboard.setContents(value)
+  hs.eventtap.keyStroke({'cmd'}, 'V')
+  hs.pasteboard.setContents(originalClipboardContent)
+end
+
 --- Slack:setStatus(message[, emote])
 --- Method
 --- Sets status on Slack.
@@ -68,10 +75,7 @@ end
 ---  * None
 function Slack:sendSlackbotCommand(command)
   Slack:openChannel('Slackbot')
-  hs.eventtap.keyStroke({}, '/')
-  waitForUI()
-  hs.eventtap.keyStrokes(command)
-  waitForUI()
+  pasteValue('/' .. command) -- to avoid slash command completion
   hs.eventtap.keyStroke({}, 'return')
   waitForUI()
 end
