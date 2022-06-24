@@ -1,6 +1,7 @@
 buildFakeMacOs = require('spec.fake_mac_os')
 
 Slack = loadfile('Slack.spoon/init.lua')()
+Slack.settings.uiTimeout = 0
 
 describe('Slack.spoon', function()
   before_each(function()

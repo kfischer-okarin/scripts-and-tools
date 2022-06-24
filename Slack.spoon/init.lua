@@ -3,11 +3,14 @@ local Slack = {
   version = '1.0',
   author = 'Kevin Fischer',
   license = 'MIT',
-  homepage = 'https://github.com/kfischer-okarin/hammerspoon-spoons'
+  homepage = 'https://github.com/kfischer-okarin/hammerspoon-spoons',
+  settings = {
+    uiTimeout = 0.3
+  }
 }
 
 local function waitForUI()
-  os.execute('sleep 0.3')
+  os.execute('sleep ' .. Slack.settings.uiTimeout)
 end
 
 --- Slack:setStatus(message[, emote])
