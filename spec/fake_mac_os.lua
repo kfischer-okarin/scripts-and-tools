@@ -1,3 +1,15 @@
+local function listEqual(list1, list2)
+  if #list1 ~= #list2 then
+    return false
+  end
+  for i = 1, #list1 do
+    if list1[i] ~= list2[i] then
+      return false
+    end
+  end
+  return true
+end
+
 -- Factory methods for creating Slack simulator.
 local FakeSlack = {}
 
@@ -9,7 +21,7 @@ function FakeSlack:buildChannel(name)
   }
 
   function channel:keyStroke(modifiers, key)
-    if #modifiers == 0 then
+    if listEqual(modifiers, {}) then
       if key == 'return' then
         table.insert(self.messages, self.inputValue)
         self.inputValue = ''
@@ -26,7 +38,7 @@ function FakeSlack:buildInitialUI(slack)
   local initialUI = {}
 
   function initialUI:keyStroke(modifiers, key)
-    if #modifiers == 1 and modifiers[1] == 'cmd' and key == 'K' then
+    if listEqual(modifiers, {'cmd'}) and key == 'K' then
       slack.currentUI = FakeSlack:buildChannelSelectorUI(slack)
     end
   end
@@ -39,7 +51,7 @@ function FakeSlack:buildChannelSelectorUI(slack)
 
   local channelSelectorUI = {}
   function channelSelectorUI:keyStroke(modifiers, key)
-    if #modifiers == 0 then
+    if listEqual(modifiers, {}) then
       if key == 'return' then
         slack.currentChannel = inputValue
         slack.currentUI = slack:getChannel(inputValue)
