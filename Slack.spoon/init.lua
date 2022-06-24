@@ -6,8 +6,8 @@ local Slack = {
   homepage = 'https://github.com/kfischer-okarin/hammerspoon-spoons'
 }
 
-local function sleep(n)
-  os.execute('sleep ' .. n)
+local function waitForUI()
+  os.execute('sleep 0.3')
 end
 
 --- Slack:setStatus(message[, emote])
@@ -66,10 +66,11 @@ end
 function Slack:sendSlackbotCommand(command)
   Slack:openChannel('Slackbot')
   hs.eventtap.keyStroke({}, '/')
-  sleep(0.1)
+  waitForUI()
   hs.eventtap.keyStrokes(command)
-  sleep(0.1)
+  waitForUI()
   hs.eventtap.keyStroke({}, 'return')
+  waitForUI()
 end
 
 --- Slack:sendMessageToChannel(command)
@@ -100,11 +101,11 @@ end
 function Slack:openChannel(channel)
   Slack:focus()
   hs.eventtap.keyStroke({'cmd'}, 'K')
-  sleep(0.1)
+  waitForUI()
   hs.eventtap.keyStrokes(channel)
-  sleep(0.1)
+  waitForUI()
   hs.eventtap.keyStroke({}, 'return')
-  sleep(0.1)
+  waitForUI()
 end
 
 --- Slack:focus()
@@ -118,7 +119,7 @@ end
 ---  * None
 function Slack:focus()
   hs.application.launchOrFocus('Slack')
-  sleep(0.1)
+  waitForUI()
 end
 
 return Slack
