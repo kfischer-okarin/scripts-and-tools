@@ -74,10 +74,7 @@ end
 --- Returns:
 ---  * None
 function Slack:sendSlackbotCommand(command)
-  Slack:openChannel('Slackbot')
-  pasteValue('/' .. command) -- to avoid slash command completion
-  hs.eventtap.keyStroke({}, 'return')
-  waitForUI()
+  self:sendMessageToChannel('Slackbot', '/' .. command)
 end
 
 --- Slack:sendMessageToChannel(command)
@@ -92,7 +89,7 @@ end
 ---  * None
 function Slack:sendMessageToChannel(channel, message)
   Slack:openChannel(channel)
-  hs.eventtap.keyStrokes(message)
+  pasteValue(message) -- to avoid completion dialogs
   hs.eventtap.keyStroke({}, 'return')
 end
 
