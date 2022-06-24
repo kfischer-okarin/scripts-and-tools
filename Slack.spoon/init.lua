@@ -20,7 +20,7 @@ local function pasteValue(value)
   hs.pasteboard.setContents(originalClipboardContent)
 end
 
---- Slack:setStatus(message[, emote])
+--- Slack.setStatus(message[, emote])
 --- Method
 --- Sets status on Slack.
 ---
@@ -30,15 +30,15 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:setStatus(message, emote)
+function Slack.setStatus(message, emote)
   if emote then
-    Slack:sendSlackbotCommand('status ' .. emote .. ' ' .. message)
+    Slack.sendSlackbotCommand('status ' .. emote .. ' ' .. message)
   else
-    Slack:sendSlackbotCommand('status ' .. message)
+    Slack.sendSlackbotCommand('status ' .. message)
   end
 end
 
---- Slack:clearStatus()
+--- Slack.clearStatus()
 --- Method
 --- Clears status on Slack.
 ---
@@ -47,11 +47,11 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:clearStatus()
-  Slack:sendSlackbotCommand('clear')
+function Slack.clearStatus()
+  Slack.sendSlackbotCommand('clear')
 end
 
---- Slack:toggleAway()
+--- Slack.toggleAway()
 --- Method
 --- Toggles away status on Slack.
 ---
@@ -60,11 +60,11 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:toggleAway()
-  Slack:sendSlackbotCommand('away')
+function Slack.toggleAway()
+  Slack.sendSlackbotCommand('away')
 end
 
---- Slack:sendSlackbotCommand(command)
+--- Slack.sendSlackbotCommand(command)
 --- Method
 --- Sends a command to Slackbot
 ---
@@ -73,11 +73,11 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:sendSlackbotCommand(command)
-  self:sendMessageToChannel('Slackbot', '/' .. command)
+function Slack.sendSlackbotCommand(command)
+  Slack.sendMessageToChannel('Slackbot', '/' .. command)
 end
 
---- Slack:sendMessageToChannel(command)
+--- Slack.sendMessageToChannel(command)
 --- Method
 --- Sends a message to a slack channel.
 ---
@@ -87,13 +87,13 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:sendMessageToChannel(channel, message)
-  Slack:openChannel(channel)
+function Slack.sendMessageToChannel(channel, message)
+  Slack.openChannel(channel)
   pasteValue(message) -- to avoid completion dialogs
   hs.eventtap.keyStroke({}, 'return')
 end
 
---- Slack:openChannel(command)
+--- Slack.openChannel(command)
 --- Method
 --- Opens a slack channel.
 ---
@@ -102,8 +102,8 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:openChannel(channel)
-  Slack:focus()
+function Slack.openChannel(channel)
+  Slack.focus()
   hs.eventtap.keyStroke({'cmd'}, 'K')
   waitForUI()
   hs.eventtap.keyStrokes(channel)
@@ -112,7 +112,7 @@ function Slack:openChannel(channel)
   waitForUI()
 end
 
---- Slack:focus()
+--- Slack.focus()
 --- Method
 --- Focuses Slack.
 ---
@@ -121,7 +121,7 @@ end
 ---
 --- Returns:
 ---  * None
-function Slack:focus()
+function Slack.focus()
   hs.application.launchOrFocus('Slack')
   waitForUI()
 end
