@@ -21,19 +21,38 @@ describe('MenubarCountdown.spoon', function()
       )
       countdown:start()
 
-      menu = find(
+      countdownMenu = find(
         fakeMacOs.menubarItems,
         function(item)
           return item.title == 'Countdown: 1:00:00'
         end
       )
-      assert.is_not_nil(menu)
+      assert.is_not_nil(countdownMenu)
 
       fakeMacOs:advanceTime(1)
 
       assert.is_equal(
         'Countdown: 59:59',
-        menu.title
+        countdownMenu.title
+      )
+
+      countdown:stop()
+
+      menu = find(
+        fakeMacOs.menubarItems,
+        function(item)
+          return item == countdownMenu
+        end
+      )
+
+      assert.is_nil(menu)
+
+      fakeMacOs:advanceTime(1)
+
+      assert.is_equal(
+        'Countdown: 59:59',
+        countdownMenu.title,
+        'Countdown should not continue to run'
       )
     end)
   end)

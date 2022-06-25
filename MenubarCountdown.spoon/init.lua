@@ -33,6 +33,11 @@ function MenubarCountdown.new(label, endTime)
     end
   end
 
+  function countdown:stop()
+    self.menu:delete()
+    self.timer:stop()
+  end
+
   return countdown
 end
 

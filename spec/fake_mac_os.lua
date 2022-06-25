@@ -12,6 +12,15 @@ local function listEqual(list1, list2)
   return true
 end
 
+local function listRemoveElement(list, element)
+  for i = 1, #list do
+    if list[i] == element then
+      table.remove(list, i)
+      break
+    end
+  end
+end
+
 -- Factory methods for creating Slack simulator.
 local FakeSlack = {}
 
@@ -127,6 +136,10 @@ function FakeHammerspoon:build(macOs)
           self.title = title
         end
 
+        function menubar:delete()
+          listRemoveElement(macOs.menubarItems, self)
+        end
+
         table.insert(macOs.menubarItems, menubar)
         return menubar
       end
@@ -146,6 +159,10 @@ function FakeHammerspoon:build(macOs)
           interval = seconds,
           callback = callback
         }
+
+        function timer:stop()
+          listRemoveElement(macOs.timers, self)
+        end
 
         table.insert(macOs.timers, timer)
 
