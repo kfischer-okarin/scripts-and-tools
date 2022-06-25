@@ -138,6 +138,19 @@ function FakeHammerspoon:build(macOs)
       getContents = function()
         return macOs.clipboard
       end
+    },
+    timer = {
+      doEvery = function(seconds, callback)
+        timer = {
+          startTime = os.time(),
+          interval = seconds,
+          callback = callback
+        }
+
+        table.insert(macOs.timers, timer)
+
+        return timer
+      end
     }
   }
 end
@@ -151,7 +164,8 @@ local function buildFakeMacOs()
     focusedApplication = nil,
     clipboard = nil,
     currentTime = nil,
-    menubarItems = {}
+    menubarItems = {},
+    timers = {}
   }
 
   function fakeMacOs:getApplication(application)
@@ -167,6 +181,23 @@ local function buildFakeMacOs()
 
   function fakeMacOs:unfreezeTime()
     os.time = originalTimeFunction
+  end
+
+  function fakeMacOs:advanceTime(seconds)
+    for i = 1, seconds do
+      self.currentTime = self.currentTime + 1
+      self:runTimers()
+    end
+  end
+
+  function fakeMacOs:runTimers()
+    for i = 1, #self.timers do
+      local timer = self.timers[i]
+      if ((os.time() - timer.startTime) % timer.interval) == 0 then
+        timer.callback()
+        timer.startTime = os.time()
+      end
+    end
   end
 
   _G.hs = FakeHammerspoon:build(fakeMacOs)

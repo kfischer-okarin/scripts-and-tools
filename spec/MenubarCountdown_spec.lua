@@ -28,6 +28,13 @@ describe('MenubarCountdown.spoon', function()
         end
       )
       assert.is_not_nil(menu)
+
+      fakeMacOs:advanceTime(1)
+
+      assert.is_equal(
+        'Countdown: 59:59',
+        menu.title
+      )
     end)
   end)
 end)
