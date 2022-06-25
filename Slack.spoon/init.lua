@@ -21,7 +21,7 @@ local function pasteValue(value)
 end
 
 --- Slack.setStatus(message[, emote])
---- Method
+--- Function
 --- Sets status on Slack.
 ---
 --- Parameters:
@@ -39,7 +39,7 @@ function Slack.setStatus(message, emote)
 end
 
 --- Slack.clearStatus()
---- Method
+--- Function
 --- Clears status on Slack.
 ---
 --- Parameters:
@@ -52,7 +52,7 @@ function Slack.clearStatus()
 end
 
 --- Slack.toggleAway()
---- Method
+--- Function
 --- Toggles away status on Slack.
 ---
 --- Parameters:
@@ -65,7 +65,7 @@ function Slack.toggleAway()
 end
 
 --- Slack.sendSlackbotCommand(command)
---- Method
+--- Function
 --- Sends a command to Slackbot
 ---
 --- Parameters:
@@ -78,7 +78,7 @@ function Slack.sendSlackbotCommand(command)
 end
 
 --- Slack.sendMessageToChannel(command)
---- Method
+--- Function
 --- Sends a message to a slack channel.
 ---
 --- Parameters:
@@ -94,7 +94,7 @@ function Slack.sendMessageToChannel(channel, message)
 end
 
 --- Slack.openChannel(command)
---- Method
+--- Function
 --- Opens a slack channel.
 ---
 --- Parameters:
@@ -113,7 +113,7 @@ function Slack.openChannel(channel)
 end
 
 --- Slack.focus()
---- Method
+--- Function
 --- Focuses Slack.
 ---
 --- Parameters:
