@@ -1,3 +1,5 @@
+local originalTimeFunction = os.time
+
 local function listEqual(list1, list2)
   if #list1 ~= #list2 then
     return false
@@ -115,6 +117,20 @@ function FakeHammerspoon:build(macOs)
         macOs.focusedApplication:keyStrokes(keys)
       end
     },
+    menubar = {
+      new = function()
+        local menubar = {
+          title = nil
+        }
+
+        function menubar:setTitle(title)
+          self.title = title
+        end
+
+        table.insert(macOs.menubarItems, menubar)
+        return menubar
+      end
+    },
     pasteboard = {
       setContents = function(contents)
         macOs.clipboard = contents
@@ -133,11 +149,24 @@ local function buildFakeMacOs()
 
   local fakeMacOs = {
     focusedApplication = nil,
-    clipboard = nil
+    clipboard = nil,
+    currentTime = nil,
+    menubarItems = {}
   }
 
   function fakeMacOs:getApplication(application)
     return applications[application]
+  end
+
+  function fakeMacOs:freezeTime()
+    self.currentTime = os.time()
+    os.time = function()
+      return self.currentTime
+    end
+  end
+
+  function fakeMacOs:unfreezeTime()
+    os.time = originalTimeFunction
   end
 
   _G.hs = FakeHammerspoon:build(fakeMacOs)
