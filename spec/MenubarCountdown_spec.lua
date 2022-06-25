@@ -70,5 +70,22 @@ describe('MenubarCountdown.spoon', function()
 
       assert.is_true(finished)
     end)
+
+    it('can execute a function when it is clicked', function()
+      local clicked = false
+      countdown = MenubarCountdown.new(
+        'Countdown',
+        os.time() + 10,
+        {
+          onClick = function()
+            clicked = true
+          end
+        }
+      )
+      countdown:start()
+      countdownMenu = fakeMacOs:getMenu('Countdown: 0:10')
+
+      countdownMenu:leftClick()
+    end)
   end)
 end)

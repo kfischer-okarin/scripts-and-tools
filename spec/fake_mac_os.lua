@@ -145,6 +145,10 @@ function FakeHammerspoon:build(macOs)
           self.title = title
         end
 
+        function menubar:setClickCallback(callback)
+          self.leftClick = callback
+        end
+
         function menubar:delete()
           listRemoveElement(macOs.menus, self)
         end

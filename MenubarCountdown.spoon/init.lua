@@ -15,6 +15,7 @@ local MenubarCountdown = {
 ---  * endTime - Time (in seconds as returned from `os.time()`) when the countdown ends
 ---  * options - A table containing the following optional parameters:
 ---    * onFinish - A function to call when the countdown finishes
+---    * onClick - A function to call when the countdown is clicked
 ---
 --- Returns:
 ---  * a MenubarCountdown object
@@ -27,6 +28,7 @@ function MenubarCountdown.new(label, endTime, options)
     options = {}
   end
   countdown.onFinish = options.onFinish
+  countdown.onClick = options.onClick
 
   setmetatable(countdown, MenubarCountdown)
   MenubarCountdown.__index = MenubarCountdown
@@ -59,6 +61,9 @@ end
 ---  * None
 function MenubarCountdown:start()
   self.menu = hs.menubar.new()
+  if self.onClick then
+    self.menu:setClickCallback(self.onClick)
+  end
   self.timer = hs.timer.doEvery(1, function()
     refreshUI(self)
     if (self:getRemainingTime() == 0) then
