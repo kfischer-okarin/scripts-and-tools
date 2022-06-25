@@ -1,4 +1,3 @@
-require('spec.helper')
 buildFakeMacOs = require('spec.fake_mac_os')
 
 MenubarCountdown = loadfile('MenubarCountdown.spoon/init.lua')()
@@ -21,12 +20,7 @@ describe('MenubarCountdown.spoon', function()
       )
       countdown:start()
 
-      countdownMenu = find(
-        fakeMacOs.menubarItems,
-        function(item)
-          return item.title == 'Countdown: 1:00:00'
-        end
-      )
+      countdownMenu = fakeMacOs:getMenu('Countdown: 1:00:00')
       assert.is_not_nil(countdownMenu)
 
       fakeMacOs:advanceTime(1)
@@ -38,12 +32,7 @@ describe('MenubarCountdown.spoon', function()
 
       countdown:stop()
 
-      menu = find(
-        fakeMacOs.menubarItems,
-        function(item)
-          return item == countdownMenu
-        end
-      )
+      menu = fakeMacOs:getMenu(countdownMenu.title)
 
       assert.is_nil(menu)
 

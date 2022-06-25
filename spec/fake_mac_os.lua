@@ -21,6 +21,15 @@ local function listRemoveElement(list, element)
   end
 end
 
+local function find(table, condition)
+  for i, v in ipairs(table) do
+    if condition(v) then
+      return v
+    end
+  end
+  return nil
+end
+
 -- Factory methods for creating Slack simulator.
 local FakeSlack = {}
 
@@ -185,8 +194,14 @@ local function buildFakeMacOs()
     timers = {}
   }
 
-  function fakeMacOs:getApplication(application)
-    return applications[application]
+  function fakeMacOs:getApplication(applicationName)
+    return applications[applicationName]
+  end
+
+  function fakeMacOs:getMenu(title)
+    return find(self.menubarItems, function(item)
+      return item.title == title
+    end)
   end
 
   function fakeMacOs:freezeTime()
