@@ -6,6 +6,18 @@ local MenubarCountdown = {
   homepage = 'https://github.com/kfischer-okarin/hammerspoon-spoons'
 }
 
+--- MenubarCountdown.new(label, endTime[, options])
+--- Constructor
+--- Creates a countdown displayed in the menubar.
+---
+--- Parameters:
+---  * label - Label displayed before the countdown
+---  * endTime - Time (in seconds as returned from `os.time()`) when the countdown ends
+---  * options - A table containing the following optional parameters:
+---    * onFinish - A function to call when the countdown finishes
+---
+--- Returns:
+---  * a MenubarCountdown object
 function MenubarCountdown.new(label, endTime, options)
   local countdown = {
     label = label,
@@ -22,10 +34,33 @@ function MenubarCountdown.new(label, endTime, options)
   return countdown
 end
 
+local function refreshUI(countdown)
+  remainingTime = countdown:getRemainingTime()
+
+  minutes = math.floor(remainingTime / 60)
+  hours = math.floor(minutes / 60)
+  minutes = minutes % 60
+  seconds = remainingTime % 60
+  if hours > 0 then
+    countdown.menu:setTitle(countdown.label .. ': ' .. string.format('%d:%02d:%02d', hours, minutes, seconds))
+  else
+    countdown.menu:setTitle(countdown.label .. ': ' .. string.format('%d:%02d', minutes, seconds))
+  end
+end
+
+--- MenubarCountdown:start()
+--- Method
+--- Starts and displays the countdown in the menubar.
+---
+--- Parameters:
+---  * None
+---
+--- Returns:
+---  * None
 function MenubarCountdown:start()
   self.menu = hs.menubar.new()
   self.timer = hs.timer.doEvery(1, function()
-    self:refreshUI()
+    refreshUI(self)
     if (self:getRemainingTime() == 0) then
       if self.onFinish then
         self.onFinish()
@@ -33,27 +68,32 @@ function MenubarCountdown:start()
     end
   end)
 
-  self:refreshUI()
+  refreshUI(self)
 end
 
-function MenubarCountdown:refreshUI()
-  remainingTime = self:getRemainingTime()
 
-  minutes = math.floor(remainingTime / 60)
-    hours = math.floor(minutes / 60)
-  minutes = minutes % 60
-  seconds = remainingTime % 60
-  if hours > 0 then
-    self.menu:setTitle(self.label .. ': ' .. string.format('%d:%02d:%02d', hours, minutes, seconds))
-  else
-    self.menu:setTitle(self.label .. ': ' .. string.format('%d:%02d', minutes, seconds))
-  end
-end
-
+--- MenubarCountdown:getRemainingTime()
+--- Method
+--- Returns seconds until countdown finishes.
+---
+--- Parameters:
+---  * None
+---
+--- Returns:
+---  * Seconds until countdown finishes
 function MenubarCountdown:getRemainingTime()
   return self.endTime - os.time()
 end
 
+--- MenubarCountdown:stop()
+--- Method
+--- Stops and removes the countdown from the menubar.
+---
+--- Parameters:
+---  * None
+---
+--- Returns:
+---  * None
 function MenubarCountdown:stop()
   self.menu:delete()
   self.timer:stop()
