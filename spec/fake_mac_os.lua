@@ -146,10 +146,10 @@ function FakeHammerspoon:build(macOs)
         end
 
         function menubar:delete()
-          listRemoveElement(macOs.menubarItems, self)
+          listRemoveElement(macOs.menus, self)
         end
 
-        table.insert(macOs.menubarItems, menubar)
+        table.insert(macOs.menus, menubar)
         return menubar
       end
     },
@@ -190,7 +190,7 @@ local function buildFakeMacOs()
     focusedApplication = nil,
     clipboard = nil,
     currentTime = nil,
-    menubarItems = {},
+    menus = {},
     timers = {}
   }
 
@@ -199,7 +199,7 @@ local function buildFakeMacOs()
   end
 
   function fakeMacOs:getMenu(title)
-    return find(self.menubarItems, function(item)
+    return find(self.menus, function(item)
       return item.title == title
     end)
   end
