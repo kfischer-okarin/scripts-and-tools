@@ -55,5 +55,31 @@ describe('MenubarCountdown.spoon', function()
         'Countdown should not continue to run'
       )
     end)
+
+    it('can execute a function when time runs out', function()
+      local finished = false
+      countdown = MenubarCountdown.new(
+        'Countdown',
+        os.time() + 10,
+        {
+          onFinish = function()
+            finished = true
+          end
+        }
+      )
+      countdown:start()
+
+      fakeMacOs:advanceTime(1)
+
+      assert.is_false(finished)
+
+      fakeMacOs:advanceTime(8)
+
+      assert.is_false(finished)
+
+      fakeMacOs:advanceTime(1)
+
+      assert.is_true(finished)
+    end)
   end)
 end)
