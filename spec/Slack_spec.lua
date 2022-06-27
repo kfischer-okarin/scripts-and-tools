@@ -8,7 +8,7 @@ describe('Slack.spoon', function()
     _G.fakeMacOs = buildFakeMacOs()
   end)
 
-  describe('f.ocus()', function()
+  describe('.focus()', function()
     it('focuses Slack', function()
       Slack.focus()
 
