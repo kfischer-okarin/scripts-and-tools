@@ -135,6 +135,15 @@ function FakeHammerspoon:build(macOs)
         macOs.focusedApplication:keyStrokes(keys)
       end
     },
+    fnutils = {
+      imap = function(list, func)
+        local result = {}
+        for i, v in ipairs(list) do
+          table.insert(result, func(v))
+        end
+        return result
+      end
+    },
     menubar = {
       new = function()
         local menubar = {
