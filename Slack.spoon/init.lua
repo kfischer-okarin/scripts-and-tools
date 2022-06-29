@@ -48,7 +48,7 @@ end
 --- Returns:
 ---  * None
 function Slack.clearStatus()
-  Slack.sendSlackbotCommand('clear')
+  Slack.sendSlackbotCommand('status')
 end
 
 --- Slack.toggleAway()
