@@ -38,16 +38,19 @@ end
 
 local function refreshUI(countdown)
   remainingTime = countdown:getRemainingTime()
+  sign = remainingTime >= 0 and '' or '-'
+  remainingTime = math.abs(remainingTime)
 
   minutes = math.floor(remainingTime / 60)
   hours = math.floor(minutes / 60)
   minutes = minutes % 60
   seconds = remainingTime % 60
   if hours > 0 then
-    countdown.menu:setTitle(countdown.label .. ': ' .. string.format('%d:%02d:%02d', hours, minutes, seconds))
+    remainingTimeString = string.format('%d:%02d:%02d', hours, minutes, seconds)
   else
-    countdown.menu:setTitle(countdown.label .. ': ' .. string.format('%d:%02d', minutes, seconds))
+    remainingTimeString = string.format('%d:%02d', minutes, seconds)
   end
+  countdown.menu:setTitle(countdown.label .. ': ' .. sign .. remainingTimeString)
 end
 
 --- MenubarCountdown:start()

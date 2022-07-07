@@ -45,6 +45,24 @@ describe('MenubarCountdown.spoon', function()
       )
     end)
 
+    it('should show a negative time when the end time has passed', function()
+      countdown = MenubarCountdown.new(
+        'Countdown',
+        os.time() + 60
+      )
+      countdown:start()
+
+      countdownMenu = fakeMacOs:getMenu('Countdown: 1:00')
+      assert.is_not_nil(countdownMenu)
+
+      fakeMacOs:advanceTime(70)
+
+      assert.is_equal(
+        'Countdown: -0:10',
+        countdownMenu.title
+      )
+    end)
+
     it('can execute a function when time runs out', function()
       local finished = false
       countdown = MenubarCountdown.new(
