@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Shortcut script to run extend_loop.py with proper mise and uv environment
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR/../src/extend_loop"
+
+# Change to project directory
+cd "$PROJECT_DIR" || exit 1
+
+# Use mise to set up environment and run via uv
+exec mise exec -- uv run python extend_loop.py "$@"
