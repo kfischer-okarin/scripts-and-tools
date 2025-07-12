@@ -42,6 +42,8 @@ class CLI < Thor
     def storage_path
       if ENV['XDG_DATA_HOME']
         File.join(ENV['XDG_DATA_HOME'], 'doc-hub')
+      else
+        File.join(Dir.home, '.local', 'share', 'doc-hub')
       end
     end
   end

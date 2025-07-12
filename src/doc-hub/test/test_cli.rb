@@ -20,4 +20,12 @@ class TestCLI < Minitest::Test
     expected_path = '/custom/data/doc-hub'
     assert_equal expected_path, cli.storage_path
   end
+
+  def test_storage_path_without_xdg_data_home
+    ENV.delete('XDG_DATA_HOME')
+
+    cli = CLI.new
+    expected_path = File.join(Dir.home, '.local', 'share', 'doc-hub')
+    assert_equal expected_path, cli.storage_path
+  end
 end
