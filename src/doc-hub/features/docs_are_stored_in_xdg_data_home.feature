@@ -4,7 +4,6 @@ Feature: Docs are stored $XDG_DATA_HOME
   So that it's easy to find and manage
 
   # TODO: Write proper documentations
-  # TODO: better shorter step definitions
 
   Scenario: AC-1 Respects $XDG_DATA_HOME
     Given I set the environment variable "XDG_DATA_HOME" to "custom/data"
