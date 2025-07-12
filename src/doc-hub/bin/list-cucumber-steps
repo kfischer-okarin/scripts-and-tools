@@ -1,0 +1,30 @@
+#!/usr/bin/env ruby
+
+require 'bundler/setup'
+require 'cucumber'
+require 'cucumber/configuration'
+require 'cucumber/runtime'
+
+config = Cucumber::Configuration.new
+files = config.all_files_to_load
+
+runtime = Cucumber::Runtime.new(config)
+runtime.support_code.load_files!(files)
+
+# Group steps by file path
+grouped_steps = Hash.new { |h, k| h[k] = [] }
+
+runtime.support_code.registry.send(:step_definitions).each do |step_def|
+  pattern = step_def.expression.source
+  file    = step_def.location.file
+  line    = step_def.location.lines.first
+  grouped_steps[file] << [line, pattern]
+end
+
+# Sort and print
+grouped_steps.sort.each do |file, steps|
+  puts "\n#{file}:"
+  steps.sort_by(&:first).each do |line, pattern|
+    puts "  [#{line}] #{pattern}"
+  end
+end
