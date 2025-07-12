@@ -1,0 +1,3 @@
+[tools]
+"pipx:markitdown" = "latest"
+ruby = "3.4"
