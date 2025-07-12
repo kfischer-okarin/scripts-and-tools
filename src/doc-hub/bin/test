@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Run unit tests
+
+bundle exec ruby -Itest test/test_cli.rb
