@@ -13,8 +13,7 @@ Then(/^the directory "([^"]*)" should contain a downloaded documentation$/) do |
 end
 
 Given(/^The url "([^"]*)" returns:$/) do |url, content|
-  # Create a mock curl executable that returns the mocked content
-  step %(an executable named "test-bin/curl" with:), <<~SCRIPT
+  replace_curl_with_script <<~SCRIPT
     #!/bin/bash
     if [[ "$@" == *"#{url}"* ]]; then
       cat << 'EOF'
@@ -25,6 +24,4 @@ Given(/^The url "([^"]*)" returns:$/) do |url, content|
       exit 6
     fi
   SCRIPT
-
-  prepend_environment_variable("PATH", expand_path("test-bin:"))
 end
