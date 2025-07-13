@@ -15,3 +15,5 @@
 ## When working on acceptance tests
 
 - Use `bin/list-cucumber-steps` to see available steps
+- Use `bin/acceptance-tests` to run acceptance tests. You MUST do this after
+  every change unless the user explicitly requests otherwise.
