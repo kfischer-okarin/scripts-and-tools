@@ -11,3 +11,20 @@ Then(/^the directory "([^"]*)" should contain a downloaded documentation$/) do |
   step %(the directory "#{dir_path}" should exist)
   step %(a file "#{dir_path}/index.md" should exist)
 end
+
+Given(/^The url "([^"]*)" returns:$/) do |url, content|
+  # Create a mock curl executable that returns the mocked content
+  step %(an executable named "test-bin/curl" with:), <<~SCRIPT
+    #!/bin/bash
+    if [[ "$@" == *"#{url}"* ]]; then
+      cat << 'EOF'
+    #{content}
+    EOF
+    else
+      echo "curl: (6) Could not resolve host"
+      exit 6
+    fi
+  SCRIPT
+
+  prepend_environment_variable("PATH", expand_path("test-bin:"))
+end

@@ -11,16 +11,17 @@ class CLI < Thor
     doc_path = File.join(storage_path, name)
     FileUtils.mkdir_p(doc_path)
 
-    # Create a dummy markdown file
-    File.write(File.join(doc_path, "index.md"), <<~MARKDOWN)
-      # #{name}
+    system("curl #{url} | markitdown --mime-type text/html > #{doc_path}/index.md")
+  end
 
-      This is a placeholder document for #{name}.
-
-      Source: #{url}
-
-      Downloaded at: #{Time.now}
-    MARKDOWN
+  desc "show NAME", "Show documentation"
+  def show(name)
+    doc_path = File.join(storage_path, name)
+    if File.exist?(doc_path)
+      puts File.read(File.join(doc_path, "index.md"))
+    else
+      raise Thor::Error, "Documentation not found: #{name}"
+    end
   end
 
   no_commands do
