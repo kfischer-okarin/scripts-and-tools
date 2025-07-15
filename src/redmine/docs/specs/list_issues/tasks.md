@@ -39,7 +39,7 @@ writing, modifying, or testing code.
 
 ### 4. HTTP API Client Implementation
 
-- [ ] 4.1 Create Redmine API client with HTTP transport
+- [x] 4.1 Create Redmine API client with HTTP transport
   - Implement `internal/api/client.go` with `RedmineClient` struct
   - Create `Client` interface with `ListIssues` method
   - Implement HTTP client with proper request formation for Redmine API
