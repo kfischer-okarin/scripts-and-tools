@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kfischer-okarin/redmine/internal/cli/issue"
 	"github.com/spf13/cobra"
-	"redmine/internal/cli/issue"
 )
 
 var rootCmd = &cobra.Command{

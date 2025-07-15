@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"redmine/internal/api"
-	"redmine/internal/config"
-	"redmine/internal/formatter"
+	"github.com/kfischer-okarin/redmine/internal/api"
+	"github.com/kfischer-okarin/redmine/internal/config"
+	"github.com/kfischer-okarin/redmine/internal/formatter"
 )
 
 // mockClient is a mock implementation of the api.Client interface

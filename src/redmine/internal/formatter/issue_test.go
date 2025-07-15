@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"redmine/internal/api"
+	"github.com/kfischer-okarin/redmine/internal/api"
 )
 
 func TestTableFormatter_Format_EmptyIssues(t *testing.T) {

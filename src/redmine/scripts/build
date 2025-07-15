@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Build script for redmine CLI tool
+# Build script for redmine tool
 
 set -e
 

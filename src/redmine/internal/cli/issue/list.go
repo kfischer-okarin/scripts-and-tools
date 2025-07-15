@@ -4,10 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kfischer-okarin/redmine/internal/api"
+	"github.com/kfischer-okarin/redmine/internal/config"
+	"github.com/kfischer-okarin/redmine/internal/formatter"
 	"github.com/spf13/cobra"
-	"redmine/internal/api"
-	"redmine/internal/config"
-	"redmine/internal/formatter"
 )
 
 // ListCommandDeps holds dependencies for the list command

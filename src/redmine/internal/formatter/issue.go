@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"redmine/internal/api"
+	"github.com/kfischer-okarin/redmine/internal/api"
 )
 
 type IssueFormatter interface {
