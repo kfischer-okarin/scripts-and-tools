@@ -12,14 +12,13 @@ writing, modifying, or testing code.
 - [x] 1.1 Initialize Go module and project structure
   - Create `go.mod` file with module declaration
   - Set up project directory structure as specified in design document
-  - Install required dependencies: `github.com/spf13/cobra`,
-    `github.com/stretchr/testify`, `github.com/cucumber/godog`
   - Create empty placeholder files for each component identified in the design
+  - *Note: Dependencies will be added as needed during implementation*
   - *References: Design document project structure section*
 
 ### 2. Configuration Management Implementation
 
-- [ ] 2.1 Create configuration data structures and loading mechanism
+- [x] 2.1 Create configuration data structures and loading mechanism
   - Implement `internal/config/config.go` with hardcoded configuration values
   - Create `Config` struct with BaseURL, APIKey, and ProjectID fields
   - Implement `LoadConfig()` function that returns hardcoded values for MVP
@@ -63,6 +62,7 @@ writing, modifying, or testing code.
 ### 6. CLI Framework Setup
 
 - [ ] 6.1 Create root CLI command structure
+  - *Note: Add `github.com/spf13/cobra` dependency when implementing this task*
   - Implement `internal/cli/root.go` with root command setup using Cobra
   - Create main application entry point in `cmd/redmine/main.go`
   - Set up command hierarchy with issue subcommand group
@@ -98,6 +98,7 @@ writing, modifying, or testing code.
 ### 9. Acceptance Test Framework Setup
 
 - [ ] 9.1 Create Cucumber acceptance test framework
+  - *Note: Add `github.com/cucumber/godog` dependency when implementing this task*
   - Create `features/list_issues.feature` file with scenarios matching
     acceptance criteria
   - Implement step definitions in
