@@ -35,8 +35,8 @@ func TestRootCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Use the actual root command with all setup done
-			cmd := RootCmd
+			// Create fresh command instance for each test
+			cmd := buildCommand()
 
 			// Capture output
 			var output bytes.Buffer
