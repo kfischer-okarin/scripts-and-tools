@@ -267,6 +267,70 @@ Errors will be displayed to stderr with clear, actionable messages:
 
 ## Testing Strategy
 
+### Acceptance Tests (Cucumber)
+
+We'll use Cucumber for BDD-style acceptance testing to verify each acceptance
+criterion from the requirements document.
+
+**Tool**: godog (Cucumber for Go)
+
+#### Feature Files
+
+```gherkin
+# features/list_issues.feature
+
+Feature: List Issues Command
+  As a developer
+  I want to list issues from a Redmine project
+  So that I can quickly view project status from the command line
+
+  Background:
+    Given the Redmine server is configured
+    And I have a valid API key
+
+  Scenario: 1.1: Successfully list issues from project
+    Given the project has the following issues:
+      | ID    | Title                           | Status      |
+      | 12345 | Fix login validation bug        | New         |
+      | 12346 | Add user profile feature        | In Progress |
+      | 12347 | Update API documentation        | Closed      |
+    When I run "redmine issue list"
+    Then the output should contain:
+      """
+      ID     | Subject                           | Status
+      -------|-----------------------------------|--------
+      12345  | Fix login validation bug          | New
+      12346  | Add user profile feature          | In Progress
+      12347  | Update API documentation          | Closed
+      """
+    And the exit code should be 0
+
+  Scenario: 1.2: No issues found in project
+    Given the project has no issues
+    When I run "redmine issue list"
+    Then the output should be "No issues found"
+    And the exit code should be 0
+
+  Scenario: 2.1: Redmine server is unreachable
+    Given the Redmine server is down
+    When I run "redmine issue list"
+    Then the error output should be "Error: Unable to connect to Redmine server"
+    And the exit code should be 1
+
+  Scenario: 2.2: Invalid command arguments
+    When I run "redmine issue invalid-command"
+    Then the output should contain usage information
+    And the output should contain "Available Commands:"
+    And the output should contain "list"
+    And the exit code should be 1
+
+  Scenario: 2.3: API request fails with authentication error
+    Given the API key is invalid
+    When I run "redmine issue list"
+    Then the error output should contain "Error:"
+    And the exit code should be 1
+```
+
 ### Unit Tests
 
 1. **API Client Tests**
@@ -284,17 +348,14 @@ Errors will be displayed to stderr with clear, actionable messages:
    - Verify error handling
    - Test output formatting
 
-### Integration Tests
-
-1. **Mock Server Tests**
-   - Use httptest to create mock Redmine server
-   - Test full command execution
-   - Verify end-to-end behavior
-
 ### Test Structure
 
 ```text
 redmine/
+├── features/
+│   ├── list_issues.feature
+│   └── step_definitions/
+│       └── list_issues_steps.go
 ├── internal/
 │   ├── api/
 │   │   ├── client_test.go
@@ -306,16 +367,64 @@ redmine/
 │   └── formatter/
 │       └── issue_test.go
 └── test/
-    └── integration/
-        └── list_issues_test.go
+    └── acceptance/
+        └── acceptance_test.go     # Godog test runner
+```
+
+### Acceptance Test Implementation
+
+```go
+// test/acceptance/acceptance_test.go
+package acceptance
+
+import (
+    "github.com/cucumber/godog"
+    "github.com/cucumber/godog/colors"
+    "os"
+    "testing"
+)
+
+func TestFeatures(t *testing.T) {
+    opts := godog.Options{
+        Format:   "progress",
+        Paths:    []string{"../../features"},
+        Output:   colors.Colored(os.Stdout),
+    }
+
+    status := godog.TestSuite{
+        ScenarioInitializer: InitializeScenario,
+        Options:            &opts,
+    }.Run()
+
+    if status != 0 {
+        t.Fail()
+    }
+}
 ```
 
 ### Testing Approach
 
-1. Use Go's built-in testing package
-2. Use testify for assertions
-3. Use httptest for mocking HTTP responses
-4. Maintain test coverage above 80%
+1. Use godog for Cucumber acceptance tests
+2. Use Go's built-in testing package for unit tests
+3. Use testify for assertions
+4. Use httptest for mocking HTTP responses
+5. Maintain test coverage above 80%
+
+### Test Execution
+
+```bash
+# Run all tests
+go test ./...
+
+# Run acceptance tests
+go test ./test/acceptance
+
+# Run unit tests only
+go test ./internal/...
+
+# Run with coverage
+go test -cover ./...
+```
 
 ## Implementation Notes
 
@@ -347,6 +456,7 @@ redmine/
 
 - `github.com/spf13/cobra`: CLI framework
 - `github.com/stretchr/testify`: Testing assertions
+- `github.com/cucumber/godog`: Cucumber acceptance testing framework
 
 ### Standard Library
 
