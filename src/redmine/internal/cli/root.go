@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
+var RootCmd = &cobra.Command{
 	Use:   "redmine",
 	Short: "A CLI tool for interacting with Redmine",
 	Long: `A command line interface for Redmine that allows you to view and manage
@@ -17,7 +17,7 @@ with Redmine projects.`,
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
+	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -37,5 +37,5 @@ func setupIssueCommands() {
 	// Add list command to issue subcommand
 	issueCmd.AddCommand(issue.NewListCommand())
 
-	rootCmd.AddCommand(issueCmd)
+	RootCmd.AddCommand(issueCmd)
 }

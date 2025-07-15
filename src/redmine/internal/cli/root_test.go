@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"strings"
 	"testing"
-
-	"github.com/spf13/cobra"
 )
 
 func TestRootCommand(t *testing.T) {
@@ -37,22 +35,8 @@ func TestRootCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a new command instance for each test
-			cmd := &cobra.Command{
-				Use:   "redmine",
-				Short: "A CLI tool for interacting with Redmine",
-				Long: `A command line interface for Redmine that allows you to view and manage
-issues from your terminal. This tool provides basic functionality to interact
-with Redmine projects.`,
-			}
-
-			// Add issue subcommand
-			issueCmd := &cobra.Command{
-				Use:   "issue",
-				Short: "Issue management commands",
-				Long:  "Commands for viewing and managing Redmine issues",
-			}
-			cmd.AddCommand(issueCmd)
+			// Use the actual root command with all setup done
+			cmd := RootCmd
 
 			// Capture output
 			var output bytes.Buffer
