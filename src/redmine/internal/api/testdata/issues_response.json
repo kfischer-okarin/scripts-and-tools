@@ -1,0 +1,41 @@
+{
+  "issues": [
+    {
+      "id": 12345,
+      "subject": "Fix login validation bug",
+      "status": {
+        "id": 1,
+        "name": "New"
+      },
+      "project": {
+        "id": 1,
+        "name": "Test Project"
+      }
+    },
+    {
+      "id": 12346,
+      "subject": "Add user profile feature",
+      "status": {
+        "id": 2,
+        "name": "In Progress"
+      },
+      "project": {
+        "id": 1,
+        "name": "Test Project"
+      }
+    },
+    {
+      "id": 12347,
+      "subject": "Update API documentation",
+      "status": {
+        "id": 3,
+        "name": "Closed"
+      },
+      "project": {
+        "id": 1,
+        "name": "Test Project"
+      }
+    }
+  ],
+  "count": 3
+}
