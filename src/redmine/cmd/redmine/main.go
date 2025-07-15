@@ -1,6 +1,7 @@
 package main
 
-// Entry point for the redmine CLI application
+import "redmine/internal/cli"
+
 func main() {
-	// TODO: Initialize root command and execute
+	cli.Execute()
 }
