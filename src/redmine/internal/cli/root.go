@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"redmine/internal/cli/issue"
 )
 
 var rootCmd = &cobra.Command{
@@ -32,6 +33,9 @@ func setupIssueCommands() {
 		Short: "Issue management commands",
 		Long:  "Commands for viewing and managing Redmine issues",
 	}
+
+	// Add list command to issue subcommand
+	issueCmd.AddCommand(issue.NewListCommand())
 
 	rootCmd.AddCommand(issueCmd)
 }

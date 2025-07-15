@@ -61,7 +61,7 @@ writing, modifying, or testing code.
 
 ### 6. CLI Framework Setup
 
-- [ ] 6.1 Create root CLI command structure
+- [x] 6.1 Create root CLI command structure
   - *Note: Add `github.com/spf13/cobra` dependency when implementing this task*
   - Implement `internal/cli/root.go` with root command setup using Cobra
   - Create main application entry point in `cmd/redmine/main.go`
@@ -73,7 +73,7 @@ writing, modifying, or testing code.
 
 ### 7. List Command Implementation
 
-- [ ] 7.1 Implement issue list command
+- [x] 7.1 Implement issue list command
   - Create `internal/cli/issue/list.go` with list command implementation
   - Wire together API client, formatter, and configuration components
   - Implement command execution flow: config → API call → format → display
