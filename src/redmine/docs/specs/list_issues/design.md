@@ -413,17 +413,11 @@ func TestFeatures(t *testing.T) {
 ### Test Execution
 
 ```bash
-# Run all tests
-go test ./...
+# Run all unit tests with coverage
+bin/unit-tests
 
 # Run acceptance tests
-go test ./test/acceptance
-
-# Run unit tests only
-go test ./internal/...
-
-# Run with coverage
-go test -cover ./...
+bin/acceptance-tests
 ```
 
 ## Implementation Notes
