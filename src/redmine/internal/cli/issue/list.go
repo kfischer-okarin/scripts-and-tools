@@ -1,6 +1,7 @@
 package issue
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -53,6 +54,11 @@ func runListCommandWithDeps(cmd *cobra.Command, args []string, deps *ListCommand
 	// Fetch issues
 	issues, err := client.ListIssues(cfg.ProjectID)
 	if err != nil {
+		// Check if it's a RedmineError and return the user-friendly message
+		var redmineErr *api.RedmineError
+		if errors.As(err, &redmineErr) {
+			return errors.New(redmineErr.Message)
+		}
 		return fmt.Errorf("failed to fetch issues: %w", err)
 	}
 

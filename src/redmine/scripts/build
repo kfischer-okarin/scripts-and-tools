@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Build script for redmine CLI tool
+
+set -e
+
+# Create bin directory if it doesn't exist
+mkdir -p bin
+
+# Build the binary
+go build -o bin/redmine ./cmd/redmine/
+
+echo "Build completed successfully. Binary available at: bin/redmine"
