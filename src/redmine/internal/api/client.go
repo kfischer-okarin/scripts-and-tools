@@ -122,9 +122,16 @@ func NewRedmineClient(baseURL, apiKey string) *RedmineClient {
 }
 
 func (c *RedmineClient) ListIssues(projectID string) ([]Issue, error) {
-	url := fmt.Sprintf("%s/issues.json?project_id=%s", c.baseURL, projectID)
+	u, err := url.Parse(c.baseURL + "/issues.json")
+	if err != nil {
+		return nil, NewRedmineError(ConfigurationError, err)
+	}
+	q := u.Query()
+	q.Set("project_id", projectID)
+	u.RawQuery = q.Encode()
+	urlStr := u.String()
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		return nil, NewRedmineError(ConfigurationError, err)
 	}
