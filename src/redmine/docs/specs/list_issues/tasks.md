@@ -113,8 +113,8 @@ writing, modifying, or testing code.
 ### 10. Test Script Creation
 
 - [ ] 10.1 Create test execution scripts
-  - Create `bin/unit-tests` script for running unit tests with coverage
-  - Create `bin/acceptance-tests` script for running Cucumber acceptance tests
+  - Create `scripts/unit-tests` script for running unit tests with coverage
+  - Create `scripts/acceptance-tests` script for running Cucumber acceptance tests
   - Ensure scripts provide clear output and proper exit codes
   - Add test scripts to project documentation
   - *References: Design document testing approach section*

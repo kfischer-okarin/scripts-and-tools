@@ -74,6 +74,9 @@ redmine/
 │   │   └── config.go        # Configuration management
 │   └── formatter/
 │       └── issue.go         # Issue formatting logic
+├── scripts/
+│   ├── unit-tests           # Unit test execution script
+│   └── acceptance-tests     # Acceptance test execution script
 ├── go.mod
 ├── go.sum
 └── docs/
@@ -414,10 +417,10 @@ func TestFeatures(t *testing.T) {
 
 ```bash
 # Run all unit tests with coverage
-bin/unit-tests
+scripts/unit-tests
 
 # Run acceptance tests
-bin/acceptance-tests
+scripts/acceptance-tests
 ```
 
 ## Implementation Notes
