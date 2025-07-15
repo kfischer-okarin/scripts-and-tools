@@ -29,10 +29,6 @@ func TestRedmineClient_ListIssues_Success(t *testing.T) {
 			t.Errorf("Expected X-Redmine-API-Key=test-api-key, got %s", r.Header.Get("X-Redmine-API-Key"))
 		}
 
-		if r.Header.Get("Content-Type") != "application/json" {
-			t.Errorf("Expected Content-Type=application/json, got %s", r.Header.Get("Content-Type"))
-		}
-
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(responseData)

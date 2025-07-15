@@ -137,7 +137,6 @@ func (c *RedmineClient) ListIssues(projectID string) ([]Issue, error) {
 	}
 
 	req.Header.Set("X-Redmine-API-Key", c.apiKey)
-	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
