@@ -118,16 +118,7 @@ feature, broken down into incremental coding steps that build upon each other.
 
 ## 6. Comprehensive Testing
 
-- [ ] 6.1 Create integration tests for full configuration workflow
-
-  - Write end-to-end test that sets all configuration values
-  - Verify values persist across multiple invocations
-  - Test configuration file creation in correct location
-  - Test permission settings on created files
-  - Test overwriting existing values
-  - References: All requirements
-
-- [ ] 6.2 Add acceptance tests for command-line interface
+- [ ] 6.1 Add acceptance tests for command-line interface
 
   - Create acceptance test file for configuration commands
   - Test successful configuration setting for all three values
@@ -136,7 +127,7 @@ feature, broken down into incremental coding steps that build upon each other.
   - Test security warnings for incorrect file permissions
   - References: Design acceptance tests section
 
-- [ ] 6.3 Create cross-platform tests
+- [ ] 6.2 Create cross-platform tests
 
   - Write tests that verify correct behavior on Linux, macOS, and Windows
   - Test path resolution for each platform

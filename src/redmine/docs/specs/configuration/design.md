@@ -289,22 +289,28 @@ Feature: Configuration Management
   I want to configure my Redmine connection settings
   So that I can connect to my Redmine server
 
-  Scenario: Set Redmine URL
+  Scenario: [1.1, 1.4, 3.1] Set Redmine URL
     When I run "redmine config set url https://redmine.example.com"
     Then the output should contain "Configuration saved successfully"
     And the configuration file should contain the URL
 
-  Scenario: Set API Key
+  Scenario: [1.2, 1.4, 3.1] Set API Key
     When I run "redmine config set api-key abc123"
     Then the output should contain "Configuration saved successfully"
     And the configuration file should contain the API key
 
-  Scenario: Set Project ID
+  Scenario: [1.3, 1.4, 3.1] Set Project ID
     When I run "redmine config set project-id my-project"
     Then the output should contain "Configuration saved successfully"
     And the configuration file should contain the project ID
 
-  Scenario: Show Configuration
+  Scenario: [1.5] Overwrite Existing Configuration
+    Given I have configured URL "https://old.redmine.com"
+    When I run "redmine config set url https://new.redmine.com"
+    Then the output should contain "Configuration saved successfully"
+    And the configuration file should contain "https://new.redmine.com"
+
+  Scenario: [2.1] Show Configuration
     Given I have configured URL "https://redmine.example.com"
     And I have configured API key "abc123"
     And I have configured project ID "my-project"
@@ -313,22 +319,12 @@ Feature: Configuration Management
     And the output should contain "API Key: ****23"
     And the output should contain "Project ID: my-project"
 
-  Scenario: Show Empty Configuration
+  Scenario: [2.2] Show Empty Configuration
     Given no configuration exists
     When I run "redmine config show"
     Then the output should contain "No configuration found"
 
-  Scenario: Invalid URL Format
-    When I run "redmine config set url not-a-url"
-    Then the error output should contain "Invalid URL format"
-    And the exit code should be 1
-
-  Scenario: Empty Value
-    When I run "redmine config set url"
-    Then the error output should contain "value cannot be empty"
-    And the exit code should be 1
-
-  Scenario: File Permission Security
+  Scenario: [3.2] File Permission Security
     Given I have a configuration file with world-readable permissions
     When I run "redmine config show"
     Then the output should contain a security warning
