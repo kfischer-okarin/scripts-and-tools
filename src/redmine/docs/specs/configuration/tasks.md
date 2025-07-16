@@ -3,21 +3,29 @@
 This document contains the implementation tasks for the configuration management
 feature, broken down into incremental coding steps that build upon each other.
 
-## 1. Foundation: Path Resolution and Configuration Structure
+## 1. Foundation: Dependencies and Configuration Structure
 
-- [ ] 1.1 Create path resolution module for cross-platform configuration storage
+- [ ] 1.1 Add XDG library dependency
+
+  - Run `go get github.com/adrg/xdg@latest` to add the latest version of the
+    dependency
+  - Update go.mod and go.sum files
+  - Verify the dependency is properly integrated
+  - References: Design dependencies section
+
+- [ ] 1.2 Create path resolution module using XDG library
 
   - Create `internal/config/paths.go` with function to determine OS-specific
     config path
-  - Implement logic following XDG Base Directory specification for Linux/Unix
+  - Use XDG library for standard directory resolution on Linux/Unix
   - Implement OS-specific paths for macOS (`~/Library/Application Support`) and
     Windows (`%APPDATA%`)
-  - Add fallback to `~/.config/redmine` if XDG not available
+  - Add appropriate fallbacks for each platform
   - Create corresponding test file `internal/config/paths_test.go` with tests
     for each OS
   - References: Requirement 3 (Configuration Storage - user-specific location)
 
-- [ ] 1.2 Update existing Config struct with JSON tags
+- [ ] 1.3 Update existing Config struct with JSON tags
 
   - Modify `internal/config/config.go` to add JSON tags to Config struct fields
   - Add `json:"url,omitempty"` tag to BaseURL field
@@ -108,14 +116,6 @@ feature, broken down into incremental coding steps that build upon each other.
   - Return appropriate errors for missing required configuration
   - Update all tests that rely on LoadConfig()
   - References: Design migration strategy
-
-- [ ] 5.2 Add XDG library dependency and update module
-
-  - Run `go get github.com/adrg/xdg@v0.4.0` to add the dependency
-  - Update go.mod and go.sum files
-  - Modify paths.go to use XDG library for standard directory resolution
-  - Test that the dependency is properly integrated
-  - References: Design dependencies section
 
 ## 6. Comprehensive Testing
 
