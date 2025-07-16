@@ -4,15 +4,15 @@
 
 This document outlines the requirements for a minimal MVP `redmine` CLI tool
 that provides basic issue listing functionality. This is a vertical slice
-focused on the core feature of retrieving and displaying issues from a
-hardcoded Redmine project.
+focused on the core feature of retrieving and displaying issues from a hardcoded
+Redmine project.
 
 ## Requirements
 
 ### Requirement 1: Issue List Command
 
-**User Story:** As a developer, I want to list issues from a Redmine project,
-so that I can quickly view project status from the command line.
+**User Story:** As a developer, I want to list issues from a Redmine project, so
+that I can quickly view project status from the command line.
 
 #### Acceptance Criteria
 
@@ -29,9 +29,9 @@ wrong, so that I can understand what needs to be fixed.
 
 #### Acceptance Criteria
 
-1. WHEN the Redmine server is unreachable, THEN the system SHALL display
-   "Error: Unable to connect to Redmine server"
-2. WHEN I provide invalid command arguments, THEN the system SHALL display
-   basic usage information
+1. WHEN the Redmine server is unreachable, THEN the system SHALL display "Error:
+   Unable to connect to Redmine server"
+2. WHEN I provide invalid command arguments, THEN the system SHALL display basic
+   usage information
 3. WHEN an API request fails, THEN the system SHALL display a simple error
    message

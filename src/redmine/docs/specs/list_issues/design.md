@@ -2,10 +2,9 @@
 
 ## Overview
 
-This design document outlines the technical implementation for the
-`list_issues` feature of the Redmine CLI tool. The feature allows users to
-retrieve and display issues from a Redmine project via the command line
-interface.
+This design document outlines the technical implementation for the `list_issues`
+feature of the Redmine CLI tool. The feature allows users to retrieve and
+display issues from a Redmine project via the command line interface.
 
 ### Technology Stack Selection
 
@@ -217,16 +216,19 @@ ID     | Subject                           | Status
 ### Error Types
 
 1. **Network Errors**
+
    - Connection refused
    - Timeout
    - DNS resolution failure
 
 2. **API Errors**
+
    - Authentication failure (401)
    - Project not found (404)
    - Server errors (5xx)
 
 3. **Configuration Errors**
+
    - Missing API key
    - Invalid base URL
 
@@ -337,16 +339,19 @@ Feature: List Issues Command
 ### Unit Tests
 
 1. **API Client Tests**
+
    - Mock HTTP responses
    - Test error scenarios
    - Verify request formatting
 
 2. **Formatter Tests**
+
    - Test various issue counts
    - Test empty results
    - Test formatting edge cases
 
 3. **Command Tests**
+
    - Test command execution flow
    - Verify error handling
    - Test output formatting
@@ -473,5 +478,5 @@ that:
 - Allows for future expansion while keeping the MVP simple
 - Follows Go best practices and idioms
 
-The implementation will focus on delivering a reliable, user-friendly
-experience for listing Redmine issues from the command line.
+The implementation will focus on delivering a reliable, user-friendly experience
+for listing Redmine issues from the command line.

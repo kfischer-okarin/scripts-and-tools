@@ -1,9 +1,9 @@
 # Implementation Plan: List Issues Feature
 
 This implementation plan converts the feature design into a series of prompts
-for a code-generation LLM that will implement each step in a test-driven
-manner. Each task builds incrementally on previous tasks, focusing only on
-writing, modifying, or testing code.
+for a code-generation LLM that will implement each step in a test-driven manner.
+Each task builds incrementally on previous tasks, focusing only on writing,
+modifying, or testing code.
 
 ## Implementation Tasks
 
@@ -23,8 +23,8 @@ writing, modifying, or testing code.
   - Create `Config` struct with BaseURL, APIKey, and ProjectID fields
   - Implement `LoadConfig()` function that returns hardcoded values for MVP
   - Write unit tests for configuration loading
-  - *References: Requirement 1 (configured project), Design document*
-    *configuration section*
+  - *References: Requirement 1 (configured project), Design document
+    configuration section*
 
 ### 3. API Data Models Implementation
 
@@ -34,8 +34,8 @@ writing, modifying, or testing code.
   - Add proper JSON tags for API response parsing
   - Create test data fixtures in `internal/api/testdata/issues_response.json`
   - Write unit tests for JSON unmarshaling of API responses
-  - *References: Requirement 1.1 (issue ID, title, status), Design document*
-    *data models section*
+  - *References: Requirement 1.1 (issue ID, title, status), Design document
+    data models section*
 
 ### 4. HTTP API Client Implementation
 
@@ -45,8 +45,8 @@ writing, modifying, or testing code.
   - Implement HTTP client with proper request formation for Redmine API
   - Add timeout and basic HTTP error handling
   - Write unit tests using `httptest` to mock API responses
-  - *References: Requirement 1.1 (retrieve issues), Design document*
-    *API client section*
+  - *References: Requirement 1.1 (retrieve issues), Design document API client
+    section*
 
 ### 5. Issue Formatter Implementation
 
@@ -56,8 +56,8 @@ writing, modifying, or testing code.
   - Implement table layout with proper column alignment and headers
   - Handle empty results case for "No issues found" message
   - Write unit tests for various formatting scenarios including edge cases
-  - *References: Requirement 1.1 (formatted list), Requirement 1.2 (no*
-    *issues), Design document formatter section*
+  - *References: Requirement 1.1 (formatted list), Requirement 1.2 (no issues),
+    Design document formatter section*
 
 ### 6. CLI Framework Setup
 
@@ -68,8 +68,8 @@ writing, modifying, or testing code.
   - Set up command hierarchy with issue subcommand group
   - Add basic help text and usage information
   - Write tests for command structure and help output
-  - *References: Requirement 2.2 (usage information), Design document CLI*
-    *layer section*
+  - *References: Requirement 2.2 (usage information), Design document CLI layer
+    section*
 
 ### 7. List Command Implementation
 
@@ -79,8 +79,8 @@ writing, modifying, or testing code.
   - Implement command execution flow: config → API call → format → display
   - Add command to CLI hierarchy and ensure proper integration
   - Write unit tests for command execution flow
-  - *References: Requirement 1.1 (redmine issue list command), Design document*
-    *command handler section*
+  - *References: Requirement 1.1 (redmine issue list command), Design document
+    command handler section*
 
 ### 8. Error Handling Implementation
 
@@ -92,29 +92,31 @@ writing, modifying, or testing code.
   - Implement user-friendly error messages as specified in design
   - Update API client and command handler to use proper error types
   - Write unit tests for each error scenario
-  - *References: Requirement 2.1 (server unreachable), Requirement 2.3 (API*
-    *failures), Design document error handling section*
+  - *References: Requirement 2.1 (server unreachable), Requirement 2.3 (API
+    failures), Design document error handling section*
 
 ### 9. Acceptance Test Framework Setup
 
 - [ ] 9.1 Create Cucumber acceptance test framework
-  - *Note: Add `github.com/cucumber/godog` dependency when implementing this task*
+  - *Note: Add `github.com/cucumber/godog` dependency when implementing this
+    task*
   - Create `features/list_issues.feature` file with scenarios matching
     acceptance criteria
   - Implement step definitions in
     `features/step_definitions/list_issues_steps.go`
   - Set up test runner in `test/acceptance/acceptance_test.go`
   - Create test helper functions for mocking Redmine server responses
-  - Implement scenario steps for testing successful listing, empty results,
-    and error conditions
-  - *References: Requirement 1.1, 1.2, 2.1, 2.2, 2.3 (all acceptance*
-    *criteria), Design document testing strategy section*
+  - Implement scenario steps for testing successful listing, empty results, and
+    error conditions
+  - *References: Requirement 1.1, 1.2, 2.1, 2.2, 2.3 (all acceptance criteria),
+    Design document testing strategy section*
 
 ### 10. Test Script Creation
 
 - [ ] 10.1 Create test execution scripts
   - Create `scripts/unit-tests` script for running unit tests with coverage
-  - Create `scripts/acceptance-tests` script for running Cucumber acceptance tests
+  - Create `scripts/acceptance-tests` script for running Cucumber acceptance
+    tests
   - Ensure scripts provide clear output and proper exit codes
   - Add test scripts to project documentation
   - *References: Design document testing approach section*
@@ -127,5 +129,5 @@ writing, modifying, or testing code.
   - Test the complete CLI workflow from command execution to output display
   - Validate error handling works correctly for all specified error scenarios
   - Ensure the binary can be built and executed successfully
-  - *References: All requirements (1.1, 1.2, 2.1, 2.2, 2.3), Design document*
-    *integration section*
+  - *References: All requirements (1.1, 1.2, 2.1, 2.2, 2.3), Design document
+    integration section*
