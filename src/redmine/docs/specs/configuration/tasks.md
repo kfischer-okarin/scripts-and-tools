@@ -112,7 +112,6 @@ feature, broken down into incremental coding steps that build upon each other.
   - Modify existing `LoadConfig()` function to check for configuration file
     first
   - Load configuration from file if it exists using ConfigManager
-  - Fall back to hardcoded values if configuration file doesn't exist
   - Return appropriate errors for missing required configuration
   - Update all tests that rely on LoadConfig()
   - References: Design migration strategy

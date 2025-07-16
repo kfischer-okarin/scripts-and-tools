@@ -184,8 +184,7 @@ The `LoadConfig()` function will be updated to:
 
 1. Check for configuration file
 2. Load from file if exists
-3. Fall back to hardcoded values if not configured
-4. Return appropriate errors for missing configuration
+3. Return appropriate errors for missing configuration
 
 ## Error Handling
 
