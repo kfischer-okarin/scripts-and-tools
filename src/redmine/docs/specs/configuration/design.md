@@ -85,6 +85,7 @@ internal/
 ```bash
 redmine config set url <URL>
 redmine config set api-key <KEY>
+redmine config set project-id <ID>
 redmine config show
 ```
 
@@ -111,6 +112,7 @@ type configManager struct {
 
 - `url`: Redmine server URL
 - `api-key`: API authentication key
+- `project-id`: Default Redmine project identifier
 
 ### 3. Configuration Storage
 
@@ -298,12 +300,19 @@ Feature: Configuration Management
     Then the output should contain "Configuration saved successfully"
     And the configuration file should contain the API key
 
+  Scenario: Set Project ID
+    When I run "redmine config set project-id my-project"
+    Then the output should contain "Configuration saved successfully"
+    And the configuration file should contain the project ID
+
   Scenario: Show Configuration
     Given I have configured URL "https://redmine.example.com"
     And I have configured API key "abc123"
+    And I have configured project ID "my-project"
     When I run "redmine config show"
     Then the output should contain "URL: https://redmine.example.com"
     And the output should contain "API Key: ****23"
+    And the output should contain "Project ID: my-project"
 
   Scenario: Show Empty Configuration
     Given no configuration exists
@@ -422,10 +431,16 @@ compatibility while keeping the solution simple and maintainable.
 
 ### Design Decision: Why Not Viper?
 
-While Viper is a popular configuration library, we chose a simpler approach because:
+While Viper is a popular configuration library, we chose a simpler approach
+because:
 
-1. **Minimal Requirements**: With only 2 configuration values, Viper's extensive features are unnecessary
-2. **Security Control**: Direct file operations give us precise control over permissions (0600)
-3. **Reduced Dependencies**: Fewer dependencies mean smaller binaries and easier maintenance
-4. **Simplicity**: The standard library provides all we need for JSON config files
-5. **Future Flexibility**: We can always migrate to Viper later if configuration needs grow complex
+1. **Minimal Requirements**: With only 3 configuration values, Viper's extensive
+   features are unnecessary
+2. **Security Control**: Direct file operations give us precise control over
+   permissions (0600)
+3. **Reduced Dependencies**: Fewer dependencies mean smaller binaries and easier
+   maintenance
+4. **Simplicity**: The standard library provides all we need for JSON config
+   files
+5. **Future Flexibility**: We can always migrate to Viper later if configuration
+   needs grow complex
