@@ -335,14 +335,6 @@ Feature: Configuration Management
     Then the output should contain a security warning
 ```
 
-### Integration Tests
-
-Test integration with existing `list` command:
-
-1. Configure valid settings
-2. Run `redmine issue list`
-3. Verify it uses configured values
-
 ## Implementation Plan
 
 ### Phase 1: Core Implementation
