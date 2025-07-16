@@ -143,10 +143,10 @@ type fileStore struct {
 
 **Path Hierarchy**:
 
-1. `$XDG_CONFIG_HOME/redmine/config.json` (Linux/Unix)
-2. `$HOME/.config/redmine/config.json` (Linux/Unix fallback)
-3. `$HOME/Library/Application Support/redmine/config.json` (macOS)
-4. `%APPDATA%\redmine\config.json` (Windows)
+1. `$XDG_CONFIG_HOME/redmine/cli-config.json` (Linux/Unix)
+2. `$HOME/.config/redmine/cli-config.json` (Linux/Unix fallback)
+3. `$HOME/Library/Application Support/redmine/cli-config.json` (macOS)
+4. `%APPDATA%\redmine\cli-config.json` (Windows)
 
 ## Data Models
 
@@ -159,7 +159,8 @@ type fileStore struct {
 ```json
 {
   "url": "https://redmine.example.com",
-  "api_key": "your-api-key-here"
+  "api_key": "your-api-key-here",
+  "project_id": "sample-project"
 }
 ```
 
@@ -171,7 +172,7 @@ The existing `Config` struct will be enhanced with JSON tags:
 type Config struct {
     BaseURL   string `json:"url,omitempty"`
     APIKey    string `json:"api_key,omitempty"`
-    ProjectID string `json:"project_id,omitempty"` // Future use
+    ProjectID string `json:"project_id,omitempty"` // Keep for future use
 }
 ```
 
@@ -418,3 +419,13 @@ that:
 
 The implementation focuses on security, usability, and cross-platform
 compatibility while keeping the solution simple and maintainable.
+
+### Design Decision: Why Not Viper?
+
+While Viper is a popular configuration library, we chose a simpler approach because:
+
+1. **Minimal Requirements**: With only 2 configuration values, Viper's extensive features are unnecessary
+2. **Security Control**: Direct file operations give us precise control over permissions (0600)
+3. **Reduced Dependencies**: Fewer dependencies mean smaller binaries and easier maintenance
+4. **Simplicity**: The standard library provides all we need for JSON config files
+5. **Future Flexibility**: We can always migrate to Viper later if configuration needs grow complex
