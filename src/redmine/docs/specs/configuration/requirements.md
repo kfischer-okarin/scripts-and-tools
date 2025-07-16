@@ -2,17 +2,18 @@
 
 ## Introduction
 
-This feature enables users to configure the Redmine URL and API key through the
-command-line interface. This provides a simple CLI-based approach to set the
-connection data needed for the tool to communicate with a Redmine server.
+This feature enables users to configure the Redmine URL, API key, and project ID
+through the command-line interface. This provides a simple CLI-based approach to
+set the connection data and project context needed for the tool to communicate
+with a Redmine server.
 
 ## Requirements
 
 ### Requirement 1: Set Configuration Values
 
-**User Story:** As a user, I want to set the Redmine URL and API key through CLI
-commands, so that I can quickly configure the tool without manually editing
-files.
+**User Story:** As a user, I want to set the Redmine URL, API key, and project
+ID through CLI commands, so that I can quickly configure the tool without
+manually editing files.
 
 #### Acceptance Criteria
 
@@ -20,9 +21,11 @@ files.
    store the provided URL as the Redmine server endpoint.
 2. WHEN the user runs `redmine config set api-key <KEY>`, THEN the system SHALL
    store the provided API key.
-3. WHEN the user sets a configuration value, THEN the system SHALL display a
+3. WHEN the user runs `redmine config set project-id <ID>`, THEN the system
+   SHALL store the provided project ID.
+4. WHEN the user sets a configuration value, THEN the system SHALL display a
    confirmation message indicating the value was successfully stored.
-4. WHEN the user sets a configuration value that already exists, THEN the system
+5. WHEN the user sets a configuration value that already exists, THEN the system
    SHALL overwrite the existing value.
 
 ### Requirement 2: View Configuration Values
@@ -33,7 +36,7 @@ that I can verify my settings.
 #### Acceptance Criteria
 
 1. WHEN the user runs `redmine config show`, THEN the system SHALL display all
-   current configuration values (URL and API key).
+   current configuration values (URL, API key, and project ID).
 2. WHEN no configuration values are set, THEN the system SHALL display a message
    indicating no configuration is found.
 
