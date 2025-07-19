@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -254,4 +255,172 @@ func TestFileStore_AtomicWrite(t *testing.T) {
 	if loaded.BaseURL != originalConfig.BaseURL {
 		t.Errorf("Loaded config doesn't match saved config")
 	}
+}
+
+func TestFileStore_LoadWithInsecurePermissions(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.json")
+
+	// Create config file with insecure permissions
+	config := &Config{
+		BaseURL:   "https://redmine.example.com",
+		APIKey:    "test-api-key",
+		ProjectID: "test-project",
+	}
+	data, _ := json.MarshalIndent(config, "", "  ")
+
+	// Create directory first
+	os.MkdirAll(filepath.Dir(configPath), 0700)
+
+	// Write file with insecure permissions
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	fs := NewFileStore(configPath)
+	_, err := fs.Load()
+
+	if err == nil {
+		t.Error("Load() should have failed with insecure permissions")
+	}
+
+	if err != nil && !contains(err.Error(), "insecure configuration file permissions") {
+		t.Errorf("Load() error = %v, want error about insecure permissions", err)
+	}
+
+	if err != nil && !contains(err.Error(), "run 'redmine config fix-permissions' to correct") {
+		t.Errorf("Load() error should suggest fix-permissions command, got: %v", err)
+	}
+}
+
+func TestFileStore_CheckPermissions(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupFunc func(string) error
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name: "secure permissions",
+			setupFunc: func(path string) error {
+				return os.WriteFile(path, []byte("{}"), 0600)
+			},
+			wantErr: false,
+		},
+		{
+			name: "insecure permissions - world readable",
+			setupFunc: func(path string) error {
+				return os.WriteFile(path, []byte("{}"), 0644)
+			},
+			wantErr: true,
+			errMsg:  "insecure configuration file permissions",
+		},
+		{
+			name: "insecure permissions - group readable",
+			setupFunc: func(path string) error {
+				return os.WriteFile(path, []byte("{}"), 0640)
+			},
+			wantErr: true,
+			errMsg:  "insecure configuration file permissions",
+		},
+		{
+			name:      "file does not exist",
+			setupFunc: func(path string) error { return nil },
+			wantErr:   true,
+			errMsg:    "configuration file not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.json")
+
+			os.MkdirAll(filepath.Dir(configPath), 0700)
+
+			if tt.setupFunc != nil {
+				if err := tt.setupFunc(configPath); err != nil {
+					t.Fatalf("Setup failed: %v", err)
+				}
+			}
+
+			fs := NewFileStore(configPath)
+			err := fs.CheckPermissions()
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CheckPermissions() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if tt.wantErr && tt.errMsg != "" && !contains(err.Error(), tt.errMsg) {
+				t.Errorf("CheckPermissions() error = %v, want error containing %v", err, tt.errMsg)
+			}
+		})
+	}
+}
+
+func TestFileStore_FixPermissions(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupFunc func(string) error
+		wantErr   bool
+	}{
+		{
+			name: "fix insecure permissions",
+			setupFunc: func(path string) error {
+				return os.WriteFile(path, []byte("{}"), 0644)
+			},
+			wantErr: false,
+		},
+		{
+			name: "fix already secure permissions",
+			setupFunc: func(path string) error {
+				return os.WriteFile(path, []byte("{}"), 0600)
+			},
+			wantErr: false,
+		},
+		{
+			name:      "file does not exist",
+			setupFunc: func(path string) error { return nil },
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.json")
+
+			os.MkdirAll(filepath.Dir(configPath), 0700)
+
+			if tt.setupFunc != nil {
+				if err := tt.setupFunc(configPath); err != nil {
+					t.Fatalf("Setup failed: %v", err)
+				}
+			}
+
+			fs := NewFileStore(configPath)
+			err := fs.FixPermissions()
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("FixPermissions() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if !tt.wantErr {
+				// Verify permissions were fixed
+				info, err := os.Stat(configPath)
+				if err != nil {
+					t.Fatalf("Failed to stat fixed file: %v", err)
+				}
+
+				if info.Mode().Perm() != 0600 {
+					t.Errorf("Fixed permissions = %v, want %v", info.Mode().Perm(), 0600)
+				}
+			}
+		})
+	}
+}
+
+// Helper function to check if a string contains a substring
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }

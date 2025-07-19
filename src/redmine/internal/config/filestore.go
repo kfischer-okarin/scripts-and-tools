@@ -13,6 +13,8 @@ type ConfigStore interface {
 	Save(config *Config) error
 	Exists() bool
 	GetPath() string
+	CheckPermissions() error
+	FixPermissions() error
 }
 
 type fileStore struct {
@@ -32,6 +34,16 @@ func (fs *fileStore) Load() (*Config, error) {
 		return nil, fmt.Errorf("failed to open configuration file: %w", err)
 	}
 	defer file.Close()
+
+	// Check file permissions
+	info, err := file.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("failed to stat configuration file: %w", err)
+	}
+
+	if info.Mode().Perm() != 0600 {
+		return nil, fmt.Errorf("insecure configuration file permissions %v (want 0600): run 'redmine config fix-permissions' to correct", info.Mode().Perm())
+	}
 
 	data, err := io.ReadAll(file)
 	if err != nil {
@@ -77,4 +89,32 @@ func (fs *fileStore) Exists() bool {
 
 func (fs *fileStore) GetPath() string {
 	return fs.path
+}
+
+func (fs *fileStore) CheckPermissions() error {
+	info, err := os.Stat(fs.path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("configuration file not found at %s", fs.path)
+		}
+		return fmt.Errorf("failed to stat configuration file: %w", err)
+	}
+
+	if info.Mode().Perm() != 0600 {
+		return fmt.Errorf("insecure configuration file permissions %v (want 0600)", info.Mode().Perm())
+	}
+
+	return nil
+}
+
+func (fs *fileStore) FixPermissions() error {
+	if !fs.Exists() {
+		return fmt.Errorf("configuration file not found at %s", fs.path)
+	}
+
+	if err := os.Chmod(fs.path, 0600); err != nil {
+		return fmt.Errorf("failed to fix configuration file permissions: %w", err)
+	}
+
+	return nil
 }
