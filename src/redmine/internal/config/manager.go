@@ -6,6 +6,68 @@ import (
 	"strings"
 )
 
+// ErrorType represents different types of configuration errors
+type ErrorType string
+
+const (
+	InvalidKeyError     ErrorType = "invalid_key"
+	EmptyValueError     ErrorType = "empty_value"
+	InvalidURLError     ErrorType = "invalid_url"
+	InvalidAPIKeyError  ErrorType = "invalid_api_key"
+	InvalidProjectError ErrorType = "invalid_project"
+	PermissionError     ErrorType = "permission_error"
+	FileCorruptedError  ErrorType = "file_corrupted"
+	InsecureFileError   ErrorType = "insecure_file"
+	LoadError           ErrorType = "load_error"
+	SaveError           ErrorType = "save_error"
+)
+
+// ConfigError represents a configuration-related error with actionable guidance
+type ConfigError struct {
+	Type    ErrorType
+	Message string
+	Cause   error
+}
+
+func (e *ConfigError) Error() string {
+	if e.Cause != nil {
+		return fmt.Sprintf("%s: %v", e.Message, e.Cause)
+	}
+	return e.Message
+}
+
+func (e *ConfigError) Unwrap() error {
+	return e.Cause
+}
+
+// User-friendly error messages with actionable guidance
+var errorMessages = map[ErrorType]string{
+	InvalidKeyError:     "Invalid configuration key. Supported keys are: url, api-key, project-id",
+	EmptyValueError:     "Configuration value cannot be empty. Please provide a valid value",
+	InvalidURLError:     "Invalid URL format. Please provide a valid HTTPS URL (e.g., https://redmine.example.com)",
+	InvalidAPIKeyError:  "Invalid API key. Please ensure your API key is at least 8 characters long",
+	InvalidProjectError: "Invalid project ID. Project IDs cannot contain spaces or special characters",
+	PermissionError:     "Unable to save configuration due to insufficient permissions. Please check file permissions",
+	FileCorruptedError:  "Configuration file is corrupted. Please delete the file and reconfigure",
+	InsecureFileError:   "Configuration file has insecure permissions. Please run 'chmod 600' on the config file",
+	LoadError:           "Failed to load configuration. Please check if the file exists and is readable",
+	SaveError:           "Failed to save configuration. Please check if you have write permissions",
+}
+
+// newConfigError creates a new ConfigError with user-friendly message
+func newConfigError(errorType ErrorType, cause error) *ConfigError {
+	message, exists := errorMessages[errorType]
+	if !exists {
+		message = "Unknown configuration error occurred"
+	}
+
+	return &ConfigError{
+		Type:    errorType,
+		Message: message,
+		Cause:   cause,
+	}
+}
+
 // ConfigManager handles configuration operations
 type ConfigManager interface {
 	Set(key string, value string) error
@@ -30,7 +92,7 @@ func NewConfigManager(store ConfigStore) ConfigManager {
 func (m *configManager) Set(key string, value string) error {
 	// Validate the key
 	if !isValidKey(key) {
-		return fmt.Errorf("invalid configuration key: %s", key)
+		return newConfigError(InvalidKeyError, nil)
 	}
 
 	// Validate the value
@@ -41,7 +103,7 @@ func (m *configManager) Set(key string, value string) error {
 	// Load existing config or create new one
 	config, err := m.store.Load()
 	if err != nil && !isNotExistError(err) {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return newConfigError(LoadError, err)
 	}
 	if config == nil {
 		config = &Config{}
@@ -59,7 +121,7 @@ func (m *configManager) Set(key string, value string) error {
 
 	// Save the updated configuration
 	if err := m.store.Save(config); err != nil {
-		return fmt.Errorf("failed to save configuration: %w", err)
+		return newConfigError(SaveError, err)
 	}
 
 	return nil
@@ -68,12 +130,12 @@ func (m *configManager) Set(key string, value string) error {
 // Get retrieves a configuration value by key
 func (m *configManager) Get(key string) (string, error) {
 	if !isValidKey(key) {
-		return "", fmt.Errorf("invalid configuration key: %s", key)
+		return "", newConfigError(InvalidKeyError, nil)
 	}
 
 	config, err := m.store.Load()
 	if err != nil {
-		return "", fmt.Errorf("failed to load configuration: %w", err)
+		return "", newConfigError(LoadError, err)
 	}
 
 	switch key {
@@ -84,7 +146,7 @@ func (m *configManager) Get(key string) (string, error) {
 	case "project-id":
 		return config.ProjectID, nil
 	default:
-		return "", fmt.Errorf("unknown configuration key: %s", key)
+		return "", newConfigError(InvalidKeyError, nil)
 	}
 }
 
@@ -92,7 +154,7 @@ func (m *configManager) Get(key string) (string, error) {
 func (m *configManager) GetAll() (*Config, error) {
 	config, err := m.store.Load()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, newConfigError(LoadError, err)
 	}
 	return config, nil
 }
@@ -136,7 +198,7 @@ func isValidKey(key string) bool {
 func validateValue(key string, value string) error {
 	// Check for empty values
 	if strings.TrimSpace(value) == "" {
-		return fmt.Errorf("configuration value cannot be empty")
+		return newConfigError(EmptyValueError, nil)
 	}
 
 	// Key-specific validation
@@ -145,23 +207,23 @@ func validateValue(key string, value string) error {
 		// Validate URL format and require HTTPS
 		u, err := url.Parse(value)
 		if err != nil {
-			return fmt.Errorf("invalid URL format: %w", err)
+			return newConfigError(InvalidURLError, err)
 		}
 		if u.Scheme == "" || u.Host == "" {
-			return fmt.Errorf("invalid URL format: missing scheme or host")
+			return newConfigError(InvalidURLError, fmt.Errorf("missing scheme or host"))
 		}
 		if u.Scheme != "https" {
-			return fmt.Errorf("URL must use HTTPS for security")
+			return newConfigError(InvalidURLError, fmt.Errorf("URL must use HTTPS for security"))
 		}
 	case "api-key":
 		// Basic validation for API key (non-empty already checked)
 		if len(value) < 8 {
-			return fmt.Errorf("API key seems too short")
+			return newConfigError(InvalidAPIKeyError, fmt.Errorf("API key is too short (minimum 8 characters)"))
 		}
 	case "project-id":
 		// Project ID validation (basic check for now)
 		if strings.ContainsAny(value, " \t\n\r") {
-			return fmt.Errorf("project ID cannot contain whitespace")
+			return newConfigError(InvalidProjectError, fmt.Errorf("project ID contains whitespace characters"))
 		}
 	}
 

@@ -98,21 +98,21 @@ func TestConfigManager_Set(t *testing.T) {
 			key:           "invalid-key",
 			value:         "some-value",
 			wantError:     true,
-			errorContains: "invalid configuration key",
+			errorContains: "Invalid configuration key",
 		},
 		{
 			name:          "empty value",
 			key:           "url",
 			value:         "",
 			wantError:     true,
-			errorContains: "configuration value cannot be empty",
+			errorContains: "Configuration value cannot be empty",
 		},
 		{
 			name:          "whitespace only value",
 			key:           "api-key",
 			value:         "   ",
 			wantError:     true,
-			errorContains: "configuration value cannot be empty",
+			errorContains: "Configuration value cannot be empty",
 		},
 		{
 			name:          "non-HTTPS URL",
@@ -140,14 +140,14 @@ func TestConfigManager_Set(t *testing.T) {
 			key:           "api-key",
 			value:         "short",
 			wantError:     true,
-			errorContains: "API key seems too short",
+			errorContains: "Invalid API key",
 		},
 		{
 			name:          "project ID with whitespace",
 			key:           "project-id",
 			value:         "my project",
 			wantError:     true,
-			errorContains: "project ID cannot contain whitespace",
+			errorContains: "Invalid project ID",
 		},
 		{
 			name:          "save error",
@@ -155,7 +155,7 @@ func TestConfigManager_Set(t *testing.T) {
 			value:         "https://redmine.example.com",
 			saveError:     errors.New("permission denied"),
 			wantError:     true,
-			errorContains: "failed to save configuration",
+			errorContains: "Failed to save configuration",
 		},
 		{
 			name:      "create new config when none exists",
@@ -248,14 +248,14 @@ func TestConfigManager_Get(t *testing.T) {
 			key:           "invalid-key",
 			config:        config,
 			wantError:     true,
-			errorContains: "invalid configuration key",
+			errorContains: "Invalid configuration key",
 		},
 		{
 			name:          "load error",
 			key:           "url",
 			loadError:     errors.New("permission denied"),
 			wantError:     true,
-			errorContains: "failed to load configuration",
+			errorContains: "Failed to load configuration",
 		},
 		{
 			name:   "get empty value",
@@ -317,7 +317,7 @@ func TestConfigManager_GetAll(t *testing.T) {
 			name:          "load error",
 			loadError:     errors.New("permission denied"),
 			wantError:     true,
-			errorContains: "failed to load configuration",
+			errorContains: "Failed to load configuration",
 		},
 	}
 
@@ -389,7 +389,7 @@ func TestConfigManager_Save(t *testing.T) {
 				APIKey: "short",
 			},
 			wantError:     true,
-			errorContains: "API key seems too short",
+			errorContains: "Invalid API key",
 		},
 		{
 			name: "save config with invalid project ID",
@@ -397,7 +397,7 @@ func TestConfigManager_Save(t *testing.T) {
 				ProjectID: "has spaces",
 			},
 			wantError:     true,
-			errorContains: "project ID cannot contain whitespace",
+			errorContains: "Invalid project ID",
 		},
 		{
 			name: "save error from store",
@@ -511,7 +511,7 @@ func TestValidateValue(t *testing.T) {
 			key:           "api-key",
 			value:         "short",
 			wantError:     true,
-			errorContains: "too short",
+			errorContains: "Invalid API key",
 		},
 		// Project ID validation tests
 		{
@@ -529,14 +529,14 @@ func TestValidateValue(t *testing.T) {
 			key:           "project-id",
 			value:         "my project",
 			wantError:     true,
-			errorContains: "cannot contain whitespace",
+			errorContains: "Invalid project ID",
 		},
 		{
 			name:          "project ID with tab",
 			key:           "project-id",
 			value:         "my\tproject",
 			wantError:     true,
-			errorContains: "cannot contain whitespace",
+			errorContains: "Invalid project ID",
 		},
 		// General validation tests
 		{
@@ -544,14 +544,14 @@ func TestValidateValue(t *testing.T) {
 			key:           "url",
 			value:         "",
 			wantError:     true,
-			errorContains: "cannot be empty",
+			errorContains: "Configuration value cannot be empty",
 		},
 		{
 			name:          "whitespace only",
 			key:           "api-key",
 			value:         "   ",
 			wantError:     true,
-			errorContains: "cannot be empty",
+			errorContains: "Configuration value cannot be empty",
 		},
 	}
 
