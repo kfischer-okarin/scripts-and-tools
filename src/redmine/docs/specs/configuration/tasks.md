@@ -5,7 +5,7 @@ feature, broken down into incremental coding steps that build upon each other.
 
 ## 1. Foundation: Dependencies and Configuration Structure
 
-- [ ] 1.1 Add XDG library dependency
+- [x] 1.1 Add XDG library dependency
 
   - Run `go get github.com/adrg/xdg@latest` to add the latest version of the
     dependency
@@ -13,7 +13,7 @@ feature, broken down into incremental coding steps that build upon each other.
   - Verify the dependency is properly integrated
   - References: Design dependencies section
 
-- [ ] 1.2 Create path resolution module using XDG library
+- [x] 1.2 Create path resolution module using XDG library
 
   - Create `internal/config/paths.go` with function to determine OS-specific
     config path
