@@ -25,7 +25,7 @@ feature, broken down into incremental coding steps that build upon each other.
     for each OS
   - References: Requirement 3 (Configuration Storage - user-specific location)
 
-- [ ] 1.3 Update existing Config struct with JSON tags
+- [x] 1.3 Update existing Config struct with JSON tags
 
   - Modify `internal/config/config.go` to add JSON tags to Config struct fields
   - Add `json:"url,omitempty"` tag to BaseURL field

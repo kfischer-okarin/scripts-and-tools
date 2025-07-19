@@ -7,15 +7,15 @@ package config
 // All fields are required for proper operation.
 type Config struct {
 	// BaseURL is the base URL of the Redmine instance (e.g., "https://redmine.example.com")
-	BaseURL string
+	BaseURL string `json:"url,omitempty"`
 
 	// APIKey is the personal API key for authenticating with the Redmine API.
 	// This can be found in your Redmine account settings under "My account" > "API access key"
-	APIKey string
+	APIKey string `json:"api_key,omitempty"`
 
 	// ProjectID is the identifier of the default Redmine project to work with.
 	// This can be either the project's numeric ID or its string identifier (slug)
-	ProjectID string
+	ProjectID string `json:"project_id,omitempty"`
 }
 
 // LoadConfig returns the configuration for the Redmine CLI application.
