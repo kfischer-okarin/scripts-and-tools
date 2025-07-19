@@ -36,7 +36,7 @@ feature, broken down into incremental coding steps that build upon each other.
 
 ## 2. Storage Layer: File-Based Configuration Persistence
 
-- [ ] 2.1 Create ConfigStore interface and file store implementation
+- [x] 2.1 Create ConfigStore interface and file store implementation
 
   - Create `internal/config/filestore.go` with ConfigStore interface
   - Implement fileStore struct with Load(), Save(), Exists(), and GetPath()
