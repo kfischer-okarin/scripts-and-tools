@@ -5,11 +5,19 @@ import AppKit
 
 // Set up logging to file
 let dataDir = "\(NSHomeDirectory())/.local/share/ActiveAppMonitor"
-let logPath = "\(dataDir)/activity.log"
 
 // Create directory if it doesn't exist
 try? FileManager.default.createDirectory(atPath: dataDir, withIntermediateDirectories: true, attributes: nil)
 
+// Get current date for filename
+func getCurrentDateString() -> String {
+    let dateFormatter = DateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+    dateFormatter.timeZone = TimeZone.current
+    return dateFormatter.string(from: Date())
+}
+
+let logPath = "\(dataDir)/activity-\(getCurrentDateString()).log"
 let logURL = URL(fileURLWithPath: logPath)
 
 private func orderedToJson(_ pairs: KeyValuePairs<String, Any>) -> String? {
