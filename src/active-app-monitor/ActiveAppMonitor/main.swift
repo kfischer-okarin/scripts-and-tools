@@ -4,7 +4,12 @@ import Foundation
 import AppKit
 
 // Set up logging to file
-let logPath = "\(NSHomeDirectory())/Library/Logs/ActiveAppMonitor.log"
+let dataDir = "\(NSHomeDirectory())/.local/share/ActiveAppMonitor"
+let logPath = "\(dataDir)/activity.log"
+
+// Create directory if it doesn't exist
+try? FileManager.default.createDirectory(atPath: dataDir, withIntermediateDirectories: true, attributes: nil)
+
 let logURL = URL(fileURLWithPath: logPath)
 
 private func orderedToJson(_ pairs: KeyValuePairs<String, Any>) -> String? {
