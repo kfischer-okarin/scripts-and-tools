@@ -37,7 +37,7 @@ enum LogMessage {
     }
 }
 
-// Set up logging to file
+// Data directory for logs
 let dataDir = "\(NSHomeDirectory())/.local/share/ActiveAppMonitor"
 
 // Create directory if it doesn't exist
@@ -50,9 +50,6 @@ func getCurrentDateString() -> String {
     dateFormatter.timeZone = TimeZone.current
     return dateFormatter.string(from: Date())
 }
-
-let logPath = "\(dataDir)/activity-\(getCurrentDateString()).log"
-let logURL = URL(fileURLWithPath: logPath)
 
 private func orderedToJson(_ pairs: KeyValuePairs<String, Any>) -> String? {
     var jsonParts = [String]()
@@ -100,6 +97,10 @@ func logMessage(_ message: LogMessage) {
 
     // Write to stdout if running from terminal
     print(jsonString)
+
+    // Get current log path (this can change if date changes)
+    let logPath = "\(dataDir)/activity-\(getCurrentDateString()).log"
+    let logURL = URL(fileURLWithPath: logPath)
 
     // Also write to log file
     let logEntry = jsonString + "\n"
