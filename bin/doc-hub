@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Get the directory where this script is located
+PROJECT_DIR="$(dirname $0)/../src/doc-hub"
+
+eval $(mise env --cd $PROJECT_DIR)
+
+export BUNDLE_GEMFILE=$PROJECT_DIR/Gemfile
+
+$PROJECT_DIR/exe/doc-hub "$@"
+
