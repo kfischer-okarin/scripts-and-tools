@@ -25,15 +25,16 @@ if [ $? -eq 0 ]; then
 
     echo "✅ Build successful!"
     echo "📍 App location: $(pwd)/dist/ActiveAppMonitor.app"
-    echo ""
+    echo
     echo "To run the app:"
     echo "  open dist/ActiveAppMonitor.app"
-    echo ""
+    echo
     echo "To view logs:"
     echo "  tail -f ~/Library/Logs/ActiveAppMonitor.log"
-    echo ""
+    echo
     echo "To stop the app:"
     echo "  pkill ActiveAppMonitor"
+    echo
 else
     echo "❌ Build failed!"
     exit 1
