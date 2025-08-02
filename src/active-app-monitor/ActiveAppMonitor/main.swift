@@ -3,6 +3,40 @@
 import Foundation
 import AppKit
 
+// Define message types as an enum with associated values
+enum LogMessage {
+    case appActive(app: String)
+    case systemMessage(message: String)
+
+    var type: String {
+        switch self {
+        case .appActive: return "appActive"
+        case .systemMessage: return "systemMessage"
+        }
+    }
+
+    var orderedPairs: KeyValuePairs<String, Any> {
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.timeZone = TimeZone.current
+        let timestamp = dateFormatter.string(from: Date())
+
+        switch self {
+        case .appActive(let app):
+            return [
+                "timestamp": timestamp,
+                "type": type,
+                "app": app
+            ]
+        case .systemMessage(let message):
+            return [
+                "timestamp": timestamp,
+                "type": type,
+                "message": message
+            ]
+        }
+    }
+}
+
 // Set up logging to file
 let dataDir = "\(NSHomeDirectory())/.local/share/ActiveAppMonitor"
 
@@ -61,35 +95,8 @@ private func orderedToJson(_ pairs: KeyValuePairs<String, Any>) -> String? {
     return "{\(jsonParts.joined(separator: ","))}"
 }
 
-func logMessage(_ type: String, _ content: [String: String]) {
-    let dateFormatter = ISO8601DateFormatter()
-    dateFormatter.timeZone = TimeZone.current
-    let timestamp = dateFormatter.string(from: Date())
-
-    // Build ordered key-value pairs based on type
-    let orderedPairs: KeyValuePairs<String, Any>
-
-    switch type {
-    case "appActive":
-        orderedPairs = [
-            "timestamp": timestamp,
-            "type": type,
-            "app": content["app"] ?? "Unknown"
-        ]
-    case "systemMessage":
-        orderedPairs = [
-            "timestamp": timestamp,
-            "type": type,
-            "message": content["message"] ?? ""
-        ]
-    default:
-        orderedPairs = [
-            "timestamp": timestamp,
-            "type": type
-        ]
-    }
-
-    guard let jsonString = orderedToJson(orderedPairs) else { return }
+func logMessage(_ message: LogMessage) {
+    guard let jsonString = orderedToJson(message.orderedPairs) else { return }
 
     // Write to stdout if running from terminal
     print(jsonString)
@@ -110,7 +117,7 @@ func logMessage(_ type: String, _ content: [String: String]) {
 }
 
 // 1) Log startup
-logMessage("systemMessage", ["message": "ActiveAppMonitor started"])
+logMessage(.systemMessage(message: "ActiveAppMonitor started"))
 
 // 2) Subscribe to activation notifications
 let nc = NSWorkspace.shared.notificationCenter
@@ -121,7 +128,7 @@ nc.addObserver(
 ) { note in
     if let app = note.userInfo?[NSWorkspace.applicationUserInfoKey]
                  as? NSRunningApplication {
-        logMessage("appActive", ["app": app.localizedName ?? "Unknown"])
+        logMessage(.appActive(app: app.localizedName ?? "Unknown"))
     }
 }
 
