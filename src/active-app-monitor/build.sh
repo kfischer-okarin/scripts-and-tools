@@ -17,7 +17,7 @@ mkdir -p dist/ActiveAppMonitor.app/Contents/MacOS
 cp ActiveAppMonitor/Info.plist dist/ActiveAppMonitor.app/Contents/
 
 # Compile the Swift code
-swiftc ActiveAppMonitor/main.swift -o dist/ActiveAppMonitor.app/Contents/MacOS/ActiveAppMonitor
+swiftc ActiveAppMonitor/main.swift ActiveAppMonitor/Logger.swift -o dist/ActiveAppMonitor.app/Contents/MacOS/ActiveAppMonitor
 
 if [ $? -eq 0 ]; then
     # Code sign the app (ad-hoc signing for local use)
