@@ -10,7 +10,7 @@ module Worktime
   class NotWorkingError < StandardError; end
 
   class Tracker
-    Status = Data.define(:state, :work_minutes, :surplus_minutes)
+    Status = Data.define(:state, :work_minutes, :todays_surplus_minutes, :month_surplus_minutes, :projected_end_time)
     DayStats = Data.define(:date, :work_minutes, :surplus_minutes)
     MonthStats = Data.define(:days, :total_surplus_minutes)
 
@@ -47,7 +47,13 @@ module Worktime
     end
 
     def status
-      Status.new(state: state, work_minutes: work_minutes, surplus_minutes: surplus_minutes)
+      Status.new(
+        state: state,
+        work_minutes: work_minutes,
+        todays_surplus_minutes: todays_surplus_minutes,
+        month_surplus_minutes: month_surplus_minutes,
+        projected_end_time: projected_end_time
+      )
     end
 
     def set_hours(hours, date: @now.to_date)
@@ -67,8 +73,27 @@ module Worktime
 
     private
 
-    def surplus_minutes
+    def projected_end_time
+      events = events_for_date(@now.to_date)
+      start_event = events.find { |e| e[:event] == :start }
+      return nil unless start_event
+
+      start_time = parse_time_for_date(start_event[:time], @now.to_date)
+      total = ((@now - start_time) / 60).to_i
+      worked_so_far = total - break_minutes_for_date(events, @now.to_date)
+      remaining_work = expected_minutes - worked_so_far
+
+      end_time = @now + (remaining_work * 60)
+      end_time += (60 * 60) unless lunch_taken?
+      end_time
+    end
+
+    def todays_surplus_minutes
       work_minutes - expected_minutes
+    end
+
+    def month_surplus_minutes
+      month_statistics.total_surplus_minutes
     end
 
     def expected_minutes

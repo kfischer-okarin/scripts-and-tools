@@ -162,7 +162,7 @@ class TrackerTest < Minitest::Test
     assert_equal 8 * 60, tracker.status.work_minutes
   end
 
-  def test_surplus_minutes_when_worked_more_than_expected
+  def test_todays_surplus_minutes_when_worked_more_than_expected
     at_nine = Time.new(2024, 12, 10, 9, 0, 0)
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
     tracker.start
@@ -171,7 +171,7 @@ class TrackerTest < Minitest::Test
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_six)
     tracker.stop
 
-    assert_equal 60, tracker.status.surplus_minutes
+    assert_equal 60, tracker.status.todays_surplus_minutes
   end
 
   def test_set_hours_overrides_expected_hours_for_today
@@ -184,7 +184,7 @@ class TrackerTest < Minitest::Test
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
     tracker.stop
 
-    assert_equal 0, tracker.status.surplus_minutes
+    assert_equal 0, tracker.status.todays_surplus_minutes
   end
 
   def test_month_statistics_returns_days_with_work_data
@@ -212,5 +212,56 @@ class TrackerTest < Minitest::Test
     assert_equal 9 * 60, result.days[1].work_minutes
     assert_equal 60, result.days[1].surplus_minutes
     assert_equal 60, result.total_surplus_minutes
+  end
+
+  def test_projected_end_time_after_lunch
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_one = Time.new(2024, 12, 10, 13, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
+    tracker.toggle_lunch
+
+    at_two = Time.new(2024, 12, 10, 14, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_two)
+
+    assert_equal Time.new(2024, 12, 10, 18, 0, 0), tracker.status.projected_end_time
+  end
+
+  def test_projected_end_time_before_lunch_adds_one_hour
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_ten = Time.new(2024, 12, 10, 10, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_ten)
+
+    assert_equal Time.new(2024, 12, 10, 18, 0, 0), tracker.status.projected_end_time
+  end
+
+  def test_status_has_todays_surplus_and_month_surplus
+    day1_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day1_nine)
+    tracker.start
+    day1_seven = Time.new(2024, 12, 10, 18, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day1_seven)
+    tracker.stop
+
+    day2_nine = Time.new(2024, 12, 11, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day2_nine)
+    tracker.start
+    day2_six = Time.new(2024, 12, 11, 17, 30, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day2_six)
+    tracker.stop
+
+    status = tracker.status
+
+    assert_equal 30, status.todays_surplus_minutes
+    assert_equal 90, status.month_surplus_minutes
   end
 end
