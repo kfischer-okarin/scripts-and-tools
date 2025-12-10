@@ -91,12 +91,12 @@ module Worktime
       stats = t.month_statistics
 
       puts "Month: #{now.strftime('%Y-%m')}"
-      puts "Date       | Work     | Surplus"
-      puts "-" * 35
+      puts "Date             | Work     | Surplus"
+      puts "-" * 41
       stats.days.each do |day|
-        puts "#{day.date} | #{format_duration(day.work_minutes).rjust(8)} | #{format_surplus(day.surplus_minutes).rjust(7)}"
+        puts "#{day.date} (#{day.date.strftime('%a')}) | #{format_duration(day.work_minutes).rjust(8)} | #{format_surplus(day.surplus_minutes).rjust(7)}"
       end
-      puts "-" * 35
+      puts "-" * 41
       puts "Total surplus: #{format_surplus(stats.total_surplus_minutes)}"
     end
 
