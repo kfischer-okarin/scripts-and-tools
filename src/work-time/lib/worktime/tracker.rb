@@ -72,12 +72,46 @@ module Worktime
           "Work today: #{format_duration(work_minutes)}",
           "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
           "Month surplus: #{format_surplus(month_surplus_minutes)}",
+          "Remaining lunch: #{remaining_lunch_break_minutes}m",
+          "Projected end: #{projected_end_time&.strftime('%H:%M') || 'N/A'}",
+          "End for zero surplus: #{projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
+        ]
+        lines.join("\n")
+      end
+    end
+
+    FinishedDayStatus = Data.define(
+      :state,
+      :work_minutes,
+      :expected_minutes,
+      :lunch_taken,
+      :month_surplus_minutes,
+      :remaining_lunch_break_minutes
+    ) do
+      include DurationFormatting
+
+      def todays_surplus_minutes
+        work_minutes - expected_minutes
+      end
+
+      def to_json_hash
+        {
+          state: state,
+          work_minutes: work_minutes,
+          todays_surplus_minutes: todays_surplus_minutes,
+          month_surplus_minutes: month_surplus_minutes,
+          remaining_lunch_break_minutes: remaining_lunch_break_minutes
+        }
+      end
+
+      def to_cli_output
+        lines = [
+          "State: #{state}",
+          "Work today: #{format_duration(work_minutes)}",
+          "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
+          "Month surplus: #{format_surplus(month_surplus_minutes)}",
           "Remaining lunch: #{remaining_lunch_break_minutes}m"
         ]
-        if state != :stopped
-          lines << "Projected end: #{projected_end_time&.strftime('%H:%M') || 'N/A'}"
-          lines << "End for zero surplus: #{projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
-        end
         lines.join("\n")
       end
     end
@@ -117,8 +151,18 @@ module Worktime
     end
 
     def status
-      if state == :unstarted
+      case state
+      when :unstarted
         UnstartedStatus.new(state: :unstarted, month_surplus_minutes: month_surplus_minutes)
+      when :stopped
+        FinishedDayStatus.new(
+          state: state,
+          work_minutes: work_minutes,
+          expected_minutes: expected_minutes,
+          lunch_taken: lunch_taken?,
+          month_surplus_minutes: month_surplus_minutes,
+          remaining_lunch_break_minutes: remaining_lunch_break_minutes
+        )
       else
         WorkingDayStatus.new(
           state: state,
