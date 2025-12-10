@@ -41,7 +41,7 @@ class TrackerTest < Minitest::Test
   end
 
   def test_stop_when_not_working_raises
-    assert_raises(Worktime::NotWorkingError) { @tracker.stop }
+    assert_raises(Worktime::OutsideWorkingHoursError) { @tracker.stop }
   end
 
   def test_generic_break_toggles_to_on_break_state
@@ -60,7 +60,7 @@ class TrackerTest < Minitest::Test
   end
 
   def test_generic_break_when_not_working_raises
-    assert_raises(Worktime::NotWorkingError) { @tracker.toggle_break }
+    assert_raises(Worktime::OutsideWorkingHoursError) { @tracker.toggle_break }
   end
 
   def test_lunch_toggles_to_on_lunch_state
@@ -79,7 +79,7 @@ class TrackerTest < Minitest::Test
   end
 
   def test_lunch_when_not_working_raises
-    assert_raises(Worktime::NotWorkingError) { @tracker.toggle_lunch }
+    assert_raises(Worktime::OutsideWorkingHoursError) { @tracker.toggle_lunch }
   end
 
   def test_lunch_twice_in_same_day_raises

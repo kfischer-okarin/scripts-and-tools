@@ -24,7 +24,7 @@ module Worktime
     def stop
       tracker.stop
       puts "Stopped working at #{Time.now.strftime('%H:%M')}"
-    rescue NotWorkingError
+    rescue OutsideWorkingHoursError
       warn "Not currently working"
     end
 
@@ -37,7 +37,7 @@ module Worktime
       else
         puts "Ended lunch at #{Time.now.strftime('%H:%M')}"
       end
-    rescue NotWorkingError
+    rescue OutsideWorkingHoursError
       warn "Not currently working"
     rescue LunchAlreadyTakenError
       warn "Lunch already taken today"
@@ -53,7 +53,7 @@ module Worktime
       else
         puts "Ended break at #{Time.now.strftime('%H:%M')}"
       end
-    rescue NotWorkingError
+    rescue OutsideWorkingHoursError
       warn "Not currently working"
     end
 

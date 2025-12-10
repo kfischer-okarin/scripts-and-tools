@@ -132,5 +132,5 @@ src/work-time/
 Exceptions raised by Tracker, caught and displayed by CLI:
 
 - `AlreadyWorkingError` - start when already working
-- `NotWorkingError` - stop/break/lunch when not working
+- `OutsideWorkingHoursError` - stop/break/lunch when outside working hours
 - `LunchAlreadyTakenError` - lunch toggle after lunch completed

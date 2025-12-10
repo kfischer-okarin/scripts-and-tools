@@ -7,7 +7,7 @@ require "time"
 module Worktime
   class AlreadyWorkingError < StandardError; end
   class LunchAlreadyTakenError < StandardError; end
-  class NotWorkingError < StandardError; end
+  class OutsideWorkingHoursError < StandardError; end
 
   class Tracker
     Status = Data.define(
@@ -36,19 +36,19 @@ module Worktime
     end
 
     def stop
-      raise NotWorkingError if %i[stopped unstarted].include?(state)
+      raise OutsideWorkingHoursError if outside_working_hours?
 
       record_event(:stop)
     end
 
     def toggle_break
-      raise NotWorkingError if %i[stopped unstarted].include?(state)
+      raise OutsideWorkingHoursError if outside_working_hours?
 
       record_event(state == :on_break ? :break_end : :break_start)
     end
 
     def toggle_lunch
-      raise NotWorkingError if %i[stopped unstarted].include?(state)
+      raise OutsideWorkingHoursError if outside_working_hours?
       raise LunchAlreadyTakenError if lunch_taken? && state != :on_lunch
 
       record_event(state == :on_lunch ? :lunch_end : :lunch_start)
@@ -190,6 +190,10 @@ module Worktime
       when :lunch_start then :on_lunch
       else :stopped
       end
+    end
+
+    def outside_working_hours?
+      %i[stopped unstarted].include?(state)
     end
 
     def lunch_taken?
