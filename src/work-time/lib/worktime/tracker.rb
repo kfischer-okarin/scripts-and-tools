@@ -9,8 +9,34 @@ module Worktime
   class LunchAlreadyTakenError < StandardError; end
   class OutsideWorkingHoursError < StandardError; end
 
+  module DurationFormatting
+    def format_duration(minutes)
+      hours = minutes / 60
+      mins = minutes % 60
+      "#{hours}:#{mins.to_s.rjust(2, '0')}"
+    end
+
+    def format_surplus(minutes)
+      sign = minutes >= 0 ? "+" : "-"
+      "#{sign}#{format_duration(minutes.abs)}"
+    end
+  end
+
   class Tracker
-    UnstartedStatus = Data.define(:state, :month_surplus_minutes)
+    UnstartedStatus = Data.define(:state, :month_surplus_minutes) do
+      include DurationFormatting
+
+      def to_json_hash
+        { state: state, month_surplus_minutes: month_surplus_minutes }
+      end
+
+      def to_cli_output
+        <<~OUTPUT.chomp
+          State: #{state}
+          Month surplus: #{format_surplus(month_surplus_minutes)}
+        OUTPUT
+      end
+    end
 
     WorkingDayStatus = Data.define(
       :state,
@@ -20,7 +46,36 @@ module Worktime
       :projected_end_time,
       :projected_end_time_for_zero_surplus,
       :remaining_lunch_break_minutes
-    )
+    ) do
+      include DurationFormatting
+
+      def to_json_hash
+        {
+          state: state,
+          work_minutes: work_minutes,
+          todays_surplus_minutes: todays_surplus_minutes,
+          month_surplus_minutes: month_surplus_minutes,
+          remaining_lunch_break_minutes: remaining_lunch_break_minutes,
+          projected_end_time: projected_end_time&.iso8601,
+          projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus&.iso8601
+        }
+      end
+
+      def to_cli_output
+        lines = [
+          "State: #{state}",
+          "Work today: #{format_duration(work_minutes)}",
+          "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
+          "Month surplus: #{format_surplus(month_surplus_minutes)}",
+          "Remaining lunch: #{remaining_lunch_break_minutes}m"
+        ]
+        if state != :stopped
+          lines << "Projected end: #{projected_end_time&.strftime('%H:%M') || 'N/A'}"
+          lines << "End for zero surplus: #{projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
+        end
+        lines.join("\n")
+      end
+    end
     DayStats = Data.define(:date, :work_minutes, :expected_minutes, :surplus_minutes)
     MonthStats = Data.define(:days, :total_surplus_minutes)
 

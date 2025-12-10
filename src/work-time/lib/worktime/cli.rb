@@ -63,34 +63,10 @@ module Worktime
       t = tracker(date ? parse_date(date) : Time.now)
       s = t.status
 
-      if options[:json] && s.is_a?(Tracker::UnstartedStatus)
-        puts JSON.pretty_generate(
-          state: s.state,
-          month_surplus_minutes: s.month_surplus_minutes
-        )
-      elsif options[:json]
-        puts JSON.pretty_generate(
-          state: s.state,
-          work_minutes: s.work_minutes,
-          todays_surplus_minutes: s.todays_surplus_minutes,
-          month_surplus_minutes: s.month_surplus_minutes,
-          remaining_lunch_break_minutes: s.remaining_lunch_break_minutes,
-          projected_end_time: s.projected_end_time&.iso8601,
-          projected_end_time_for_zero_surplus: s.projected_end_time_for_zero_surplus&.iso8601
-        )
-      elsif s.is_a?(Tracker::UnstartedStatus)
-        puts "State: #{s.state}"
-        puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
+      if options[:json]
+        puts JSON.pretty_generate(s.to_json_hash)
       else
-        puts "State: #{s.state}"
-        puts "Work today: #{format_duration(s.work_minutes)}"
-        puts "Today's surplus: #{format_surplus(s.todays_surplus_minutes)}"
-        puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
-        puts "Remaining lunch: #{s.remaining_lunch_break_minutes}m"
-        if s.state != :stopped
-          puts "Projected end: #{s.projected_end_time&.strftime('%H:%M') || 'N/A'}"
-          puts "End for zero surplus: #{s.projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
-        end
+        puts s.to_cli_output
       end
     end
 
