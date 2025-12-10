@@ -1,0 +1,20 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    csv (3.3.5)
+    minitest (5.26.2)
+    rake (13.3.1)
+    thor (1.4.0)
+
+PLATFORMS
+  arm64-darwin-24
+  ruby
+
+DEPENDENCIES
+  csv
+  minitest
+  rake
+  thor
+
+BUNDLED WITH
+   2.5.22
