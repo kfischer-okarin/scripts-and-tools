@@ -10,7 +10,9 @@ module Worktime
   class OutsideWorkingHoursError < StandardError; end
 
   class Tracker
-    Status = Data.define(
+    UnstartedStatus = Data.define(:state, :month_surplus_minutes)
+
+    WorkingDayStatus = Data.define(
       :state,
       :work_minutes,
       :todays_surplus_minutes,
@@ -55,15 +57,19 @@ module Worktime
     end
 
     def status
-      Status.new(
-        state: state,
-        work_minutes: work_minutes,
-        todays_surplus_minutes: todays_surplus_minutes,
-        month_surplus_minutes: month_surplus_minutes,
-        projected_end_time: projected_end_time,
-        projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus,
-        remaining_lunch_break_minutes: remaining_lunch_break_minutes
-      )
+      if state == :unstarted
+        UnstartedStatus.new(state: :unstarted, month_surplus_minutes: month_surplus_minutes)
+      else
+        WorkingDayStatus.new(
+          state: state,
+          work_minutes: work_minutes,
+          todays_surplus_minutes: todays_surplus_minutes,
+          month_surplus_minutes: month_surplus_minutes,
+          projected_end_time: projected_end_time,
+          projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus,
+          remaining_lunch_break_minutes: remaining_lunch_break_minutes
+        )
+      end
     end
 
     def set_hours(hours, date: @now.to_date)

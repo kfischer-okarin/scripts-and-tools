@@ -63,7 +63,7 @@ module Worktime
       t = tracker(date ? parse_date(date) : Time.now)
       s = t.status
 
-      if options[:json] && s.state == :unstarted
+      if options[:json] && s.is_a?(Tracker::UnstartedStatus)
         puts JSON.pretty_generate(
           state: s.state,
           month_surplus_minutes: s.month_surplus_minutes
@@ -78,7 +78,7 @@ module Worktime
           projected_end_time: s.projected_end_time&.iso8601,
           projected_end_time_for_zero_surplus: s.projected_end_time_for_zero_surplus&.iso8601
         )
-      elsif s.state == :unstarted
+      elsif s.is_a?(Tracker::UnstartedStatus)
         puts "State: #{s.state}"
         puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
       else
