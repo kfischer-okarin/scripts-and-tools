@@ -1,6 +1,7 @@
 # Work Time CLI - Design Document
 
 ## Overview
+
 Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 
 ## Commands
@@ -9,16 +10,16 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 |---------|-------------|
 | `worktime start` | Start work session (warns if already working) |
 | `worktime stop` | Stop work (auto-ends any active break) |
-| `worktime lunch` | Toggle lunch break (1/day, 1hr allotment) |
+| `worktime lunch` | Toggle lunch break (1/day) |
 | `worktime break` | Toggle regular break |
-| `worktime status` | Show current state + projections |
-| `worktime month [YYYY-MM]` | Monthly overview table |
-| `worktime set-hours HOURS [--date DATE]` | Override expected hours |
+| `worktime status [DATE]` | Show current state + projections (optional: YYYY-MM-DD) |
+| `worktime month [MONTH]` | Monthly overview table (optional: YYYY-MM) |
+| `worktime set_hours HOURS [--date DATE]` | Override expected hours |
 
 ## Business Rules
 
-- All breaks deduct from work time
-- Lunch: one per day, 1-hour fixed allotment, track remaining time
+- All breaks (lunch + regular) deduct from work time
+- Lunch: one per day, tracked separately for 1-hour allotment
 - Default expected hours: 8/day (overridable per day)
 - Surplus resets monthly (no carryover)
 - Can't start break without active work
@@ -26,37 +27,53 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 
 ## Status Output
 
-- Current state (working/break/lunch/stopped)
-- Today's projected end time (adds 1hr if before lunch)
-- Current surplus/minus if stopped now
-- End time needed to reach 0 surplus/minus
+```
+State: working
+Work today: 3h 00m
+Today's surplus: -5h 00m
+Month surplus: -6h 00m
+Projected end: 18:00
+End for zero surplus: 19:00
+```
+
+- **State**: working/on_break/on_lunch/stopped
+- **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
+- **End for zero surplus**: Time to reach 0 month surplus (accounts for previous days)
 
 ## Month Output
 
-- Table: date | work duration | daily surplus/minus
-- Total surplus at end
+```
+Month: 2024-12
+Date       | Work     | Surplus
+-----------------------------------
+2024-12-10 |   8h 00m |  +0h 00m
+2024-12-11 |   7h 00m |  -1h 00m
+-----------------------------------
+Total surplus: -1h 00m
+```
 
-## Architecture (Humble Objects)
+## Architecture
 
 ```
 Thor CLI (thin, untested)
     │
     ▼
-Domain Layer (tested)
-    ├── WorktimeTracker (orchestrator)
-    ├── DayLog (single day's events)
-    ├── MonthLog (collection of DayLogs)
-    ├── StatusCalculator (projections)
-    └── Result objects (plain data)
+Tracker (domain logic, tested)
+    ├── Status (Data object)
+    ├── DayStats (Data object)
+    └── MonthStats (Data object)
 ```
 
-Thor only: parses args, calls domain, formats output from Result objects.
+- **CLI**: Parses args, sets `now` time, calls Tracker, formats output
+- **Tracker**: All domain logic, CSV persistence, calculations
+- **Data objects**: Plain `Data.define` structs for results
 
 ## Data Format
 
 **Location**: `~/.local/share/worktime/`
 
 **Event data** (per month): `YYYY-MM.csv`
+
 ```csv
 date,event,time
 2024-12-10,start,09:00
@@ -68,6 +85,7 @@ date,event,time
 ```
 
 **Overrides** (per month): `YYYY-MM-worktime-overrides.csv`
+
 ```csv
 date,expected_hours
 2024-12-25,0
@@ -79,46 +97,24 @@ date,expected_hours
 ```
 src/work-time/
 ├── Gemfile
+├── Rakefile
 ├── mise.toml
-├── bin/
+├── DESIGN.md
+├── exe/
 │   └── worktime              # Executable entry point
 ├── lib/
 │   └── worktime/
-│       ├── cli.rb            # Thor wrapper (thin)
-│       ├── tracker.rb        # Main orchestrator
-│       ├── day_log.rb        # Single day's events
-│       ├── month_log.rb      # Month collection + persistence
-│       ├── status_calculator.rb
-│       ├── event.rb          # Event value object
-│       └── results/
-│           ├── status_result.rb
-│           └── month_result.rb
+│       ├── cli.rb            # Thor CLI (thin wrapper)
+│       └── tracker.rb        # Domain logic + persistence
 └── test/
     ├── test_helper.rb
-    ├── tracker_test.rb
-    ├── day_log_test.rb
-    ├── month_log_test.rb
-    └── status_calculator_test.rb
+    └── tracker_test.rb
 ```
 
-## Implementation Steps (TDD)
+## Error Handling
 
-### Phase 1: Core Domain
-1. `Event` value object - represents a timestamped event
-2. `DayLog` - add events, calculate work duration, break duration, lunch tracking
-3. `MonthLog` - load/save CSV, collection of DayLogs, overrides handling
+Exceptions raised by Tracker, caught and displayed by CLI:
 
-### Phase 2: Calculations
-4. `StatusCalculator` - current state, projections, surplus/minus
-5. Result objects - `StatusResult`, `MonthResult`
-
-### Phase 3: Orchestration
-6. `Tracker` - coordinates operations, validates state transitions
-
-### Phase 4: CLI
-7. Thor CLI wrapper - thin layer calling Tracker, formatting Results
-8. Executable `bin/worktime`
-
-### Phase 5: Polish
-9. Edge case handling, error messages
-10. Manual testing and refinement
+- `AlreadyWorkingError` - start when already working
+- `NotWorkingError` - stop/break/lunch when not working
+- `LunchAlreadyTakenError` - lunch toggle after lunch completed
