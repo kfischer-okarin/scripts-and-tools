@@ -22,3 +22,7 @@ formats (e.g., `1:30.5`, `90s`, `1h`).
 ```bash
 ./bin/extend-loop -i input.mp3 --loop-start 0:18.744 --loop-end 1:52.563 --min-length 1h --output extended.mp3
 ```
+
+## `hammerspoon-spoons/`
+
+Custom Hammerspoon Spoons for macOS automation.
