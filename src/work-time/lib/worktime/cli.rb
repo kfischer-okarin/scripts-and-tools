@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
+require "json"
+
 require "thor"
+
 require_relative "tracker"
 
 module Worktime
@@ -61,7 +64,6 @@ module Worktime
       s = t.status
 
       if options[:json]
-        require "json"
         puts JSON.pretty_generate(
           state: s.state,
           work_minutes: s.work_minutes,
