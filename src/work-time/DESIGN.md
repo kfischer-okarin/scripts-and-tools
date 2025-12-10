@@ -37,7 +37,7 @@ Projected end: 18:00
 End for zero surplus: 19:00
 ```
 
-- **State**: working/on_break/on_lunch/stopped
+- **State**: unstarted/working/on_break/on_lunch/stopped
 - **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, 0 after full hour used)
 - **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
 - **End for zero surplus**: Time to reach 0 month surplus (accounts for previous days)

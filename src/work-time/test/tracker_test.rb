@@ -17,6 +17,10 @@ class TrackerTest < Minitest::Test
     FileUtils.remove_entry(@data_dir)
   end
 
+  def test_initial_state_is_unstarted
+    assert_equal :unstarted, @tracker.status.state
+  end
+
   def test_start_work_changes_state_to_working
     @tracker.start
 

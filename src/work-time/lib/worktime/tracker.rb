@@ -36,19 +36,19 @@ module Worktime
     end
 
     def stop
-      raise NotWorkingError if state == :stopped
+      raise NotWorkingError if %i[stopped unstarted].include?(state)
 
       record_event(:stop)
     end
 
     def toggle_break
-      raise NotWorkingError if state == :stopped
+      raise NotWorkingError if %i[stopped unstarted].include?(state)
 
       record_event(state == :on_break ? :break_end : :break_start)
     end
 
     def toggle_lunch
-      raise NotWorkingError if state == :stopped
+      raise NotWorkingError if %i[stopped unstarted].include?(state)
       raise LunchAlreadyTakenError if lunch_taken? && state != :on_lunch
 
       record_event(state == :on_lunch ? :lunch_end : :lunch_start)
@@ -180,7 +180,7 @@ module Worktime
 
     def state
       today_events = events_for_date(@now.to_date)
-      return :stopped if today_events.empty?
+      return :unstarted if today_events.empty?
 
       last_event = today_events.last[:event]
       case last_event
