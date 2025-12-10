@@ -10,7 +10,15 @@ module Worktime
   class NotWorkingError < StandardError; end
 
   class Tracker
-    Status = Data.define(:state, :work_minutes, :todays_surplus_minutes, :month_surplus_minutes, :projected_end_time, :projected_end_time_for_zero_surplus)
+    Status = Data.define(
+      :state,
+      :work_minutes,
+      :todays_surplus_minutes,
+      :month_surplus_minutes,
+      :projected_end_time,
+      :projected_end_time_for_zero_surplus,
+      :remaining_lunch_break_minutes
+    )
     DayStats = Data.define(:date, :work_minutes, :surplus_minutes)
     MonthStats = Data.define(:days, :total_surplus_minutes)
 
@@ -53,7 +61,8 @@ module Worktime
         todays_surplus_minutes: todays_surplus_minutes,
         month_surplus_minutes: month_surplus_minutes,
         projected_end_time: projected_end_time,
-        projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus
+        projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus,
+        remaining_lunch_break_minutes: remaining_lunch_break_minutes
       )
     end
 
@@ -185,6 +194,31 @@ module Worktime
 
     def lunch_taken?
       events_for_date(@now.to_date).any? { |e| e[:event] == :lunch_end }
+    end
+
+    def remaining_lunch_break_minutes
+      events = events_for_date(@now.to_date)
+      lunch_start_event = events.find { |e| e[:event] == :lunch_start }
+
+      return 60 unless lunch_start_event
+
+      start_time = parse_time_for_date(lunch_start_event[:time], @now.to_date)
+      lunch_end_event = events.find { |e| e[:event] == :lunch_end }
+
+      if lunch_end_event
+        end_time = parse_time_for_date(lunch_end_event[:time], @now.to_date)
+        lunch_duration = ((end_time - start_time) / 60).to_i
+        [60 - lunch_duration, 0].max
+      elsif state == :on_lunch
+        elapsed = ((@now - start_time) / 60).to_i
+        [60 - elapsed, 0].max
+      else
+        # Lunch started but stopped work without ending lunch - use stop time
+        stop_event = events.find { |e| e[:event] == :stop }
+        end_time = parse_time_for_date(stop_event[:time], @now.to_date)
+        lunch_duration = ((end_time - start_time) / 60).to_i
+        [60 - lunch_duration, 0].max
+      end
     end
 
     def events_for_date(date)

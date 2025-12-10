@@ -282,4 +282,59 @@ class TrackerTest < Minitest::Test
 
     assert_equal Time.new(2024, 12, 11, 19, 0, 0), tracker.status.projected_end_time_for_zero_surplus
   end
+
+  def test_remaining_lunch_break_minutes_is_60_when_lunch_not_taken
+    @tracker.start
+
+    assert_equal 60, @tracker.status.remaining_lunch_break_minutes
+  end
+
+  def test_remaining_lunch_break_minutes_is_0_after_60_minute_lunch
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_one = Time.new(2024, 12, 10, 13, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
+    tracker.toggle_lunch
+
+    assert_equal 0, tracker.status.remaining_lunch_break_minutes
+  end
+
+  def test_remaining_lunch_break_minutes_shows_remaining_while_on_lunch
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_twelve_fifteen = Time.new(2024, 12, 10, 12, 15, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_twelve_fifteen)
+
+    assert_equal :on_lunch, tracker.status.state
+    assert_equal 45, tracker.status.remaining_lunch_break_minutes
+  end
+
+  def test_remaining_lunch_break_minutes_when_stopped_without_ending_lunch
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_twelve_thirty = Time.new(2024, 12, 10, 12, 30, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_twelve_thirty)
+    tracker.stop
+
+    assert_equal :stopped, tracker.status.state
+    assert_equal 30, tracker.status.remaining_lunch_break_minutes
+  end
 end

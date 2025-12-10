@@ -32,11 +32,13 @@ State: working
 Work today: 3h 00m
 Today's surplus: -5h 00m
 Month surplus: -6h 00m
+Remaining lunch: 60m
 Projected end: 18:00
 End for zero surplus: 19:00
 ```
 
 - **State**: working/on_break/on_lunch/stopped
+- **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, 0 after full hour used)
 - **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
 - **End for zero surplus**: Time to reach 0 month surplus (accounts for previous days)
 
@@ -48,6 +50,7 @@ With `--json` flag:
   "work_minutes": 180,
   "todays_surplus_minutes": -300,
   "month_surplus_minutes": -360,
+  "remaining_lunch_break_minutes": 60,
   "projected_end_time": "2024-12-10T18:00:00+09:00",
   "projected_end_time_for_zero_surplus": "2024-12-10T19:00:00+09:00"
 }

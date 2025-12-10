@@ -67,6 +67,7 @@ module Worktime
           work_minutes: s.work_minutes,
           todays_surplus_minutes: s.todays_surplus_minutes,
           month_surplus_minutes: s.month_surplus_minutes,
+          remaining_lunch_break_minutes: s.remaining_lunch_break_minutes,
           projected_end_time: s.projected_end_time&.iso8601,
           projected_end_time_for_zero_surplus: s.projected_end_time_for_zero_surplus&.iso8601
         )
@@ -75,6 +76,7 @@ module Worktime
         puts "Work today: #{format_duration(s.work_minutes)}"
         puts "Today's surplus: #{format_surplus(s.todays_surplus_minutes)}"
         puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
+        puts "Remaining lunch: #{s.remaining_lunch_break_minutes}m"
         if s.state != :stopped
           puts "Projected end: #{s.projected_end_time&.strftime('%H:%M') || 'N/A'}"
           puts "End for zero surplus: #{s.projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
