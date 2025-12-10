@@ -109,4 +109,56 @@ class TrackerTest < Minitest::Test
 
     assert_equal :working, new_tracker.status.state
   end
+
+  def test_status_shows_work_duration_for_completed_day
+    now = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: now)
+    tracker.start
+
+    eight_hours_later = Time.new(2024, 12, 10, 17, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: eight_hours_later)
+    tracker.stop
+
+    assert_equal 8 * 60, tracker.status.work_minutes
+  end
+
+  def test_work_minutes_deducts_lunch_time
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_one = Time.new(2024, 12, 10, 13, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
+    tracker.toggle_lunch
+
+    at_six = Time.new(2024, 12, 10, 18, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_six)
+    tracker.stop
+
+    assert_equal 8 * 60, tracker.status.work_minutes
+  end
+
+  def test_work_minutes_deducts_generic_break_time
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_ten = Time.new(2024, 12, 10, 10, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_ten)
+    tracker.toggle_break
+
+    at_ten_fifteen = Time.new(2024, 12, 10, 10, 15, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_ten_fifteen)
+    tracker.toggle_break
+
+    at_five = Time.new(2024, 12, 10, 17, 15, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_five)
+    tracker.stop
+
+    assert_equal 8 * 60, tracker.status.work_minutes
+  end
 end

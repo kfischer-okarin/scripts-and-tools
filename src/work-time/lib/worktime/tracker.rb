@@ -10,7 +10,7 @@ module Worktime
   class NotWorkingError < StandardError; end
 
   class Tracker
-    Status = Data.define(:state)
+    Status = Data.define(:state, :work_minutes)
 
     def initialize(data_dir:, now: Time.now)
       @data_dir = data_dir
@@ -44,10 +44,47 @@ module Worktime
     end
 
     def status
-      Status.new(state: state)
+      Status.new(state: state, work_minutes: work_minutes)
     end
 
     private
+
+    def work_minutes
+      events = events_for_date(@now.to_date)
+      return 0 if events.empty?
+
+      start_event = events.find { |e| e[:event] == :start }
+      stop_event = events.find { |e| e[:event] == :stop }
+      return 0 unless start_event && stop_event
+
+      start_time = parse_time(start_event[:time])
+      stop_time = parse_time(stop_event[:time])
+      total = ((stop_time - start_time) / 60).to_i
+
+      total - break_minutes(events)
+    end
+
+    def break_minutes(events)
+      total = 0
+      break_start = nil
+
+      events.each do |event|
+        case event[:event]
+        when :break_start, :lunch_start
+          break_start = parse_time(event[:time])
+        when :break_end, :lunch_end
+          total += ((parse_time(event[:time]) - break_start) / 60).to_i if break_start
+          break_start = nil
+        end
+      end
+
+      total
+    end
+
+    def parse_time(time_str)
+      hour, min = time_str.split(":").map(&:to_i)
+      Time.new(@now.year, @now.month, @now.day, hour, min, 0)
+    end
 
     def state
       today_events = events_for_date(@now.to_date)
