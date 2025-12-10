@@ -135,7 +135,7 @@ module Worktime
     def format_duration(minutes)
       hours = minutes / 60
       mins = minutes % 60
-      "#{hours}h #{mins.to_s.rjust(2, '0')}m"
+      "#{hours}:#{mins.to_s.rjust(2, '0')}"
     end
 
     def format_surplus(minutes)

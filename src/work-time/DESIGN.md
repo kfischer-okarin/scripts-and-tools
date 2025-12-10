@@ -29,9 +29,9 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 
 ```
 State: working
-Work today: 3h 00m
-Today's surplus: -5h 00m
-Month surplus: -6h 00m
+Work today: 3:00
+Today's surplus: -5:00
+Month surplus: -6:00
 Remaining lunch: 60m
 Projected end: 18:00
 End for zero surplus: 19:00
@@ -62,10 +62,10 @@ With `--json` flag:
 Month: 2024-12
 Date       | Work     | Surplus
 -----------------------------------
-2024-12-10 |   8h 00m |  +0h 00m
-2024-12-11 |   7h 00m |  -1h 00m
+2024-12-10 |     8:00 |   +0:00
+2024-12-11 |     7:00 |   -1:00
 -----------------------------------
-Total surplus: -1h 00m
+Total surplus: -1:00
 ```
 
 ## Architecture
