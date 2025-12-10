@@ -41,13 +41,18 @@ module Worktime
     WorkingDayStatus = Data.define(
       :state,
       :work_minutes,
-      :todays_surplus_minutes,
+      :expected_minutes,
+      :lunch_taken,
       :month_surplus_minutes,
       :projected_end_time,
       :projected_end_time_for_zero_surplus,
       :remaining_lunch_break_minutes
     ) do
       include DurationFormatting
+
+      def todays_surplus_minutes
+        work_minutes - expected_minutes
+      end
 
       def to_json_hash
         {
@@ -118,7 +123,8 @@ module Worktime
         WorkingDayStatus.new(
           state: state,
           work_minutes: work_minutes,
-          todays_surplus_minutes: todays_surplus_minutes,
+          expected_minutes: expected_minutes,
+          lunch_taken: lunch_taken?,
           month_surplus_minutes: month_surplus_minutes,
           projected_end_time: projected_end_time,
           projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus,
@@ -179,10 +185,6 @@ module Worktime
       start_time = parse_time_for_date(start_event[:time], @now.to_date)
       total = ((@now - start_time) / 60).to_i
       total - break_minutes_for_date(events, @now.to_date)
-    end
-
-    def todays_surplus_minutes
-      work_minutes - expected_minutes
     end
 
     def month_surplus_minutes
