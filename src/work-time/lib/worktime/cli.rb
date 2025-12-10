@@ -63,14 +63,19 @@ module Worktime
       puts "Work today: #{format_duration(s.work_minutes)}"
       puts "Today's surplus: #{format_surplus(s.todays_surplus_minutes)}"
       puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
-      puts "Projected end: #{s.projected_end_time&.strftime('%H:%M') || 'N/A'}" if s.state != :stopped
+      if s.state != :stopped
+        puts "Projected end: #{s.projected_end_time&.strftime('%H:%M') || 'N/A'}"
+        puts "End for zero surplus: #{s.projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
+      end
     end
 
     desc "month [MONTH]", "Show month statistics (optionally for a specific month YYYY-MM)"
     def month(month = nil)
-      t = tracker(month ? parse_month(month) : Time.now)
+      now = month ? parse_month(month) : Time.now
+      t = tracker(now)
       stats = t.month_statistics
 
+      puts "Month: #{now.strftime('%Y-%m')}"
       puts "Date       | Work     | Surplus"
       puts "-" * 35
       stats.days.each do |day|

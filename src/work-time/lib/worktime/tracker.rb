@@ -10,7 +10,7 @@ module Worktime
   class NotWorkingError < StandardError; end
 
   class Tracker
-    Status = Data.define(:state, :work_minutes, :todays_surplus_minutes, :month_surplus_minutes, :projected_end_time)
+    Status = Data.define(:state, :work_minutes, :todays_surplus_minutes, :month_surplus_minutes, :projected_end_time, :projected_end_time_for_zero_surplus)
     DayStats = Data.define(:date, :work_minutes, :surplus_minutes)
     MonthStats = Data.define(:days, :total_surplus_minutes)
 
@@ -52,7 +52,8 @@ module Worktime
         work_minutes: work_minutes,
         todays_surplus_minutes: todays_surplus_minutes,
         month_surplus_minutes: month_surplus_minutes,
-        projected_end_time: projected_end_time
+        projected_end_time: projected_end_time,
+        projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus
       )
     end
 
@@ -78,14 +79,36 @@ module Worktime
       start_event = events.find { |e| e[:event] == :start }
       return nil unless start_event
 
-      start_time = parse_time_for_date(start_event[:time], @now.to_date)
-      total = ((@now - start_time) / 60).to_i
-      worked_so_far = total - break_minutes_for_date(events, @now.to_date)
-      remaining_work = expected_minutes - worked_so_far
+      remaining_work = expected_minutes - worked_minutes_so_far
+      end_time = @now + (remaining_work * 60)
+      end_time += (60 * 60) unless lunch_taken?
+      end_time
+    end
+
+    def projected_end_time_for_zero_surplus
+      events = events_for_date(@now.to_date)
+      start_event = events.find { |e| e[:event] == :start }
+      return nil unless start_event
+
+      previous_days_surplus = month_statistics.days
+        .reject { |d| d.date == @now.to_date }
+        .sum(&:surplus_minutes)
+      remaining_for_today = expected_minutes - worked_minutes_so_far
+      remaining_work = remaining_for_today - previous_days_surplus
 
       end_time = @now + (remaining_work * 60)
       end_time += (60 * 60) unless lunch_taken?
       end_time
+    end
+
+    def worked_minutes_so_far
+      events = events_for_date(@now.to_date)
+      start_event = events.find { |e| e[:event] == :start }
+      return 0 unless start_event
+
+      start_time = parse_time_for_date(start_event[:time], @now.to_date)
+      total = ((@now - start_time) / 60).to_i
+      total - break_minutes_for_date(events, @now.to_date)
     end
 
     def todays_surplus_minutes

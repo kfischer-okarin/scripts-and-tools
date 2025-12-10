@@ -264,4 +264,22 @@ class TrackerTest < Minitest::Test
     assert_equal 30, status.todays_surplus_minutes
     assert_equal 90, status.month_surplus_minutes
   end
+
+  def test_projected_end_time_until_month_surplus_zero_when_behind
+    day1_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day1_nine)
+    tracker.start
+    day1_four = Time.new(2024, 12, 10, 16, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day1_four)
+    tracker.stop
+
+    day2_nine = Time.new(2024, 12, 11, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day2_nine)
+    tracker.start
+
+    day2_noon = Time.new(2024, 12, 11, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: day2_noon)
+
+    assert_equal Time.new(2024, 12, 11, 19, 0, 0), tracker.status.projected_end_time_for_zero_surplus
+  end
 end
