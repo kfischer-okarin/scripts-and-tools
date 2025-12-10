@@ -211,9 +211,11 @@ class TrackerTest < Minitest::Test
     assert_equal 2, result.days.size
     assert_equal Date.new(2024, 12, 10), result.days[0].date
     assert_equal 8 * 60, result.days[0].work_minutes
+    assert_equal 8 * 60, result.days[0].expected_minutes
     assert_equal 0, result.days[0].surplus_minutes
     assert_equal Date.new(2024, 12, 11), result.days[1].date
     assert_equal 9 * 60, result.days[1].work_minutes
+    assert_equal 8 * 60, result.days[1].expected_minutes
     assert_equal 60, result.days[1].surplus_minutes
     assert_equal 60, result.total_surplus_minutes
   end

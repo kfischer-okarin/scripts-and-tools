@@ -19,7 +19,7 @@ module Worktime
       :projected_end_time_for_zero_surplus,
       :remaining_lunch_break_minutes
     )
-    DayStats = Data.define(:date, :work_minutes, :surplus_minutes)
+    DayStats = Data.define(:date, :work_minutes, :expected_minutes, :surplus_minutes)
     MonthStats = Data.define(:days, :total_surplus_minutes)
 
     def initialize(data_dir:, now: Time.now)
@@ -76,7 +76,7 @@ module Worktime
       days = dates.map do |date|
         work_mins = work_minutes_for_date(date)
         expected_mins = expected_minutes_for_date(date)
-        DayStats.new(date: date, work_minutes: work_mins, surplus_minutes: work_mins - expected_mins)
+        DayStats.new(date: date, work_minutes: work_mins, expected_minutes: expected_mins, surplus_minutes: work_mins - expected_mins)
       end
       MonthStats.new(days: days, total_surplus_minutes: days.sum(&:surplus_minutes))
     end

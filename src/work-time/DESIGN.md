@@ -64,9 +64,12 @@ Date             | Work     | Surplus
 -----------------------------------------
 2024-12-10 (Tue) |     8:00 |   +0:00
 2024-12-11 (Wed) |     7:00 |   -1:00
+2024-12-15 (Sun) |     2:00 |   +2:00  [0h expected]
 -----------------------------------------
-Total surplus: -1:00
+Total surplus: +1:00
 ```
+
+Days with non-standard expected hours (set via `set_hours`) show `[Xh expected]` suffix.
 
 ## Architecture
 
