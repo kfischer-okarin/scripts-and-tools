@@ -12,7 +12,7 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 | `worktime stop` | Stop work (auto-ends any active break) |
 | `worktime lunch` | Toggle lunch break (1/day) |
 | `worktime break` | Toggle regular break |
-| `worktime status [DATE]` | Show current state + projections (optional: YYYY-MM-DD) |
+| `worktime status [DATE] [--json]` | Show current state + projections (optional: YYYY-MM-DD) |
 | `worktime month [MONTH]` | Monthly overview table (optional: YYYY-MM) |
 | `worktime set_hours HOURS [--date DATE]` | Override expected hours |
 
@@ -39,6 +39,19 @@ End for zero surplus: 19:00
 - **State**: working/on_break/on_lunch/stopped
 - **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
 - **End for zero surplus**: Time to reach 0 month surplus (accounts for previous days)
+
+With `--json` flag:
+
+```json
+{
+  "state": "working",
+  "work_minutes": 180,
+  "todays_surplus_minutes": -300,
+  "month_surplus_minutes": -360,
+  "projected_end_time": "2024-12-10T18:00:00+09:00",
+  "projected_end_time_for_zero_surplus": "2024-12-10T19:00:00+09:00"
+}
+```
 
 ## Month Output
 

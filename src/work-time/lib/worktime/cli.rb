@@ -55,17 +55,30 @@ module Worktime
     end
 
     desc "status [DATE]", "Show current status (optionally for a specific date YYYY-MM-DD)"
+    method_option :json, type: :boolean, desc: "Output as JSON"
     def status(date = nil)
       t = tracker(date ? parse_date(date) : Time.now)
       s = t.status
 
-      puts "State: #{s.state}"
-      puts "Work today: #{format_duration(s.work_minutes)}"
-      puts "Today's surplus: #{format_surplus(s.todays_surplus_minutes)}"
-      puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
-      if s.state != :stopped
-        puts "Projected end: #{s.projected_end_time&.strftime('%H:%M') || 'N/A'}"
-        puts "End for zero surplus: #{s.projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
+      if options[:json]
+        require "json"
+        puts JSON.pretty_generate(
+          state: s.state,
+          work_minutes: s.work_minutes,
+          todays_surplus_minutes: s.todays_surplus_minutes,
+          month_surplus_minutes: s.month_surplus_minutes,
+          projected_end_time: s.projected_end_time&.iso8601,
+          projected_end_time_for_zero_surplus: s.projected_end_time_for_zero_surplus&.iso8601
+        )
+      else
+        puts "State: #{s.state}"
+        puts "Work today: #{format_duration(s.work_minutes)}"
+        puts "Today's surplus: #{format_surplus(s.todays_surplus_minutes)}"
+        puts "Month surplus: #{format_surplus(s.month_surplus_minutes)}"
+        if s.state != :stopped
+          puts "Projected end: #{s.projected_end_time&.strftime('%H:%M') || 'N/A'}"
+          puts "End for zero surplus: #{s.projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
+        end
       end
     end
 
