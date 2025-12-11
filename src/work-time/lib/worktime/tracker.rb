@@ -16,24 +16,24 @@ module Worktime
       "#{hours}:#{mins.to_s.rjust(2, '0')}"
     end
 
-    def format_surplus(minutes)
+    def format_overtime(minutes)
       sign = minutes >= 0 ? "+" : "-"
       "#{sign}#{format_duration(minutes.abs)}"
     end
   end
 
   class Tracker
-    UnstartedStatus = Data.define(:state, :month_surplus_minutes) do
+    UnstartedStatus = Data.define(:state, :month_overtime_minutes) do
       include DurationFormatting
 
       def to_json_hash
-        { state: state, month_surplus_minutes: month_surplus_minutes }
+        { state: state, month_overtime_minutes: month_overtime_minutes }
       end
 
       def to_cli_output
         <<~OUTPUT.chomp
           State: #{state}
-          Month surplus: #{format_surplus(month_surplus_minutes)}
+          Month overtime: #{format_overtime(month_overtime_minutes)}
         OUTPUT
       end
     end
@@ -45,7 +45,7 @@ module Worktime
       :break_minutes,
       :expected_minutes,
       :lunch_taken,
-      :other_days_surplus_minutes,
+      :other_days_overtime_minutes,
       :remaining_lunch_break_minutes
     ) do
       include DurationFormatting
@@ -54,12 +54,12 @@ module Worktime
         ((self.now - start_time) / 60).to_i - break_minutes
       end
 
-      def todays_surplus_minutes
+      def todays_overtime_minutes
         work_minutes - expected_minutes
       end
 
-      def month_surplus_minutes
-        other_days_surplus_minutes + todays_surplus_minutes
+      def month_overtime_minutes
+        other_days_overtime_minutes + todays_overtime_minutes
       end
 
       def projected_end_time
@@ -69,9 +69,9 @@ module Worktime
         end_time
       end
 
-      def projected_end_time_for_zero_surplus
+      def projected_end_time_for_zero_overtime
         remaining_for_today = expected_minutes - work_minutes
-        remaining_work = remaining_for_today - other_days_surplus_minutes
+        remaining_work = remaining_for_today - other_days_overtime_minutes
         end_time = self.now + (remaining_work * 60)
         end_time += (60 * 60) unless lunch_taken
         end_time
@@ -83,11 +83,11 @@ module Worktime
           start_time: start_time.iso8601,
           lunch_taken: lunch_taken,
           work_minutes: work_minutes,
-          todays_surplus_minutes: todays_surplus_minutes,
-          month_surplus_minutes: month_surplus_minutes,
+          todays_overtime_minutes: todays_overtime_minutes,
+          month_overtime_minutes: month_overtime_minutes,
           remaining_lunch_break_minutes: remaining_lunch_break_minutes,
           projected_end_time: projected_end_time&.iso8601,
-          projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus&.iso8601
+          projected_end_time_for_zero_overtime: projected_end_time_for_zero_overtime&.iso8601
         }
       end
 
@@ -97,11 +97,11 @@ module Worktime
           "Start time: #{start_time.strftime('%H:%M')}",
           "Lunch taken: #{lunch_taken ? 'Yes' : 'No'}",
           "Work today: #{format_duration(work_minutes)}",
-          "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
-          "Month surplus: #{format_surplus(month_surplus_minutes)}",
+          "Today's overtime: #{format_overtime(todays_overtime_minutes)}",
+          "Month overtime: #{format_overtime(month_overtime_minutes)}",
           "Remaining lunch: #{remaining_lunch_break_minutes}m",
           "Projected end: #{projected_end_time&.strftime('%H:%M') || 'N/A'}",
-          "End for zero surplus: #{projected_end_time_for_zero_surplus&.strftime('%H:%M') || 'N/A'}"
+          "End for zero overtime: #{projected_end_time_for_zero_overtime&.strftime('%H:%M') || 'N/A'}"
         ]
         lines.join("\n")
       end
@@ -113,7 +113,7 @@ module Worktime
       :stop_time,
       :break_minutes,
       :expected_minutes,
-      :other_days_surplus_minutes
+      :other_days_overtime_minutes
     ) do
       include DurationFormatting
 
@@ -121,20 +121,20 @@ module Worktime
         ((stop_time - start_time) / 60).to_i - break_minutes
       end
 
-      def todays_surplus_minutes
+      def todays_overtime_minutes
         work_minutes - expected_minutes
       end
 
-      def month_surplus_minutes
-        other_days_surplus_minutes + todays_surplus_minutes
+      def month_overtime_minutes
+        other_days_overtime_minutes + todays_overtime_minutes
       end
 
       def to_json_hash
         {
           state: state,
           work_minutes: work_minutes,
-          todays_surplus_minutes: todays_surplus_minutes,
-          month_surplus_minutes: month_surplus_minutes
+          todays_overtime_minutes: todays_overtime_minutes,
+          month_overtime_minutes: month_overtime_minutes
         }
       end
 
@@ -142,14 +142,14 @@ module Worktime
         lines = [
           "State: #{state}",
           "Work today: #{format_duration(work_minutes)}",
-          "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
-          "Month surplus: #{format_surplus(month_surplus_minutes)}"
+          "Today's overtime: #{format_overtime(todays_overtime_minutes)}",
+          "Month overtime: #{format_overtime(month_overtime_minutes)}"
         ]
         lines.join("\n")
       end
     end
-    DayStats = Data.define(:date, :work_minutes, :expected_minutes, :surplus_minutes)
-    MonthStats = Data.define(:days, :total_surplus_minutes)
+    DayStats = Data.define(:date, :work_minutes, :expected_minutes, :overtime_minutes)
+    MonthStats = Data.define(:days, :total_overtime_minutes)
 
     def initialize(data_dir:, now: Time.now)
       @data_dir = data_dir
@@ -186,7 +186,7 @@ module Worktime
     def status
       case state
       when :unstarted
-        UnstartedStatus.new(state: :unstarted, month_surplus_minutes: month_surplus_minutes)
+        UnstartedStatus.new(state: :unstarted, month_overtime_minutes: month_overtime_minutes)
       when :stopped
         FinishedDayStatus.new(
           state: state,
@@ -194,7 +194,7 @@ module Worktime
           stop_time: stop_time_for_date(@now.to_date),
           break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
           expected_minutes: expected_minutes,
-          other_days_surplus_minutes: other_days_surplus_minutes
+          other_days_overtime_minutes: other_days_overtime_minutes
         )
       else
         WorkingDayStatus.new(
@@ -204,7 +204,7 @@ module Worktime
           break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
           expected_minutes: expected_minutes,
           lunch_taken: lunch_taken?,
-          other_days_surplus_minutes: other_days_surplus_minutes,
+          other_days_overtime_minutes: other_days_overtime_minutes,
           remaining_lunch_break_minutes: remaining_lunch_break_minutes
         )
       end
@@ -220,21 +220,21 @@ module Worktime
       days = dates.map do |date|
         work_mins = work_minutes_for_date(date)
         expected_mins = expected_minutes_for_date(date)
-        DayStats.new(date: date, work_minutes: work_mins, expected_minutes: expected_mins, surplus_minutes: work_mins - expected_mins)
+        DayStats.new(date: date, work_minutes: work_mins, expected_minutes: expected_mins, overtime_minutes: work_mins - expected_mins)
       end
-      MonthStats.new(days: days, total_surplus_minutes: days.sum(&:surplus_minutes))
+      MonthStats.new(days: days, total_overtime_minutes: days.sum(&:overtime_minutes))
     end
 
     private
 
-    def other_days_surplus_minutes
+    def other_days_overtime_minutes
       month_statistics.days
         .reject { |d| d.date == @now.to_date }
-        .sum(&:surplus_minutes)
+        .sum(&:overtime_minutes)
     end
 
-    def month_surplus_minutes
-      month_statistics.total_surplus_minutes
+    def month_overtime_minutes
+      month_statistics.total_overtime_minutes
     end
 
     def expected_minutes

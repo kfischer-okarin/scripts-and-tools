@@ -21,7 +21,7 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 - All breaks (lunch + regular) deduct from work time
 - Lunch: one per day, tracked separately for 1-hour allotment
 - Default expected hours: 8/day (overridable per day)
-- Surplus resets monthly (no carryover)
+- Overtime resets monthly (no carryover)
 - Can't start break without active work
 - Stop auto-ends any active break
 
@@ -32,17 +32,17 @@ State: working
 Start time: 09:00
 Lunch taken: No
 Work today: 3:00
-Today's surplus: -5:00
-Month surplus: -6:00
+Today's overtime: -5:00
+Month overtime: -6:00
 Remaining lunch: 60m
 Projected end: 18:00
-End for zero surplus: 19:00
+End for zero overtime: 19:00
 ```
 
 - **State**: unstarted/working/on_break/on_lunch/stopped
 - **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, 0 after full hour used)
 - **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
-- **End for zero surplus**: Time to reach 0 month surplus (accounts for previous days)
+- **End for zero overtime**: Time to reach 0 month overtime (accounts for previous days)
 
 With `--json` flag:
 
@@ -52,11 +52,11 @@ With `--json` flag:
   "start_time": "2024-12-10T09:00:00+09:00",
   "lunch_taken": false,
   "work_minutes": 180,
-  "todays_surplus_minutes": -300,
-  "month_surplus_minutes": -360,
+  "todays_overtime_minutes": -300,
+  "month_overtime_minutes": -360,
   "remaining_lunch_break_minutes": 60,
   "projected_end_time": "2024-12-10T18:00:00+09:00",
-  "projected_end_time_for_zero_surplus": "2024-12-10T19:00:00+09:00"
+  "projected_end_time_for_zero_overtime": "2024-12-10T19:00:00+09:00"
 }
 ```
 
@@ -64,13 +64,13 @@ With `--json` flag:
 
 ```
 Month: 2024-12
-Date             | Work     | Surplus
+Date             | Work     | Overtime
 -----------------------------------------
 2024-12-10 (Tue) |     8:00 |   +0:00
 2024-12-11 (Wed) |     7:00 |   -1:00
 2024-12-15 (Sun) |     2:00 |   +2:00  [0h expected]
 -----------------------------------------
-Total surplus: +1:00
+Total overtime: +1:00
 ```
 
 Days with non-standard expected hours (set via `set_hours`) show `[Xh expected]` suffix.

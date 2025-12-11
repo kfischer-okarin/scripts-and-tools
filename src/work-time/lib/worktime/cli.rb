@@ -77,15 +77,15 @@ module Worktime
       stats = t.month_statistics
 
       puts "Month: #{now.strftime('%Y-%m')}"
-      puts "Date             | Work     | Surplus"
+      puts "Date             | Work     | Overtime"
       puts "-" * 41
       stats.days.each do |day|
-        row = "#{day.date} (#{day.date.strftime('%a')}) | #{format_duration(day.work_minutes).rjust(8)} | #{format_surplus(day.surplus_minutes).rjust(7)}"
+        row = "#{day.date} (#{day.date.strftime('%a')}) | #{format_duration(day.work_minutes).rjust(8)} | #{format_overtime(day.overtime_minutes).rjust(7)}"
         row += "  [#{day.expected_minutes / 60}h expected]" if day.expected_minutes != 480
         puts row
       end
       puts "-" * 41
-      puts "Total surplus: #{format_surplus(stats.total_surplus_minutes)}"
+      puts "Total overtime: #{format_overtime(stats.total_overtime_minutes)}"
     end
 
     desc "set_hours HOURS", "Set expected hours for a day (default: today)"
@@ -126,7 +126,7 @@ module Worktime
       "#{hours}:#{mins.to_s.rjust(2, '0')}"
     end
 
-    def format_surplus(minutes)
+    def format_overtime(minutes)
       sign = minutes >= 0 ? "+" : "-"
       "#{sign}#{format_duration(minutes.abs)}"
     end
