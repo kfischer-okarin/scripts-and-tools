@@ -407,17 +407,16 @@ class WorkingDayStatusTest < Minitest::Test
     # month_surplus = 300 + (-240) = 60
     # projected_end_time = now + remaining_work + lunch = 13:00 + 4h + 1h = 18:00
     # projected_end_time_for_zero_surplus = now + (remaining - other_days) + lunch = 13:00 + (4h - 5h) + 1h = 13:00
-    expected = {
-      state: :working,
-      work_minutes: 240,
-      todays_surplus_minutes: -240,
-      month_surplus_minutes: 60,
-      remaining_lunch_break_minutes: 60,
-      projected_end_time: Time.new(2024, 12, 10, 18, 0, 0).iso8601,
-      projected_end_time_for_zero_surplus: Time.new(2024, 12, 10, 13, 0, 0).iso8601
-    }
+    result = status.to_json_hash
 
-    assert_equal expected, status.to_json_hash
+    assert_equal :working, result[:state]
+    assert_equal start_time.iso8601, result[:start_time]
+    assert_equal 240, result[:work_minutes]
+    assert_equal(-240, result[:todays_surplus_minutes])
+    assert_equal 60, result[:month_surplus_minutes]
+    assert_equal 60, result[:remaining_lunch_break_minutes]
+    assert_equal Time.new(2024, 12, 10, 18, 0, 0).iso8601, result[:projected_end_time]
+    assert_equal Time.new(2024, 12, 10, 13, 0, 0).iso8601, result[:projected_end_time_for_zero_surplus]
   end
 
   def test_to_cli_output
@@ -440,6 +439,7 @@ class WorkingDayStatusTest < Minitest::Test
     # projected_end_time_for_zero_surplus = now + (remaining - other_days) = 13:00 + (4h - 5h) = 12:00
     expected = <<~OUTPUT.chomp
       State: working
+      Start time: 09:00
       Work today: 4:00
       Today's surplus: -4:00
       Month surplus: +1:00
