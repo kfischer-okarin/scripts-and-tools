@@ -24,6 +24,7 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 - Overtime resets monthly (no carryover)
 - Can't start break without active work
 - Stop auto-ends any active break
+- Start after stop resumes work, inserting a break for the gap
 
 ## Status Output
 

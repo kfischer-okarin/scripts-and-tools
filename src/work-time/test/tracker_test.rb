@@ -44,6 +44,24 @@ class TrackerTest < Minitest::Test
     assert_raises(Worktime::OutsideWorkingHoursError) { @tracker.stop }
   end
 
+  def test_start_when_stopped_inserts_break_and_resumes
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_five = Time.new(2024, 12, 10, 17, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_five)
+    tracker.stop
+
+    at_five_thirty = Time.new(2024, 12, 10, 17, 30, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_five_thirty)
+    tracker.start
+
+    assert_equal :working, tracker.status.state
+    # Should have one break of 30 minutes (17:00-17:30)
+    assert_equal 30, tracker.status.break_minutes
+  end
+
   def test_generic_break_toggles_to_on_break_state
     @tracker.start
     @tracker.toggle_break

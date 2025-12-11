@@ -14,8 +14,14 @@ module Worktime
 
     desc "start", "Start working"
     def start
-      tracker.start
-      puts "Started working at #{Time.now.strftime('%H:%M')}"
+      t = tracker
+      was_stopped = t.status.state == :stopped
+      t.start
+      if was_stopped
+        puts "Resumed working at #{Time.now.strftime('%H:%M')}"
+      else
+        puts "Started working at #{Time.now.strftime('%H:%M')}"
+      end
     rescue AlreadyWorkingError
       warn "Already working"
     end

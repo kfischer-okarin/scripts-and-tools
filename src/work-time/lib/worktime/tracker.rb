@@ -163,7 +163,11 @@ module Worktime
     def start
       raise AlreadyWorkingError if state == :working
 
-      record_event(:start)
+      if state == :stopped
+        resume_after_stop
+      else
+        record_event(:start)
+      end
     end
 
     def stop
@@ -301,6 +305,16 @@ module Worktime
 
     def record_event(event_type)
       @events << { date: @now.to_date, event: event_type, time: @now.strftime("%H:%M") }
+      save_events
+    end
+
+    def resume_after_stop
+      stop_event = @events.find { |e| e[:date] == @now.to_date && e[:event] == :stop }
+      stop_time = stop_event[:time]
+
+      @events.delete(stop_event)
+      @events << { date: @now.to_date, event: :break_start, time: stop_time }
+      @events << { date: @now.to_date, event: :break_end, time: @now.strftime("%H:%M") }
       save_events
     end
 
