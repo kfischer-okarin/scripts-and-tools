@@ -23,8 +23,7 @@ module Worktime
     def state
       return :unstarted if @events.empty?
 
-      last_event = @events.last[:event]
-      case last_event
+      case last_event[:event]
       when :start, :break_end, :lunch_end then :working
       when :stop then :stopped
       when :break_start then :on_break
@@ -78,6 +77,10 @@ module Worktime
 
       result << Break.new(start_time: break_start, end_time: nil) if break_start
       result
+    end
+
+    def last_event
+      @events.last
     end
 
     private

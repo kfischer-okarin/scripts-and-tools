@@ -48,7 +48,9 @@ module Worktime
       :expected_minutes,
       :lunch_taken,
       :other_days_overtime_minutes,
-      :remaining_lunch_break_minutes
+      :remaining_lunch_break_minutes,
+      :last_event,
+      :last_event_time
     ) do
       include DurationFormatting
 
@@ -89,7 +91,9 @@ module Worktime
           month_overtime_minutes: month_overtime_minutes,
           remaining_lunch_break_minutes: remaining_lunch_break_minutes,
           projected_end_time: projected_end_time&.iso8601,
-          projected_end_time_for_zero_overtime: projected_end_time_for_zero_overtime&.iso8601
+          projected_end_time_for_zero_overtime: projected_end_time_for_zero_overtime&.iso8601,
+          last_event: last_event,
+          last_event_time: last_event_time
         }
       end
 
@@ -105,7 +109,18 @@ module Worktime
           "Projected end: #{projected_end_time&.strftime('%H:%M') || 'N/A'}",
           "End for zero overtime: #{projected_end_time_for_zero_overtime&.strftime('%H:%M') || 'N/A'}"
         ]
+        lines << format_last_event if format_last_event
         lines.join("\n")
+      end
+
+      def format_last_event
+        case last_event
+        when :start then nil
+        when :break_start then "Break started at #{last_event_time}"
+        when :break_end then "Break ended at #{last_event_time}"
+        when :lunch_start then "Lunch started at #{last_event_time}"
+        when :lunch_end then "Lunch ended at #{last_event_time}"
+        end
       end
     end
 
@@ -115,7 +130,9 @@ module Worktime
       :stop_time,
       :break_minutes,
       :expected_minutes,
-      :other_days_overtime_minutes
+      :other_days_overtime_minutes,
+      :last_event,
+      :last_event_time
     ) do
       include DurationFormatting
 
@@ -136,7 +153,9 @@ module Worktime
           state: state,
           work_minutes: work_minutes,
           todays_overtime_minutes: todays_overtime_minutes,
-          month_overtime_minutes: month_overtime_minutes
+          month_overtime_minutes: month_overtime_minutes,
+          last_event: last_event,
+          last_event_time: last_event_time
         }
       end
 
@@ -145,7 +164,8 @@ module Worktime
           "State: #{state}",
           "Work today: #{format_duration(work_minutes)}",
           "Today's overtime: #{format_overtime(todays_overtime_minutes)}",
-          "Month overtime: #{format_overtime(month_overtime_minutes)}"
+          "Month overtime: #{format_overtime(month_overtime_minutes)}",
+          "Finished work at #{last_event_time}"
         ]
         lines.join("\n")
       end
@@ -196,15 +216,19 @@ module Worktime
       when :unstarted
         UnstartedStatus.new(state: :unstarted, month_overtime_minutes: month_overtime_minutes)
       when :stopped
+        last = work_log.last_event
         FinishedDayStatus.new(
           state: :stopped,
           start_time: work_log.start_time,
           stop_time: work_log.stop_time,
           break_minutes: break_minutes_for_log(work_log),
           expected_minutes: expected_minutes,
-          other_days_overtime_minutes: other_days_overtime_minutes
+          other_days_overtime_minutes: other_days_overtime_minutes,
+          last_event: last&.dig(:event),
+          last_event_time: last&.dig(:time)
         )
       else
+        last = work_log.last_event
         WorkingDayStatus.new(
           state: work_log.state,
           start_time: work_log.start_time,
@@ -213,7 +237,9 @@ module Worktime
           expected_minutes: expected_minutes,
           lunch_taken: work_log.lunch_taken?,
           other_days_overtime_minutes: other_days_overtime_minutes,
-          remaining_lunch_break_minutes: remaining_lunch_break_minutes(work_log)
+          remaining_lunch_break_minutes: remaining_lunch_break_minutes(work_log),
+          last_event: last&.dig(:event),
+          last_event_time: last&.dig(:time)
         )
       end
     end
