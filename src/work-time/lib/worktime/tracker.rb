@@ -4,6 +4,8 @@ require "csv"
 require "fileutils"
 require "time"
 
+require_relative "work_log"
+
 module Worktime
   class AlreadyWorkingError < StandardError; end
   class LunchAlreadyTakenError < StandardError; end
@@ -184,28 +186,30 @@ module Worktime
     end
 
     def status
-      case state
+      work_log = work_log_for_date(@now.to_date)
+
+      case work_log.state
       when :unstarted
         UnstartedStatus.new(state: :unstarted, month_overtime_minutes: month_overtime_minutes)
       when :stopped
         FinishedDayStatus.new(
-          state: state,
-          start_time: start_time_for_date(@now.to_date),
-          stop_time: stop_time_for_date(@now.to_date),
-          break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
+          state: :stopped,
+          start_time: work_log.start_time,
+          stop_time: work_log.stop_time,
+          break_minutes: break_minutes_for_log(work_log),
           expected_minutes: expected_minutes,
           other_days_overtime_minutes: other_days_overtime_minutes
         )
       else
         WorkingDayStatus.new(
-          state: state,
-          start_time: start_time_for_date(@now.to_date),
+          state: work_log.state,
+          start_time: work_log.start_time,
           now: @now,
-          break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
+          break_minutes: break_minutes_for_log(work_log),
           expected_minutes: expected_minutes,
-          lunch_taken: lunch_taken?,
+          lunch_taken: work_log.lunch_taken?,
           other_days_overtime_minutes: other_days_overtime_minutes,
-          remaining_lunch_break_minutes: remaining_lunch_break_minutes
+          remaining_lunch_break_minutes: remaining_lunch_break_minutes(work_log)
         )
       end
     end
@@ -218,14 +222,47 @@ module Worktime
     def month_statistics
       dates = @events.map { |e| e[:date] }.uniq.sort
       days = dates.map do |date|
-        work_mins = work_minutes_for_date(date)
+        work_log = work_log_for_date(date)
+        work_mins = work_minutes_for_log(work_log)
         expected_mins = expected_minutes_for_date(date)
-        DayStats.new(date: date, work_minutes: work_mins, expected_minutes: expected_mins, overtime_minutes: work_mins - expected_mins)
+        DayStats.new(
+          date: date,
+          work_minutes: work_mins,
+          expected_minutes: expected_mins,
+          overtime_minutes: work_mins - expected_mins
+        )
       end
       MonthStats.new(days: days, total_overtime_minutes: days.sum(&:overtime_minutes))
     end
 
     private
+
+    def work_log_for_date(date)
+      WorkLog.new(events: events_for_date(date), date: date)
+    end
+
+    def break_minutes_for_log(work_log)
+      work_log.breaks.sum { |b| b.duration_minutes || 0 }
+    end
+
+    def work_minutes_for_log(work_log)
+      return 0 unless work_log.start_time && work_log.stop_time
+
+      total = ((work_log.stop_time - work_log.start_time) / 60).to_i
+      total - break_minutes_for_log(work_log)
+    end
+
+    def remaining_lunch_break_minutes(work_log)
+      lunch = work_log.lunch_break
+      return 60 unless lunch
+
+      if lunch.ongoing?
+        elapsed = ((@now - lunch.start_time) / 60).to_i
+        [60 - elapsed, 0].max
+      else
+        [60 - lunch.duration_minutes, 0].max
+      end
+    end
 
     def other_days_overtime_minutes
       month_statistics.days
@@ -246,71 +283,8 @@ module Worktime
       hours * 60
     end
 
-    def work_minutes_for_date(date)
-      events = events_for_date(date)
-      return 0 if events.empty?
-
-      start_event = events.find { |e| e[:event] == :start }
-      stop_event = events.find { |e| e[:event] == :stop }
-      return 0 unless start_event && stop_event
-
-      start_time = parse_time_for_date(start_event[:time], date)
-      stop_time = parse_time_for_date(stop_event[:time], date)
-      total = ((stop_time - start_time) / 60).to_i
-
-      total - break_minutes_for_date(events, date)
-    end
-
-    def break_minutes_for_date(events, date)
-      total = 0
-      break_start = nil
-
-      events.each do |event|
-        case event[:event]
-        when :break_start, :lunch_start
-          break_start = parse_time_for_date(event[:time], date)
-        when :break_end, :lunch_end, :stop
-          total += ((parse_time_for_date(event[:time], date) - break_start) / 60).to_i if break_start
-          break_start = nil
-        end
-      end
-
-      total
-    end
-
-    def parse_time_for_date(time_str, date)
-      hour, min = time_str.split(":").map(&:to_i)
-      Time.new(date.year, date.month, date.day, hour, min, 0)
-    end
-
-    def start_time_for_date(date)
-      events = events_for_date(date)
-      start_event = events.find { |e| e[:event] == :start }
-      return nil unless start_event
-
-      parse_time_for_date(start_event[:time], date)
-    end
-
-    def stop_time_for_date(date)
-      events = events_for_date(date)
-      stop_event = events.find { |e| e[:event] == :stop }
-      return nil unless stop_event
-
-      parse_time_for_date(stop_event[:time], date)
-    end
-
     def state
-      today_events = events_for_date(@now.to_date)
-      return :unstarted if today_events.empty?
-
-      last_event = today_events.last[:event]
-      case last_event
-      when :start, :break_end, :lunch_end then :working
-      when :stop then :stopped
-      when :break_start then :on_break
-      when :lunch_start then :on_lunch
-      else :stopped
-      end
+      work_log_for_date(@now.to_date).state
     end
 
     def outside_working_hours?
@@ -318,32 +292,7 @@ module Worktime
     end
 
     def lunch_taken?
-      events_for_date(@now.to_date).any? { |e| e[:event] == :lunch_end }
-    end
-
-    def remaining_lunch_break_minutes
-      events = events_for_date(@now.to_date)
-      lunch_start_event = events.find { |e| e[:event] == :lunch_start }
-
-      return 60 unless lunch_start_event
-
-      start_time = parse_time_for_date(lunch_start_event[:time], @now.to_date)
-      lunch_end_event = events.find { |e| e[:event] == :lunch_end }
-
-      if lunch_end_event
-        end_time = parse_time_for_date(lunch_end_event[:time], @now.to_date)
-        lunch_duration = ((end_time - start_time) / 60).to_i
-        [60 - lunch_duration, 0].max
-      elsif state == :on_lunch
-        elapsed = ((@now - start_time) / 60).to_i
-        [60 - elapsed, 0].max
-      else
-        # Lunch started but stopped work without ending lunch - use stop time
-        stop_event = events.find { |e| e[:event] == :stop }
-        end_time = parse_time_for_date(stop_event[:time], @now.to_date)
-        lunch_duration = ((end_time - start_time) / 60).to_i
-        [60 - lunch_duration, 0].max
-      end
+      work_log_for_date(@now.to_date).lunch_taken?
     end
 
     def events_for_date(date)
