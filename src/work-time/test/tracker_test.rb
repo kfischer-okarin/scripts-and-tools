@@ -411,6 +411,7 @@ class WorkingDayStatusTest < Minitest::Test
 
     assert_equal :working, result[:state]
     assert_equal start_time.iso8601, result[:start_time]
+    assert_equal false, result[:lunch_taken]
     assert_equal 240, result[:work_minutes]
     assert_equal(-240, result[:todays_surplus_minutes])
     assert_equal 60, result[:month_surplus_minutes]
@@ -440,12 +441,43 @@ class WorkingDayStatusTest < Minitest::Test
     expected = <<~OUTPUT.chomp
       State: working
       Start time: 09:00
+      Lunch taken: Yes
       Work today: 4:00
       Today's surplus: -4:00
       Month surplus: +1:00
       Remaining lunch: 0m
       Projected end: 17:00
       End for zero surplus: 12:00
+    OUTPUT
+
+    assert_equal expected, status.to_cli_output
+  end
+
+  def test_to_cli_output_lunch_not_taken
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 13, 0, 0)
+
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
+      expected_minutes: 480,
+      lunch_taken: false,
+      other_days_surplus_minutes: 300,
+      remaining_lunch_break_minutes: 60
+    )
+
+    expected = <<~OUTPUT.chomp
+      State: working
+      Start time: 09:00
+      Lunch taken: No
+      Work today: 4:00
+      Today's surplus: -4:00
+      Month surplus: +1:00
+      Remaining lunch: 60m
+      Projected end: 18:00
+      End for zero surplus: 13:00
     OUTPUT
 
     assert_equal expected, status.to_cli_output

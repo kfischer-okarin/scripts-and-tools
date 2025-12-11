@@ -30,6 +30,7 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 ```
 State: working
 Start time: 09:00
+Lunch taken: No
 Work today: 3:00
 Today's surplus: -5:00
 Month surplus: -6:00
@@ -49,6 +50,7 @@ With `--json` flag:
 {
   "state": "working",
   "start_time": "2024-12-10T09:00:00+09:00",
+  "lunch_taken": false,
   "work_minutes": 180,
   "todays_surplus_minutes": -300,
   "month_surplus_minutes": -360,

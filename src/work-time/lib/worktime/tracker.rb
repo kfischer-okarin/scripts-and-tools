@@ -81,6 +81,7 @@ module Worktime
         {
           state: state,
           start_time: start_time.iso8601,
+          lunch_taken: lunch_taken,
           work_minutes: work_minutes,
           todays_surplus_minutes: todays_surplus_minutes,
           month_surplus_minutes: month_surplus_minutes,
@@ -94,6 +95,7 @@ module Worktime
         lines = [
           "State: #{state}",
           "Start time: #{start_time.strftime('%H:%M')}",
+          "Lunch taken: #{lunch_taken ? 'Yes' : 'No'}",
           "Work today: #{format_duration(work_minutes)}",
           "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
           "Month surplus: #{format_surplus(month_surplus_minutes)}",
