@@ -389,12 +389,16 @@ end
 
 class WorkingDayStatusTest < Minitest::Test
   def test_to_json_hash
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 13, 0, 0)
     projected_end = Time.new(2024, 12, 10, 17, 0, 0)
     projected_zero = Time.new(2024, 12, 10, 18, 0, 0)
 
     status = Worktime::Tracker::WorkingDayStatus.new(
       state: :working,
-      work_minutes: 240,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: false,
       month_surplus_minutes: 60,
@@ -417,12 +421,16 @@ class WorkingDayStatusTest < Minitest::Test
   end
 
   def test_to_cli_output
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 13, 0, 0)
     projected_end = Time.new(2024, 12, 10, 17, 0, 0)
     projected_zero = Time.new(2024, 12, 10, 18, 0, 0)
 
     status = Worktime::Tracker::WorkingDayStatus.new(
       state: :working,
-      work_minutes: 240,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
       month_surplus_minutes: 60,
@@ -444,10 +452,35 @@ class WorkingDayStatusTest < Minitest::Test
     assert_equal expected, status.to_cli_output
   end
 
-  def test_todays_surplus_minutes_is_calculated
+  def test_work_minutes_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 18, 0, 0)
+
     status = Worktime::Tracker::WorkingDayStatus.new(
       state: :working,
-      work_minutes: 510,
+      start_time: start_time,
+      now: now,
+      break_minutes: 30,
+      expected_minutes: 480,
+      lunch_taken: true,
+      month_surplus_minutes: 0,
+      projected_end_time: nil,
+      projected_end_time_for_zero_surplus: nil,
+      remaining_lunch_break_minutes: 0
+    )
+
+    assert_equal 510, status.work_minutes
+  end
+
+  def test_todays_surplus_minutes_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 17, 30, 0)
+
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
       month_surplus_minutes: 0,

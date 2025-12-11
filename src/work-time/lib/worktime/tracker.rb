@@ -40,7 +40,9 @@ module Worktime
 
     WorkingDayStatus = Data.define(
       :state,
-      :work_minutes,
+      :start_time,
+      :now,
+      :break_minutes,
       :expected_minutes,
       :lunch_taken,
       :month_surplus_minutes,
@@ -49,6 +51,10 @@ module Worktime
       :remaining_lunch_break_minutes
     ) do
       include DurationFormatting
+
+      def work_minutes
+        ((self.now - start_time) / 60).to_i - break_minutes
+      end
 
       def todays_surplus_minutes
         work_minutes - expected_minutes
@@ -168,7 +174,9 @@ module Worktime
       else
         WorkingDayStatus.new(
           state: state,
-          work_minutes: work_minutes,
+          start_time: start_time_for_date(@now.to_date),
+          now: @now,
+          break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
           expected_minutes: expected_minutes,
           lunch_taken: lunch_taken?,
           month_surplus_minutes: month_surplus_minutes,
