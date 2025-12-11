@@ -254,10 +254,6 @@ module Worktime
       hours * 60
     end
 
-    def work_minutes
-      work_minutes_for_date(@now.to_date)
-    end
-
     def work_minutes_for_date(date)
       events = events_for_date(date)
       return 0 if events.empty?
