@@ -45,8 +45,7 @@ module Worktime
       :break_minutes,
       :expected_minutes,
       :lunch_taken,
-      :month_surplus_minutes,
-      :previous_days_surplus_minutes,
+      :other_days_surplus_minutes,
       :remaining_lunch_break_minutes
     ) do
       include DurationFormatting
@@ -59,6 +58,10 @@ module Worktime
         work_minutes - expected_minutes
       end
 
+      def month_surplus_minutes
+        other_days_surplus_minutes + todays_surplus_minutes
+      end
+
       def projected_end_time
         remaining_work = expected_minutes - work_minutes
         end_time = self.now + (remaining_work * 60)
@@ -68,7 +71,7 @@ module Worktime
 
       def projected_end_time_for_zero_surplus
         remaining_for_today = expected_minutes - work_minutes
-        remaining_work = remaining_for_today - previous_days_surplus_minutes
+        remaining_work = remaining_for_today - other_days_surplus_minutes
         end_time = self.now + (remaining_work * 60)
         end_time += (60 * 60) unless lunch_taken
         end_time
@@ -106,7 +109,7 @@ module Worktime
       :stop_time,
       :break_minutes,
       :expected_minutes,
-      :month_surplus_minutes
+      :other_days_surplus_minutes
     ) do
       include DurationFormatting
 
@@ -116,6 +119,10 @@ module Worktime
 
       def todays_surplus_minutes
         work_minutes - expected_minutes
+      end
+
+      def month_surplus_minutes
+        other_days_surplus_minutes + todays_surplus_minutes
       end
 
       def to_json_hash
@@ -183,7 +190,7 @@ module Worktime
           stop_time: stop_time_for_date(@now.to_date),
           break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
           expected_minutes: expected_minutes,
-          month_surplus_minutes: month_surplus_minutes
+          other_days_surplus_minutes: other_days_surplus_minutes
         )
       else
         WorkingDayStatus.new(
@@ -193,8 +200,7 @@ module Worktime
           break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
           expected_minutes: expected_minutes,
           lunch_taken: lunch_taken?,
-          month_surplus_minutes: month_surplus_minutes,
-          previous_days_surplus_minutes: previous_days_surplus_minutes,
+          other_days_surplus_minutes: other_days_surplus_minutes,
           remaining_lunch_break_minutes: remaining_lunch_break_minutes
         )
       end
@@ -217,7 +223,7 @@ module Worktime
 
     private
 
-    def previous_days_surplus_minutes
+    def other_days_surplus_minutes
       month_statistics.days
         .reject { |d| d.date == @now.to_date }
         .sum(&:surplus_minutes)

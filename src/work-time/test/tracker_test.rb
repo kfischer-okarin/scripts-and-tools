@@ -399,13 +399,14 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: false,
-      month_surplus_minutes: 60,
-      previous_days_surplus_minutes: 60,
+      other_days_surplus_minutes: 300,
       remaining_lunch_break_minutes: 60
     )
 
+    # work_minutes = 4h = 240, todays_surplus = 240 - 480 = -240
+    # month_surplus = 300 + (-240) = 60
     # projected_end_time = now + remaining_work + lunch = 13:00 + 4h + 1h = 18:00
-    # projected_end_time_for_zero_surplus = now + (remaining - prev_surplus) + lunch = 13:00 + (4h - 1h) + 1h = 17:00
+    # projected_end_time_for_zero_surplus = now + (remaining - other_days) + lunch = 13:00 + (4h - 5h) + 1h = 13:00
     expected = {
       state: :working,
       work_minutes: 240,
@@ -413,7 +414,7 @@ class WorkingDayStatusTest < Minitest::Test
       month_surplus_minutes: 60,
       remaining_lunch_break_minutes: 60,
       projected_end_time: Time.new(2024, 12, 10, 18, 0, 0).iso8601,
-      projected_end_time_for_zero_surplus: Time.new(2024, 12, 10, 17, 0, 0).iso8601
+      projected_end_time_for_zero_surplus: Time.new(2024, 12, 10, 13, 0, 0).iso8601
     }
 
     assert_equal expected, status.to_json_hash
@@ -430,13 +431,13 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
-      month_surplus_minutes: 60,
-      previous_days_surplus_minutes: 60,
+      other_days_surplus_minutes: 300,
       remaining_lunch_break_minutes: 0
     )
 
+    # month_surplus = 300 + (-240) = 60
     # projected_end_time = now + remaining_work = 13:00 + 4h = 17:00 (lunch already taken)
-    # projected_end_time_for_zero_surplus = now + (remaining - prev_surplus) = 13:00 + 3h = 16:00
+    # projected_end_time_for_zero_surplus = now + (remaining - other_days) = 13:00 + (4h - 5h) = 12:00
     expected = <<~OUTPUT.chomp
       State: working
       Work today: 4:00
@@ -444,7 +445,7 @@ class WorkingDayStatusTest < Minitest::Test
       Month surplus: +1:00
       Remaining lunch: 0m
       Projected end: 17:00
-      End for zero surplus: 16:00
+      End for zero surplus: 12:00
     OUTPUT
 
     assert_equal expected, status.to_cli_output
@@ -461,8 +462,7 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 30,
       expected_minutes: 480,
       lunch_taken: true,
-      month_surplus_minutes: 0,
-      previous_days_surplus_minutes: 0,
+      other_days_surplus_minutes: 0,
       remaining_lunch_break_minutes: 0
     )
 
@@ -480,12 +480,30 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
-      month_surplus_minutes: 0,
-      previous_days_surplus_minutes: 0,
+      other_days_surplus_minutes: 0,
       remaining_lunch_break_minutes: 0
     )
 
     assert_equal 30, status.todays_surplus_minutes
+  end
+
+  def test_month_surplus_minutes_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 17, 30, 0)
+
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
+      expected_minutes: 480,
+      lunch_taken: true,
+      other_days_surplus_minutes: 60,
+      remaining_lunch_break_minutes: 0
+    )
+
+    # todays_surplus = 30, other_days = 60, month = 90
+    assert_equal 90, status.month_surplus_minutes
   end
 
   def test_projected_end_time_is_calculated
@@ -499,8 +517,7 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
-      month_surplus_minutes: 0,
-      previous_days_surplus_minutes: 0,
+      other_days_surplus_minutes: 0,
       remaining_lunch_break_minutes: 0
     )
 
@@ -520,8 +537,7 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: false,
-      month_surplus_minutes: 0,
-      previous_days_surplus_minutes: 0,
+      other_days_surplus_minutes: 0,
       remaining_lunch_break_minutes: 60
     )
 
@@ -541,12 +557,11 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
-      month_surplus_minutes: -60,
-      previous_days_surplus_minutes: -60,
+      other_days_surplus_minutes: -60,
       remaining_lunch_break_minutes: 0
     )
 
-    # work_minutes = 4h, remaining = 4h, previous_days = -1h (behind)
+    # work_minutes = 4h, remaining = 4h, other_days = -1h (behind)
     # remaining_for_zero = 4h - (-1h) = 5h
     # projected = 13:00 + 5h = 18:00
     assert_equal Time.new(2024, 12, 10, 18, 0, 0), status.projected_end_time_for_zero_surplus
@@ -563,12 +578,11 @@ class WorkingDayStatusTest < Minitest::Test
       break_minutes: 0,
       expected_minutes: 480,
       lunch_taken: true,
-      month_surplus_minutes: 60,
-      previous_days_surplus_minutes: 60,
+      other_days_surplus_minutes: 60,
       remaining_lunch_break_minutes: 0
     )
 
-    # work_minutes = 4h, remaining = 4h, previous_days = +1h (ahead)
+    # work_minutes = 4h, remaining = 4h, other_days = +1h (ahead)
     # remaining_for_zero = 4h - 1h = 3h
     # projected = 13:00 + 3h = 16:00
     assert_equal Time.new(2024, 12, 10, 16, 0, 0), status.projected_end_time_for_zero_surplus
@@ -586,7 +600,7 @@ class FinishedDayStatusTest < Minitest::Test
       stop_time: stop_time,
       break_minutes: 0,
       expected_minutes: 480,
-      month_surplus_minutes: 30
+      other_days_surplus_minutes: 30
     )
 
     expected = {
@@ -609,9 +623,11 @@ class FinishedDayStatusTest < Minitest::Test
       stop_time: stop_time,
       break_minutes: 60,
       expected_minutes: 480,
-      month_surplus_minutes: 90
+      other_days_surplus_minutes: 60
     )
 
+    # work_minutes = 9.5h - 1h = 8.5h = 510, todays_surplus = 30
+    # month_surplus = 60 + 30 = 90
     expected = <<~OUTPUT.chomp
       State: stopped
       Work today: 8:30
@@ -632,7 +648,7 @@ class FinishedDayStatusTest < Minitest::Test
       stop_time: stop_time,
       break_minutes: 60,
       expected_minutes: 480,
-      month_surplus_minutes: 0
+      other_days_surplus_minutes: 0
     )
 
     assert_equal 480, status.work_minutes
@@ -648,9 +664,26 @@ class FinishedDayStatusTest < Minitest::Test
       stop_time: stop_time,
       break_minutes: 60,
       expected_minutes: 480,
-      month_surplus_minutes: 0
+      other_days_surplus_minutes: 0
     )
 
     assert_equal(-30, status.todays_surplus_minutes)
+  end
+
+  def test_month_surplus_minutes_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    stop_time = Time.new(2024, 12, 10, 17, 30, 0)
+
+    status = Worktime::Tracker::FinishedDayStatus.new(
+      state: :stopped,
+      start_time: start_time,
+      stop_time: stop_time,
+      break_minutes: 0,
+      expected_minutes: 480,
+      other_days_surplus_minutes: 60
+    )
+
+    # work = 8.5h = 510, todays_surplus = 30, other_days = 60, month = 90
+    assert_equal 90, status.month_surplus_minutes
   end
 end
