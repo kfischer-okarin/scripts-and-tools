@@ -391,7 +391,6 @@ class WorkingDayStatusTest < Minitest::Test
   def test_to_json_hash
     start_time = Time.new(2024, 12, 10, 9, 0, 0)
     now = Time.new(2024, 12, 10, 13, 0, 0)
-    projected_end = Time.new(2024, 12, 10, 17, 0, 0)
     projected_zero = Time.new(2024, 12, 10, 18, 0, 0)
 
     status = Worktime::Tracker::WorkingDayStatus.new(
@@ -402,18 +401,18 @@ class WorkingDayStatusTest < Minitest::Test
       expected_minutes: 480,
       lunch_taken: false,
       month_surplus_minutes: 60,
-      projected_end_time: projected_end,
       projected_end_time_for_zero_surplus: projected_zero,
       remaining_lunch_break_minutes: 60
     )
 
+    # projected_end_time = now + remaining_work + lunch = 13:00 + 4h + 1h = 18:00
     expected = {
       state: :working,
       work_minutes: 240,
       todays_surplus_minutes: -240,
       month_surplus_minutes: 60,
       remaining_lunch_break_minutes: 60,
-      projected_end_time: projected_end.iso8601,
+      projected_end_time: Time.new(2024, 12, 10, 18, 0, 0).iso8601,
       projected_end_time_for_zero_surplus: projected_zero.iso8601
     }
 
@@ -423,7 +422,6 @@ class WorkingDayStatusTest < Minitest::Test
   def test_to_cli_output
     start_time = Time.new(2024, 12, 10, 9, 0, 0)
     now = Time.new(2024, 12, 10, 13, 0, 0)
-    projected_end = Time.new(2024, 12, 10, 17, 0, 0)
     projected_zero = Time.new(2024, 12, 10, 18, 0, 0)
 
     status = Worktime::Tracker::WorkingDayStatus.new(
@@ -434,11 +432,11 @@ class WorkingDayStatusTest < Minitest::Test
       expected_minutes: 480,
       lunch_taken: true,
       month_surplus_minutes: 60,
-      projected_end_time: projected_end,
       projected_end_time_for_zero_surplus: projected_zero,
       remaining_lunch_break_minutes: 0
     )
 
+    # projected_end_time = now + remaining_work = 13:00 + 4h = 17:00 (lunch already taken)
     expected = <<~OUTPUT.chomp
       State: working
       Work today: 4:00
@@ -464,7 +462,6 @@ class WorkingDayStatusTest < Minitest::Test
       expected_minutes: 480,
       lunch_taken: true,
       month_surplus_minutes: 0,
-      projected_end_time: nil,
       projected_end_time_for_zero_surplus: nil,
       remaining_lunch_break_minutes: 0
     )
@@ -484,12 +481,53 @@ class WorkingDayStatusTest < Minitest::Test
       expected_minutes: 480,
       lunch_taken: true,
       month_surplus_minutes: 0,
-      projected_end_time: nil,
       projected_end_time_for_zero_surplus: nil,
       remaining_lunch_break_minutes: 0
     )
 
     assert_equal 30, status.todays_surplus_minutes
+  end
+
+  def test_projected_end_time_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 13, 0, 0)
+
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
+      expected_minutes: 480,
+      lunch_taken: true,
+      month_surplus_minutes: 0,
+      projected_end_time_for_zero_surplus: nil,
+      remaining_lunch_break_minutes: 0
+    )
+
+    # work_minutes = 4h, remaining = 8h - 4h = 4h, lunch taken so no extra hour
+    # projected = 13:00 + 4h = 17:00
+    assert_equal Time.new(2024, 12, 10, 17, 0, 0), status.projected_end_time
+  end
+
+  def test_projected_end_time_adds_hour_when_lunch_not_taken
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    now = Time.new(2024, 12, 10, 11, 0, 0)
+
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: start_time,
+      now: now,
+      break_minutes: 0,
+      expected_minutes: 480,
+      lunch_taken: false,
+      month_surplus_minutes: 0,
+      projected_end_time_for_zero_surplus: nil,
+      remaining_lunch_break_minutes: 60
+    )
+
+    # work_minutes = 2h, remaining = 8h - 2h = 6h, lunch not taken so +1h
+    # projected = 11:00 + 6h + 1h = 18:00
+    assert_equal Time.new(2024, 12, 10, 18, 0, 0), status.projected_end_time
   end
 end
 

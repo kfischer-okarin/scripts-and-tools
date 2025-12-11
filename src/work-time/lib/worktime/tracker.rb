@@ -46,7 +46,6 @@ module Worktime
       :expected_minutes,
       :lunch_taken,
       :month_surplus_minutes,
-      :projected_end_time,
       :projected_end_time_for_zero_surplus,
       :remaining_lunch_break_minutes
     ) do
@@ -58,6 +57,13 @@ module Worktime
 
       def todays_surplus_minutes
         work_minutes - expected_minutes
+      end
+
+      def projected_end_time
+        remaining_work = expected_minutes - work_minutes
+        end_time = self.now + (remaining_work * 60)
+        end_time += (60 * 60) unless lunch_taken
+        end_time
       end
 
       def to_json_hash
@@ -180,7 +186,6 @@ module Worktime
           expected_minutes: expected_minutes,
           lunch_taken: lunch_taken?,
           month_surplus_minutes: month_surplus_minutes,
-          projected_end_time: projected_end_time,
           projected_end_time_for_zero_surplus: projected_end_time_for_zero_surplus,
           remaining_lunch_break_minutes: remaining_lunch_break_minutes
         )
@@ -203,17 +208,6 @@ module Worktime
     end
 
     private
-
-    def projected_end_time
-      events = events_for_date(@now.to_date)
-      start_event = events.find { |e| e[:event] == :start }
-      return nil unless start_event
-
-      remaining_work = expected_minutes - worked_minutes_so_far
-      end_time = @now + (remaining_work * 60)
-      end_time += (60 * 60) unless lunch_taken?
-      end_time
-    end
 
     def projected_end_time_for_zero_surplus
       events = events_for_date(@now.to_date)
