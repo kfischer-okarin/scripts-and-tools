@@ -327,7 +327,7 @@ class TrackerTest < Minitest::Test
     assert_equal 45, tracker.status.remaining_lunch_break_minutes
   end
 
-  def test_remaining_lunch_break_minutes_when_stopped_without_ending_lunch
+  def test_work_minutes_when_stopped_without_ending_lunch
     at_nine = Time.new(2024, 12, 10, 9, 0, 0)
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
     tracker.start
@@ -340,8 +340,11 @@ class TrackerTest < Minitest::Test
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_twelve_thirty)
     tracker.stop
 
+    # 9:00-12:30 = 210 minutes total
+    # lunch started at 12:00, stop at 12:30 implicitly ends it (30 min break)
+    # work = 210 - 30 = 180
     assert_equal :stopped, tracker.status.state
-    assert_equal 30, tracker.status.remaining_lunch_break_minutes
+    assert_equal 180, tracker.status.work_minutes
   end
 end
 
@@ -459,34 +462,39 @@ end
 
 class FinishedDayStatusTest < Minitest::Test
   def test_to_json_hash
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    stop_time = Time.new(2024, 12, 10, 17, 0, 0)
+
     status = Worktime::Tracker::FinishedDayStatus.new(
       state: :stopped,
-      work_minutes: 480,
+      start_time: start_time,
+      stop_time: stop_time,
+      break_minutes: 0,
       expected_minutes: 480,
-      lunch_taken: true,
-      month_surplus_minutes: 30,
-      remaining_lunch_break_minutes: 0
+      month_surplus_minutes: 30
     )
 
     expected = {
       state: :stopped,
       work_minutes: 480,
       todays_surplus_minutes: 0,
-      month_surplus_minutes: 30,
-      remaining_lunch_break_minutes: 0
+      month_surplus_minutes: 30
     }
 
     assert_equal expected, status.to_json_hash
   end
 
   def test_to_cli_output
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    stop_time = Time.new(2024, 12, 10, 18, 30, 0)
+
     status = Worktime::Tracker::FinishedDayStatus.new(
       state: :stopped,
-      work_minutes: 510,
+      start_time: start_time,
+      stop_time: stop_time,
+      break_minutes: 60,
       expected_minutes: 480,
-      lunch_taken: true,
-      month_surplus_minutes: 90,
-      remaining_lunch_break_minutes: 30
+      month_surplus_minutes: 90
     )
 
     expected = <<~OUTPUT.chomp
@@ -494,20 +502,38 @@ class FinishedDayStatusTest < Minitest::Test
       Work today: 8:30
       Today's surplus: +0:30
       Month surplus: +1:30
-      Remaining lunch: 30m
     OUTPUT
 
     assert_equal expected, status.to_cli_output
   end
 
-  def test_todays_surplus_minutes_is_calculated
+  def test_work_minutes_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    stop_time = Time.new(2024, 12, 10, 18, 0, 0)
+
     status = Worktime::Tracker::FinishedDayStatus.new(
       state: :stopped,
-      work_minutes: 450,
+      start_time: start_time,
+      stop_time: stop_time,
+      break_minutes: 60,
       expected_minutes: 480,
-      lunch_taken: true,
-      month_surplus_minutes: 0,
-      remaining_lunch_break_minutes: 0
+      month_surplus_minutes: 0
+    )
+
+    assert_equal 480, status.work_minutes
+  end
+
+  def test_todays_surplus_minutes_is_calculated
+    start_time = Time.new(2024, 12, 10, 9, 0, 0)
+    stop_time = Time.new(2024, 12, 10, 17, 30, 0)
+
+    status = Worktime::Tracker::FinishedDayStatus.new(
+      state: :stopped,
+      start_time: start_time,
+      stop_time: stop_time,
+      break_minutes: 60,
+      expected_minutes: 480,
+      month_surplus_minutes: 0
     )
 
     assert_equal(-30, status.todays_surplus_minutes)

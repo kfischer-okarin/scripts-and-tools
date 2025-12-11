@@ -82,13 +82,17 @@ module Worktime
 
     FinishedDayStatus = Data.define(
       :state,
-      :work_minutes,
+      :start_time,
+      :stop_time,
+      :break_minutes,
       :expected_minutes,
-      :lunch_taken,
-      :month_surplus_minutes,
-      :remaining_lunch_break_minutes
+      :month_surplus_minutes
     ) do
       include DurationFormatting
+
+      def work_minutes
+        ((stop_time - start_time) / 60).to_i - break_minutes
+      end
 
       def todays_surplus_minutes
         work_minutes - expected_minutes
@@ -99,8 +103,7 @@ module Worktime
           state: state,
           work_minutes: work_minutes,
           todays_surplus_minutes: todays_surplus_minutes,
-          month_surplus_minutes: month_surplus_minutes,
-          remaining_lunch_break_minutes: remaining_lunch_break_minutes
+          month_surplus_minutes: month_surplus_minutes
         }
       end
 
@@ -109,8 +112,7 @@ module Worktime
           "State: #{state}",
           "Work today: #{format_duration(work_minutes)}",
           "Today's surplus: #{format_surplus(todays_surplus_minutes)}",
-          "Month surplus: #{format_surplus(month_surplus_minutes)}",
-          "Remaining lunch: #{remaining_lunch_break_minutes}m"
+          "Month surplus: #{format_surplus(month_surplus_minutes)}"
         ]
         lines.join("\n")
       end
@@ -157,11 +159,11 @@ module Worktime
       when :stopped
         FinishedDayStatus.new(
           state: state,
-          work_minutes: work_minutes,
+          start_time: start_time_for_date(@now.to_date),
+          stop_time: stop_time_for_date(@now.to_date),
+          break_minutes: break_minutes_for_date(events_for_date(@now.to_date), @now.to_date),
           expected_minutes: expected_minutes,
-          lunch_taken: lunch_taken?,
-          month_surplus_minutes: month_surplus_minutes,
-          remaining_lunch_break_minutes: remaining_lunch_break_minutes
+          month_surplus_minutes: month_surplus_minutes
         )
       else
         WorkingDayStatus.new(
@@ -271,7 +273,7 @@ module Worktime
         case event[:event]
         when :break_start, :lunch_start
           break_start = parse_time_for_date(event[:time], date)
-        when :break_end, :lunch_end
+        when :break_end, :lunch_end, :stop
           total += ((parse_time_for_date(event[:time], date) - break_start) / 60).to_i if break_start
           break_start = nil
         end
@@ -283,6 +285,22 @@ module Worktime
     def parse_time_for_date(time_str, date)
       hour, min = time_str.split(":").map(&:to_i)
       Time.new(date.year, date.month, date.day, hour, min, 0)
+    end
+
+    def start_time_for_date(date)
+      events = events_for_date(date)
+      start_event = events.find { |e| e[:event] == :start }
+      return nil unless start_event
+
+      parse_time_for_date(start_event[:time], date)
+    end
+
+    def stop_time_for_date(date)
+      events = events_for_date(date)
+      stop_event = events.find { |e| e[:event] == :stop }
+      return nil unless stop_event
+
+      parse_time_for_date(stop_event[:time], date)
     end
 
     def state
