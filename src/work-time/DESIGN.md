@@ -34,16 +34,22 @@ Start time: 09:00
 Lunch taken: No
 Work today: 3:00
 Today's overtime: -5:00
-Month overtime: -6:00
+Month overtime: -1:00
 Remaining lunch: 60m
 Projected end: 18:00
 End for zero overtime: 19:00
+Break ended at 10:15
 ```
 
 - **State**: unstarted/working/on_break/on_lunch/stopped
 - **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, 0 after full hour used)
 - **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
 - **End for zero overtime**: Time to reach 0 month overtime (accounts for previous days)
+- **Month overtime**: Previous days only (excludes today's in-progress overtime)
+- **Last event line**: Context-dependent message showing the last event (not shown for `:start` since start time is already displayed):
+  - "Break started at HH:MM" / "Break ended at HH:MM"
+  - "Lunch started at HH:MM" / "Lunch ended at HH:MM"
+  - "Finished work at HH:MM" (for stopped status)
 
 With `--json` flag:
 
@@ -54,10 +60,12 @@ With `--json` flag:
   "lunch_taken": false,
   "work_minutes": 180,
   "todays_overtime_minutes": -300,
-  "month_overtime_minutes": -360,
+  "month_overtime_minutes": -60,
   "remaining_lunch_break_minutes": 60,
   "projected_end_time": "2024-12-10T18:00:00+09:00",
-  "projected_end_time_for_zero_overtime": "2024-12-10T19:00:00+09:00"
+  "projected_end_time_for_zero_overtime": "2024-12-10T19:00:00+09:00",
+  "last_event": "break_end",
+  "last_event_time": "10:15"
 }
 ```
 

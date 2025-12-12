@@ -434,7 +434,7 @@ class WorkingDayStatusTest < Minitest::Test
     assert_equal false, result[:lunch_taken]
     assert_equal 240, result[:work_minutes]
     assert_equal(-240, result[:todays_overtime_minutes])
-    assert_equal 60, result[:month_overtime_minutes]
+    assert_equal 300, result[:month_overtime_minutes]
     assert_equal 60, result[:remaining_lunch_break_minutes]
     assert_equal Time.new(2024, 12, 10, 18, 0, 0).iso8601, result[:projected_end_time]
     assert_equal Time.new(2024, 12, 10, 13, 0, 0).iso8601, result[:projected_end_time_for_zero_overtime]
@@ -457,7 +457,7 @@ class WorkingDayStatusTest < Minitest::Test
       last_event_time: "13:00"
     )
 
-    # month_overtime = 300 + (-240) = 60
+    # month_overtime = 300 (other days only, not including today's -240)
     # projected_end_time = now + remaining_work = 13:00 + 4h = 17:00 (lunch already taken)
     # projected_end_time_for_zero_overtime = now + (remaining - other_days) = 13:00 + (4h - 5h) = 12:00
     expected = <<~OUTPUT.chomp
@@ -466,7 +466,7 @@ class WorkingDayStatusTest < Minitest::Test
       Lunch taken: Yes
       Work today: 4:00
       Today's overtime: -4:00
-      Month overtime: +1:00
+      Month overtime: +5:00
       Remaining lunch: 0m
       Projected end: 17:00
       End for zero overtime: 12:00
@@ -499,7 +499,7 @@ class WorkingDayStatusTest < Minitest::Test
       Lunch taken: No
       Work today: 4:00
       Today's overtime: -4:00
-      Month overtime: +1:00
+      Month overtime: +5:00
       Remaining lunch: 60m
       Projected end: 18:00
       End for zero overtime: 13:00

@@ -63,7 +63,7 @@ module Worktime
       end
 
       def month_overtime_minutes
-        other_days_overtime_minutes + todays_overtime_minutes
+        other_days_overtime_minutes
       end
 
       def projected_end_time
