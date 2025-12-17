@@ -102,6 +102,18 @@ module Worktime
       puts "Set expected hours for #{date} to #{hours}"
     end
 
+    desc "adjust TIME", "Adjust the last event's time (e.g., 10:22)"
+    def adjust(time)
+      t = tracker
+      last_event = t.status.last_event
+      t.adjust(time)
+      puts "Adjusted #{last_event} to #{time}"
+    rescue OutsideWorkingHoursError
+      warn "No events to adjust"
+    rescue InvalidAdjustmentError
+      warn "Cannot adjust to a time before the previous event"
+    end
+
     private
 
     def tracker(now = Time.now)

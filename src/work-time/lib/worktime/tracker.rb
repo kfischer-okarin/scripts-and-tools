@@ -10,6 +10,7 @@ module Worktime
   class AlreadyWorkingError < StandardError; end
   class LunchAlreadyTakenError < StandardError; end
   class OutsideWorkingHoursError < StandardError; end
+  class InvalidAdjustmentError < StandardError; end
 
   module DurationFormatting
     def format_duration(minutes)
@@ -247,6 +248,20 @@ module Worktime
     def set_hours(hours, date: @now.to_date)
       @overrides[date] = hours
       save_overrides
+    end
+
+    def adjust(new_time)
+      raise OutsideWorkingHoursError if state == :unstarted
+
+      today_events = events_for_date(@now.to_date)
+
+      if today_events.size > 1
+        previous_time = today_events[-2][:time]
+        raise InvalidAdjustmentError if new_time < previous_time
+      end
+
+      today_events.last[:time] = new_time
+      save_events
     end
 
     def month_statistics

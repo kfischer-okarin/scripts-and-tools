@@ -597,6 +597,47 @@ class WorkingDayStatusTest < Minitest::Test
   end
 end
 
+class AdjustTest < Minitest::Test
+  def setup
+    @data_dir = Dir.mktmpdir
+  end
+
+  def teardown
+    FileUtils.remove_entry(@data_dir)
+  end
+
+  def test_adjust_changes_last_event_time
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    tracker.adjust("09:15")
+
+    # Reload to verify persistence
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    assert_equal Time.new(2024, 12, 10, 9, 15, 0), tracker.status.start_time
+  end
+
+  def test_adjust_when_unstarted_raises
+    tracker = Worktime::Tracker.new(data_dir: @data_dir)
+
+    assert_raises(Worktime::OutsideWorkingHoursError) { tracker.adjust("09:00") }
+  end
+
+  def test_adjust_to_time_before_previous_event_raises
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_ten = Time.new(2024, 12, 10, 10, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_ten)
+    tracker.toggle_break
+
+    # Try to adjust break_start to 08:30 (before start at 09:00)
+    assert_raises(Worktime::InvalidAdjustmentError) { tracker.adjust("08:30") }
+  end
+end
+
 class FinishedDayStatusTest < Minitest::Test
   def test_to_json_hash
     start_time = Time.new(2024, 12, 10, 9, 0, 0)

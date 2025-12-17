@@ -15,6 +15,7 @@ Ruby CLI for tracking worktime and breaks for employer timesheet reporting.
 | `worktime status [DATE] [--json]` | Show current state + projections (optional: YYYY-MM-DD) |
 | `worktime month [MONTH]` | Monthly overview table (optional: YYYY-MM) |
 | `worktime set_hours HOURS [--date DATE]` | Override expected hours |
+| `worktime adjust TIME` | Adjust last event time (HH:MM) |
 
 ## Business Rules
 
@@ -148,5 +149,6 @@ src/work-time/
 Exceptions raised by Tracker, caught and displayed by CLI:
 
 - `AlreadyWorkingError` - start when already working
-- `OutsideWorkingHoursError` - stop/break/lunch when outside working hours
+- `OutsideWorkingHoursError` - stop/break/lunch/adjust when outside working hours
 - `LunchAlreadyTakenError` - lunch toggle after lunch completed
+- `InvalidAdjustmentError` - adjust to time before previous event
