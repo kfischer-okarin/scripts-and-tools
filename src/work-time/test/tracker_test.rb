@@ -329,6 +329,22 @@ class TrackerTest < Minitest::Test
     assert_equal 0, tracker.status.remaining_lunch_break_minutes
   end
 
+  def test_remaining_lunch_break_minutes_is_negative_after_over_60_minute_lunch
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_one_fifteen = Time.new(2024, 12, 10, 13, 15, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one_fifteen)
+    tracker.toggle_lunch
+
+    assert_equal(-15, tracker.status.remaining_lunch_break_minutes)
+  end
+
   def test_remaining_lunch_break_minutes_shows_remaining_while_on_lunch
     at_nine = Time.new(2024, 12, 10, 9, 0, 0)
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)

@@ -303,9 +303,9 @@ module Worktime
 
       if lunch.ongoing?
         elapsed = ((@now - lunch.start_time) / 60).to_i
-        [60 - elapsed, 0].max
+        60 - elapsed
       else
-        [60 - lunch.duration_minutes, 0].max
+        60 - lunch.duration_minutes
       end
     end
 

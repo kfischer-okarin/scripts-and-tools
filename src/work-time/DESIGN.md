@@ -43,7 +43,7 @@ Break ended at 10:15
 ```
 
 - **State**: unstarted/working/on_break/on_lunch/stopped
-- **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, 0 after full hour used)
+- **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, negative if exceeded)
 - **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
 - **End for zero overtime**: Time to reach 0 month overtime (accounts for previous days)
 - **Month overtime**: Previous days only (excludes today's in-progress overtime)
