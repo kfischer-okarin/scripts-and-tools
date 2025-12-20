@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+require "tempfile"
 require "test_helper"
 
 class ProjectParserTest < ClaudeHistory::TestCase
@@ -44,5 +46,43 @@ class ProjectParserTest < ClaudeHistory::TestCase
     summary_records = session.records.select { |r| r.type == "summary" }
     refute_empty summary_records
     assert summary_records.all? { |r| r.is_a?(ClaudeHistory::Summary) }
+  end
+
+  def test_warns_on_unknown_record_type
+    project_dir = build_project(
+      "test-session.jsonl" => <<~JSONL
+        {"type":"unknown-future-type","foo":"bar"}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test-session")
+
+    assert_equal 1, session.records.size
+    record = session.records.first
+
+    assert_instance_of ClaudeHistory::Record, record
+    refute_empty record.warnings
+
+    warning = record.warnings.first
+    assert_equal :unknown_record_type, warning.type
+    assert_equal 1, warning.line_number
+    assert_equal({ type: "unknown-future-type", foo: "bar" }, warning.raw_data)
+  end
+
+  def test_session_aggregates_warnings_from_records
+    project_dir = build_project(
+      "test-session.jsonl" => <<~JSONL
+        {"type":"user","uuid":"123","message":{"role":"user","content":"hi"}}
+        {"type":"unknown-type-1","foo":"bar"}
+        {"type":"unknown-type-2","baz":"qux"}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test-session")
+
+    assert_equal 2, session.warnings.size
+    assert session.warnings.all? { |w| w.type == :unknown_record_type }
   end
 end

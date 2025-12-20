@@ -2,11 +2,14 @@
 
 module ClaudeHistory
   class Session
-    attr_reader :records, :warnings
+    attr_reader :records
 
-    def initialize(records:, warnings: [])
+    def initialize(records:)
       @records = records
-      @warnings = warnings
+    end
+
+    def warnings
+      records.flat_map(&:warnings)
     end
   end
 end

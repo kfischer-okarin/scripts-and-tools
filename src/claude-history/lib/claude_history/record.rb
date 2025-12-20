@@ -12,5 +12,9 @@ module ClaudeHistory
     def type
       raw_data[:type]
     end
+
+    def add_warning(warning)
+      @warnings << warning
+    end
   end
 end

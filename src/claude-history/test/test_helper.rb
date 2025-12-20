@@ -1,10 +1,22 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "minitest/autorun"
+require "tmpdir"
 require_relative "../lib/claude_history"
 
 module ClaudeHistory
   class TestCase < Minitest::Test
+    def before_setup
+      super
+      @temp_dirs = []
+    end
+
+    def after_teardown
+      @temp_dirs.each { |dir| FileUtils.rm_rf(dir) }
+      super
+    end
+
     def projects_fixture_path
       File.expand_path("fixtures/claude-projects", __dir__)
     end
@@ -19,6 +31,17 @@ module ClaudeHistory
 
     def fixture_summary_session_id
       "be89c3cd-bfbf-4c4f-a515-5af6e13249bf"
+    end
+
+    def build_project(files)
+      dir = Dir.mktmpdir
+      @temp_dirs << dir
+
+      files.each do |filename, content|
+        File.write(File.join(dir, filename), content)
+      end
+
+      dir
     end
   end
 end
