@@ -2,12 +2,15 @@
 
 module ClaudeHistory
   class Record
+    EXPECTED_ATTRIBUTES = [].freeze
+
     attr_reader :raw_data, :warnings, :line_number
 
     def initialize(data, line_number)
       @raw_data = data
       @line_number = line_number
       @warnings = []
+      validate_attributes
     end
 
     def type
@@ -24,6 +27,23 @@ module ClaudeHistory
 
     def add_warning(warning)
       @warnings << warning
+    end
+
+    private
+
+    def validate_attributes
+      expected = self.class::EXPECTED_ATTRIBUTES
+      return if expected.empty?
+
+      unexpected = raw_data.keys - expected
+      return if unexpected.empty?
+
+      add_warning(Warning.new(
+        type: :unexpected_attributes,
+        message: "Unexpected attributes: #{unexpected.join(", ")}",
+        line_number: line_number,
+        raw_data: raw_data
+      ))
     end
   end
 end

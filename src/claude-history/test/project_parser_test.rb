@@ -204,6 +204,66 @@ class ProjectParserTest < ClaudeHistory::TestCase
     assert_equal :unexpected_content_shape, user_msg.warnings.first.type
   end
 
+  def test_user_message_warns_on_unexpected_attributes
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"123","message":{"role":"user","content":"hi"},"newField":"x","anotherNew":"y"}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+    user_msg = session.records.first
+
+    assert_equal 1, user_msg.warnings.size
+    warning = user_msg.warnings.first
+    assert_equal :unexpected_attributes, warning.type
+    assert_includes warning.message, "newField"
+    assert_includes warning.message, "anotherNew"
+  end
+
+  def test_assistant_message_warns_on_unexpected_attributes
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"assistant","uuid":"123","message":{"role":"assistant","content":[]},"futureField":"x"}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+
+    assert_equal 1, session.warnings.size
+    assert_equal :unexpected_attributes, session.warnings.first.type
+  end
+
+  def test_summary_warns_on_unexpected_attributes
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"summary","summary":"test","leafUuid":"123","futureField":"x"}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+
+    assert_equal 1, session.warnings.size
+    assert_equal :unexpected_attributes, session.warnings.first.type
+  end
+
+  def test_file_history_snapshot_warns_on_unexpected_attributes
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"file-history-snapshot","messageId":"123","snapshot":{},"isSnapshotUpdate":false,"futureField":"x"}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+
+    assert_equal 1, session.warnings.size
+    assert_equal :unexpected_attributes, session.warnings.first.type
+  end
+
   # Sanity test against real fixture data
 
   def test_no_warnings_on_real_fixture_sessions

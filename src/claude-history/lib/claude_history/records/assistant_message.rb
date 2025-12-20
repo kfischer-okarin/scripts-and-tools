@@ -2,6 +2,11 @@
 
 module ClaudeHistory
   class AssistantMessage < Record
+    EXPECTED_ATTRIBUTES = %i[
+      type uuid parentUuid timestamp sessionId message cwd version
+      gitBranch slug isSidechain userType requestId
+    ].freeze
+
     def model
       raw_data.dig(:message, :model)
     end

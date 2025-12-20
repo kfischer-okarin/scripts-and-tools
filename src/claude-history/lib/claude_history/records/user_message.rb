@@ -4,6 +4,12 @@ module ClaudeHistory
   class UserMessage < Record
     INTERRUPT_MARKER = "[Request interrupted by user]"
 
+    EXPECTED_ATTRIBUTES = %i[
+      type uuid parentUuid timestamp sessionId message cwd version
+      gitBranch slug isSidechain userType isMeta thinkingMetadata
+      toolUseResult todos
+    ].freeze
+
     attr_reader :content_type
 
     def initialize(data, line_number)
