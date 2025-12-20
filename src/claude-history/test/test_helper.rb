@@ -16,5 +16,9 @@ module ClaudeHistory
     def fixture_main_session_id
       "b3edadab-bca0-4054-9b41-f7ffa6941260"
     end
+
+    def fixture_summary_session_id
+      "be89c3cd-bfbf-4c4f-a515-5af6e13249bf"
+    end
   end
 end
