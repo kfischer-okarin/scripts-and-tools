@@ -13,6 +13,14 @@ module ClaudeHistory
       raw_data[:type]
     end
 
+    def uuid
+      raw_data[:uuid]
+    end
+
+    def parent_uuid
+      raw_data[:parentUuid]
+    end
+
     def add_warning(warning)
       @warnings << warning
     end
