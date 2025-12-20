@@ -203,4 +203,29 @@ class ProjectParserTest < ClaudeHistory::TestCase
     refute_empty user_msg.warnings
     assert_equal :unexpected_content_shape, user_msg.warnings.first.type
   end
+
+  # Sanity test against real fixture data
+
+  def test_no_warnings_on_real_fixture_sessions
+    project_path = File.join(projects_fixture_path, fixture_project_id)
+    parser = ClaudeHistory::ProjectParser.new(project_path)
+
+    session_files = Dir.glob(File.join(project_path, "*.jsonl"))
+      .map { |f| File.basename(f, ".jsonl") }
+      .reject { |name| name.start_with?("agent-") }
+      .reject { |name| File.zero?(File.join(project_path, "#{name}.jsonl")) }
+
+    all_warnings = []
+
+    session_files.each do |session_id|
+      session = parser.parse_session(session_id)
+      session.warnings.each do |warning|
+        all_warnings << { session_id: session_id, warning: warning }
+      end
+    end
+
+    assert_empty all_warnings, -> {
+      all_warnings.map { |w| "#{w[:session_id]}:#{w[:warning].line_number} - #{w[:warning].type}: #{w[:warning].message}" }.join("\n")
+    }
+  end
 end
