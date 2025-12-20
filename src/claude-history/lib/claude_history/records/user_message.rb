@@ -4,11 +4,20 @@ module ClaudeHistory
   class UserMessage < Record
     INTERRUPT_MARKER = "[Request interrupted by user]"
 
+    attr_reader :content_type
+
+    def initialize(data, line_number)
+      super
+      @content_type = determine_content_type
+    end
+
     def content
       raw_data.dig(:message, :content)
     end
 
-    def content_type
+    private
+
+    def determine_content_type
       case content
       when String
         if content.start_with?("<command-name>")
@@ -21,7 +30,23 @@ module ClaudeHistory
           :tool_result
         elsif content.size == 1 && content.first[:type] == "text" && content.first[:text] == INTERRUPT_MARKER
           :interrupt
+        else
+          add_warning(Warning.new(
+            type: :unexpected_content_shape,
+            message: "Unexpected user message content array: size=#{content.size}",
+            line_number: line_number,
+            raw_data: raw_data
+          ))
+          :unknown
         end
+      else
+        add_warning(Warning.new(
+          type: :unexpected_content_shape,
+          message: "Unexpected user message content type: #{content.class}",
+          line_number: line_number,
+          raw_data: raw_data
+        ))
+        :unknown
       end
     end
   end

@@ -188,4 +188,19 @@ class ProjectParserTest < ClaudeHistory::TestCase
     refute_nil assistant_msg.model
     refute_nil assistant_msg.content_blocks
   end
+
+  def test_user_message_warns_on_unexpected_content_array_shape
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"123","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"1"},{"type":"tool_result","tool_use_id":"2"}]}}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+    user_msg = session.records.first
+
+    refute_empty user_msg.warnings
+    assert_equal :unexpected_content_shape, user_msg.warnings.first.type
+  end
 end
