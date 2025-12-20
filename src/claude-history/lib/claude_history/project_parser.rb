@@ -34,9 +34,9 @@ module ClaudeHistory
       record_class = RECORD_TYPES[type]
 
       if record_class
-        record_class.new(data)
+        record_class.new(data, line_number)
       else
-        record = Record.new(data)
+        record = Record.new(data, line_number)
         record.add_warning(
           Warning.new(
             type: :unknown_record_type,

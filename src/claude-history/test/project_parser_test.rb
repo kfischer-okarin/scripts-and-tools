@@ -98,6 +98,23 @@ class ProjectParserTest < ClaudeHistory::TestCase
     assert_nil first_user.parent_uuid
   end
 
+  def test_record_exposes_line_number
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","message":{"role":"user","content":"first"}}
+        {"type":"user","uuid":"2","message":{"role":"user","content":"second"}}
+        {"type":"user","uuid":"3","message":{"role":"user","content":"third"}}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+
+    assert_equal 1, session.records[0].line_number
+    assert_equal 2, session.records[1].line_number
+    assert_equal 3, session.records[2].line_number
+  end
+
   def test_user_message_with_simple_text_content
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
