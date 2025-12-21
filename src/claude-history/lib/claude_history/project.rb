@@ -7,9 +7,10 @@ module ClaudeHistory
     RECORD_TYPES = {
       "user" => UserMessage,
       "assistant" => AssistantMessage,
-      "summary" => Summary,
-      "file-history-snapshot" => FileHistorySnapshot
+      "summary" => Summary
     }.freeze
+
+    SKIPPED_TYPES = %w[file-history-snapshot].freeze
 
     def initialize(project_path)
       @project_path = project_path
@@ -22,7 +23,8 @@ module ClaudeHistory
 
       File.foreach(file_path).with_index(1) do |line, line_number|
         data = JSON.parse(line, symbolize_names: true)
-        records << build_record(data, line_number, filename)
+        record = build_record(data, line_number, filename)
+        records << record if record
       end
 
       Session.new(id: session_id, records: records)
@@ -32,6 +34,8 @@ module ClaudeHistory
 
     def build_record(data, line_number, filename)
       type = data[:type]
+      return nil if SKIPPED_TYPES.include?(type)
+
       record_class = RECORD_TYPES[type]
 
       if record_class

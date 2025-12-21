@@ -32,12 +32,21 @@ class ProjectTest < ClaudeHistory::TestCase
     assert assistant_records.all? { |r| r.is_a?(ClaudeHistory::AssistantMessage) }
   end
 
-  def test_session_parses_file_history_snapshot_records
-    session = @project.session(fixture_main_session_id)
+  def test_session_excludes_file_history_snapshot_records
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"file-history-snapshot","messageId":"123","snapshot":{},"isSnapshotUpdate":false}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
 
-    snapshot_records = session.records.select { |r| r.type == "file-history-snapshot" }
-    refute_empty snapshot_records
-    assert snapshot_records.all? { |r| r.is_a?(ClaudeHistory::FileHistorySnapshot) }
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+    assert_empty session.warnings
   end
 
   def test_session_parses_summary_records
@@ -242,20 +251,6 @@ class ProjectTest < ClaudeHistory::TestCase
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"summary","summary":"test","leafUuid":"123","futureField":"x"}
-      JSONL
-    )
-
-    project = ClaudeHistory::Project.new(project_dir)
-    session = project.session("test")
-
-    assert_equal 1, session.warnings.size
-    assert_equal :unexpected_attributes, session.warnings.first.type
-  end
-
-  def test_file_history_snapshot_warns_on_unexpected_attributes
-    project_dir = build_project(
-      "test.jsonl" => <<~JSONL
-        {"type":"file-history-snapshot","messageId":"123","snapshot":{},"isSnapshotUpdate":false,"futureField":"x"}
       JSONL
     )
 
