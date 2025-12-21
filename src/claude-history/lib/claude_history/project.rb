@@ -14,11 +14,28 @@ module ClaudeHistory
 
     def initialize(project_path)
       @project_path = project_path
+      @sessions = {}
+      parse_all_sessions
     end
 
     def session(session_id)
-      filename = "#{session_id}.jsonl"
-      file_path = File.join(@project_path, filename)
+      @sessions[session_id]
+    end
+
+    private
+
+    def parse_all_sessions
+      Dir.glob(File.join(@project_path, "*.jsonl")).each do |file_path|
+        filename = File.basename(file_path)
+        next if filename.start_with?("agent-")
+        next if File.zero?(file_path)
+
+        session_id = File.basename(filename, ".jsonl")
+        @sessions[session_id] = parse_session_file(file_path, session_id, filename)
+      end
+    end
+
+    def parse_session_file(file_path, session_id, filename)
       records = []
       warnings = []
 
