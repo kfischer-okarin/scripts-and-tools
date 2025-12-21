@@ -49,12 +49,29 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_empty session.warnings
   end
 
-  def test_session_parses_summary_records
+  def test_session_summaries_returns_only_summary_records
     session = @project.session(fixture_summary_session_id)
 
-    summary_records = session.records.select { |r| r.type == "summary" }
-    refute_empty summary_records
-    assert summary_records.all? { |r| r.is_a?(ClaudeHistory::Summary) }
+    assert session.summaries.all? { |r| r.is_a?(ClaudeHistory::Summary) }
+    refute_empty session.summaries
+  end
+
+  def test_session_records_excludes_summaries
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"summary","summary":"test summary","leafUuid":"1"}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+    assert_equal 1, session.summaries.size
+    assert_equal "summary", session.summaries.first.type
   end
 
   def test_session_excludes_unknown_record_types_but_warns
