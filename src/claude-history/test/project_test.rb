@@ -57,7 +57,7 @@ class ProjectTest < ClaudeHistory::TestCase
     assert summary_records.all? { |r| r.is_a?(ClaudeHistory::Summary) }
   end
 
-  def test_session_warns_on_unknown_record_type
+  def test_session_excludes_unknown_record_types_but_warns
     project_dir = build_project(
       "test-session.jsonl" => <<~JSONL
         {"type":"unknown-future-type","foo":"bar"}
@@ -67,20 +67,17 @@ class ProjectTest < ClaudeHistory::TestCase
     project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test-session")
 
-    assert_equal 1, session.records.size
-    record = session.records.first
+    assert_empty session.records
 
-    assert_instance_of ClaudeHistory::Record, record
-    refute_empty record.warnings
-
-    warning = record.warnings.first
+    assert_equal 1, session.warnings.size
+    warning = session.warnings.first
     assert_equal :unknown_record_type, warning.type
     assert_equal 1, warning.line_number
     assert_equal "test-session.jsonl", warning.filename
     assert_equal({ type: "unknown-future-type", foo: "bar" }, warning.raw_data)
   end
 
-  def test_session_aggregates_warnings_from_records
+  def test_session_aggregates_warnings_from_records_and_unknown_types
     project_dir = build_project(
       "test-session.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":"hi"}}
@@ -92,6 +89,11 @@ class ProjectTest < ClaudeHistory::TestCase
     project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test-session")
 
+    # Only the user record is included
+    assert_equal 1, session.records.size
+    assert_equal "user", session.records.first.type
+
+    # But warnings from unknown types are still present
     assert_equal 2, session.warnings.size
     assert session.warnings.all? { |w| w.type == :unknown_record_type }
   end

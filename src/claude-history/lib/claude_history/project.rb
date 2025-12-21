@@ -20,39 +20,28 @@ module ClaudeHistory
       filename = "#{session_id}.jsonl"
       file_path = File.join(@project_path, filename)
       records = []
+      warnings = []
 
       File.foreach(file_path).with_index(1) do |line, line_number|
         data = JSON.parse(line, symbolize_names: true)
-        record = build_record(data, line_number, filename)
-        records << record if record
-      end
+        type = data[:type]
 
-      Session.new(id: session_id, records: records)
-    end
-
-    private
-
-    def build_record(data, line_number, filename)
-      type = data[:type]
-      return nil if SKIPPED_TYPES.include?(type)
-
-      record_class = RECORD_TYPES[type]
-
-      if record_class
-        record_class.new(data, line_number, filename)
-      else
-        record = Record.new(data, line_number, filename)
-        record.add_warning(
-          Warning.new(
+        if SKIPPED_TYPES.include?(type)
+          next
+        elsif RECORD_TYPES.key?(type)
+          records << RECORD_TYPES[type].new(data, line_number, filename)
+        else
+          warnings << Warning.new(
             type: :unknown_record_type,
             message: "Unknown record type: #{type}",
             line_number: line_number,
             filename: filename,
             raw_data: data
           )
-        )
-        record
+        end
       end
+
+      Session.new(id: session_id, records: records, warnings: warnings)
     end
   end
 end
