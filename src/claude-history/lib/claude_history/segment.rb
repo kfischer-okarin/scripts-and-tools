@@ -6,11 +6,16 @@ module ClaudeHistory
   # segments after a branch. A segment ends when a record has multiple
   # children (branch point) or no children (leaf).
   class Segment
-    attr_reader :records, :children
+    attr_reader :records, :children, :summaries
 
-    def initialize(records:, children: [])
+    def initialize(records:, children: [], summaries: [])
       @records = records
       @children = children
+      @summaries = summaries
+    end
+
+    def leaf_uuid
+      records.last.uuid
     end
   end
 end

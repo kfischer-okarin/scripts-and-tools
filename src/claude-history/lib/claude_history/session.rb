@@ -10,18 +10,17 @@ module ClaudeHistory
   class Session
     attr_reader :id, :records, :summaries
 
+    attr_reader :root_segment
+
     def initialize(id:, records:, warnings: [])
       @id = id
       @records, @summaries = records.partition { |r| !r.is_a?(Summary) }
       @direct_warnings = warnings
+      @root_segment = build_root_segment
     end
 
     def root
       records.find { |r| r.parent_uuid.nil? }
-    end
-
-    def root_segment
-      @root_segment ||= build_root_segment
     end
 
     def warnings
@@ -33,26 +32,29 @@ module ClaudeHistory
     def build_root_segment
       return nil if root.nil?
 
-      @children_index = records.group_by(&:parent_uuid)
-      build_segment_from(root)
+      children_index = records.group_by(&:parent_uuid)
+      summaries_index = summaries.group_by(&:leaf_uuid)
+      build_segment_from(root, children_index, summaries_index)
     end
 
-    def build_segment_from(start_record)
+    def build_segment_from(start_record, children_index, summaries_index)
       segment_records = []
       current = start_record
 
       loop do
         segment_records << current
-        children = @children_index[current.uuid] || []
+        children = children_index[current.uuid] || []
 
         case children.size
         when 0
-          return Segment.new(records: segment_records)
+          segment_summaries = summaries_index[current.uuid] || []
+          return Segment.new(records: segment_records, summaries: segment_summaries)
         when 1
           current = children.first
         else
-          child_segments = children.map { |child| build_segment_from(child) }
-          return Segment.new(records: segment_records, children: child_segments)
+          segment_summaries = summaries_index[current.uuid] || []
+          child_segments = children.map { |child| build_segment_from(child, children_index, summaries_index) }
+          return Segment.new(records: segment_records, children: child_segments, summaries: segment_summaries)
         end
       end
     end

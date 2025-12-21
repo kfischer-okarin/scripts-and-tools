@@ -442,6 +442,37 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal %w[5a1 5a2], branch_3a.children.map { |s| s.records.first.uuid }.sort
   end
 
+  def test_segment_exposes_leaf_uuid
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"thanks"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal "3", session.root_segment.leaf_uuid
+  end
+
+  def test_segment_contains_summaries_for_its_leaf
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"summary","summary":"conversation summary","leafUuid":"2"}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 1, session.root_segment.summaries.size
+    assert_equal "conversation summary", session.root_segment.summaries.first.raw_data[:summary]
+  end
+
   # Sanity test against real fixture data
 
   def test_no_warnings_on_real_fixture_sessions
