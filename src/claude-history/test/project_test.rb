@@ -49,29 +49,11 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_empty session.warnings
   end
 
-  def test_session_includes_summaries_from_other_files
-    project_dir = build_project(
-      "main-session.jsonl" => <<~JSONL,
-        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
-        {"type":"assistant","uuid":"leaf","parentUuid":"root","message":{"role":"assistant","content":[]}}
-      JSONL
-      "other-file.jsonl" => <<~JSONL
-        {"type":"summary","summary":"external summary","leafUuid":"leaf"}
-      JSONL
-    )
-
-    project = ClaudeHistory::Project.new(project_dir)
-    session = project.session("main-session")
-
-    assert_equal 1, session.summaries.size
-    assert_equal "external summary", session.summaries.first.raw_data[:summary]
-  end
-
   def test_session_records_excludes_summaries
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
-        {"type":"summary","summary":"test summary","leafUuid":"1"}
+        {"type":"summary","summary":"test summary","leafUuid":"2"}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
@@ -81,8 +63,6 @@ class ProjectTest < ClaudeHistory::TestCase
 
     assert_equal 2, session.records.size
     assert_equal %w[user assistant], session.records.map(&:type)
-    assert_equal 1, session.summaries.size
-    assert_equal "summary", session.summaries.first.type
   end
 
   def test_summary_only_files_do_not_create_sessions
@@ -376,6 +356,24 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   # Segment tests
+
+  def test_segment_includes_summaries_from_other_files
+    project_dir = build_project(
+      "main-session.jsonl" => <<~JSONL,
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"leaf","parentUuid":"root","message":{"role":"assistant","content":[]}}
+      JSONL
+      "other-file.jsonl" => <<~JSONL
+        {"type":"summary","summary":"external summary","leafUuid":"leaf"}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("main-session")
+
+    assert_equal 1, session.root_segment.summaries.size
+    assert_equal "external summary", session.root_segment.summaries.first.raw_data[:summary]
+  end
 
   def test_root_segment_contains_all_records_for_linear_session
     project_dir = build_project(

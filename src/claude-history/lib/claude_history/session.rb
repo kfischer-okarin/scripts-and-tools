@@ -8,9 +8,7 @@ module ClaudeHistory
   # Warnings are aggregated from session-level issues (e.g., unknown record types)
   # and record-level issues (e.g., unexpected attributes).
   class Session
-    attr_reader :id, :records, :summaries
-
-    attr_reader :root_segment
+    attr_reader :id, :records, :root_segment
 
     def initialize(id:, records:, warnings: [])
       @id = id
@@ -33,7 +31,7 @@ module ClaudeHistory
       return nil if root.nil?
 
       children_index = records.group_by(&:parent_uuid)
-      summaries_index = summaries.group_by(&:leaf_uuid)
+      summaries_index = @summaries.group_by(&:leaf_uuid)
       build_segment_from(root, children_index, summaries_index)
     end
 

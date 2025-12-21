@@ -5,6 +5,9 @@ module ClaudeHistory
   # Segments form a tree: each segment has children pointing to the next
   # segments after a branch. A segment ends when a record has multiple
   # children (branch point) or no children (leaf).
+  #
+  # Each segment exposes its leaf_uuid (the last record's uuid) and holds
+  # any summaries that reference that leaf.
   class Segment
     attr_reader :records, :children, :summaries
 
