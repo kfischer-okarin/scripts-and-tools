@@ -12,7 +12,7 @@ module ClaudeHistory
 
     attr_reader :content_type
 
-    def initialize(data, line_number)
+    def initialize(data, line_number, filename)
       super
       @content_type = determine_content_type
     end

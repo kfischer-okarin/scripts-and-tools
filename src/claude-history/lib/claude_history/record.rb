@@ -4,11 +4,12 @@ module ClaudeHistory
   class Record
     EXPECTED_ATTRIBUTES = [].freeze
 
-    attr_reader :raw_data, :warnings, :line_number
+    attr_reader :raw_data, :warnings, :line_number, :filename
 
-    def initialize(data, line_number)
+    def initialize(data, line_number, filename)
       @raw_data = data
       @line_number = line_number
+      @filename = filename
       @warnings = []
       validate_attributes
     end

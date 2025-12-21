@@ -113,6 +113,10 @@ class ProjectParserTest < ClaudeHistory::TestCase
     assert_equal 1, session.records[0].line_number
     assert_equal 2, session.records[1].line_number
     assert_equal 3, session.records[2].line_number
+
+    assert_equal "test.jsonl", session.records[0].filename
+    assert_equal "test.jsonl", session.records[1].filename
+    assert_equal "test.jsonl", session.records[2].filename
   end
 
   def test_user_message_with_simple_text_content

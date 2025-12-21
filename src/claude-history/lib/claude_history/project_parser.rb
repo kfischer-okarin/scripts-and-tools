@@ -16,12 +16,13 @@ module ClaudeHistory
     }.freeze
 
     def parse_session(session_id)
-      file_path = File.join(@project_path, "#{session_id}.jsonl")
+      filename = "#{session_id}.jsonl"
+      file_path = File.join(@project_path, filename)
       records = []
 
       File.foreach(file_path).with_index(1) do |line, line_number|
         data = JSON.parse(line, symbolize_names: true)
-        records << build_record(data, line_number)
+        records << build_record(data, line_number, filename)
       end
 
       Session.new(records: records)
@@ -29,14 +30,14 @@ module ClaudeHistory
 
     private
 
-    def build_record(data, line_number)
+    def build_record(data, line_number, filename)
       type = data[:type]
       record_class = RECORD_TYPES[type]
 
       if record_class
-        record_class.new(data, line_number)
+        record_class.new(data, line_number, filename)
       else
-        record = Record.new(data, line_number)
+        record = Record.new(data, line_number, filename)
         record.add_warning(
           Warning.new(
             type: :unknown_record_type,
