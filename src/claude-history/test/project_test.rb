@@ -49,11 +49,22 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_empty session.warnings
   end
 
-  def test_session_summaries_returns_only_summary_records
-    session = @project.session(fixture_summary_session_id)
+  def test_session_includes_summaries_from_other_files
+    project_dir = build_project(
+      "main-session.jsonl" => <<~JSONL,
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"leaf","parentUuid":"root","message":{"role":"assistant","content":[]}}
+      JSONL
+      "other-file.jsonl" => <<~JSONL
+        {"type":"summary","summary":"external summary","leafUuid":"leaf"}
+      JSONL
+    )
 
-    assert session.summaries.all? { |r| r.is_a?(ClaudeHistory::Summary) }
-    refute_empty session.summaries
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("main-session")
+
+    assert_equal 1, session.summaries.size
+    assert_equal "external summary", session.summaries.first.raw_data[:summary]
   end
 
   def test_session_records_excludes_summaries
@@ -74,9 +85,59 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal "summary", session.summaries.first.type
   end
 
+  def test_summary_only_files_do_not_create_sessions
+    project_dir = build_project(
+      "main-session.jsonl" => <<~JSONL,
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+      JSONL
+      "summary-only.jsonl" => <<~JSONL
+        {"type":"summary","summary":"test","leafUuid":"root"}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+
+    refute_nil project.session("main-session")
+    assert_nil project.session("summary-only")
+  end
+
+  def test_session_merges_records_from_continuation_files
+    project_dir = build_project(
+      "main.jsonl" => <<~JSONL,
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"first"}}
+        {"type":"assistant","uuid":"a1","parentUuid":"root","message":{"role":"assistant","content":[]}}
+      JSONL
+      "continuation.jsonl" => <<~JSONL
+        {"type":"user","uuid":"u2","parentUuid":"a1","message":{"role":"user","content":"continued"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("main")
+
+    assert_equal 3, session.records.size
+    assert_nil project.session("continuation")
+  end
+
+  def test_warns_on_multiple_roots_in_session
+    project_dir = build_project(
+      "session.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root1","parentUuid":null,"message":{"role":"user","content":"first"}}
+        {"type":"user","uuid":"root2","parentUuid":null,"message":{"role":"user","content":"second"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("session")
+
+    warning = session.warnings.find { |w| w.type == :multiple_roots }
+    refute_nil warning
+  end
+
   def test_session_excludes_unknown_record_types_but_warns
     project_dir = build_project(
       "test-session.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"unknown-future-type","foo":"bar"}
       JSONL
     )
@@ -84,12 +145,12 @@ class ProjectTest < ClaudeHistory::TestCase
     project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test-session")
 
-    assert_empty session.records
+    assert_equal 1, session.records.size
 
     assert_equal 1, session.warnings.size
     warning = session.warnings.first
     assert_equal :unknown_record_type, warning.type
-    assert_equal 1, warning.line_number
+    assert_equal 2, warning.line_number
     assert_equal "test-session.jsonl", warning.filename
     assert_equal({ type: "unknown-future-type", foo: "bar" }, warning.raw_data)
   end
@@ -129,9 +190,9 @@ class ProjectTest < ClaudeHistory::TestCase
   def test_record_exposes_line_number_and_filename
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"1","message":{"role":"user","content":"first"}}
-        {"type":"user","uuid":"2","message":{"role":"user","content":"second"}}
-        {"type":"user","uuid":"3","message":{"role":"user","content":"third"}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"first"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"third"}}
       JSONL
     )
 
@@ -271,7 +332,8 @@ class ProjectTest < ClaudeHistory::TestCase
   def test_summary_warns_on_unexpected_attributes
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"summary","summary":"test","leafUuid":"123","futureField":"x"}
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"summary","summary":"test","leafUuid":"root","futureField":"x"}
       JSONL
     )
 
@@ -328,6 +390,8 @@ class ProjectTest < ClaudeHistory::TestCase
 
     session_files.each do |session_id|
       session = project.session(session_id)
+      next unless session # Summary-only files don't create sessions
+
       session.warnings.each do |warning|
         all_warnings << { session_id: session_id, warning: warning }
       end

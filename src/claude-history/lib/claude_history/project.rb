@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
 require "json"
+require "set"
 
 module ClaudeHistory
   # Represents a Claude Code project directory containing session files.
   #
-  # Parses all session files at initialization and caches them. Agent files
-  # (prefixed "agent-"), empty files, and file-history-snapshot records are
-  # skipped. Unknown record types generate warnings but are excluded from
-  # the session's records.
+  # Parses all session files at initialization and builds sessions by tracing
+  # parentUuid chains. Sessions are created for each root record (null parentUuid)
+  # and include all connected records from any file. Summaries are matched to
+  # sessions via their leafUuid field.
+  #
+  # Agent files (prefixed "agent-"), empty files, and file-history-snapshot
+  # records are skipped. Unknown record types generate warnings but are excluded.
   class Project
     RECORD_TYPES = {
       "user" => UserMessage,
@@ -31,18 +35,52 @@ module ClaudeHistory
     private
 
     def parse_all_sessions
+      all_records = []
+      all_summaries = []
+      file_warnings = {}
+
+      # Phase 1: Parse all files
       Dir.glob(File.join(@project_path, "*.jsonl")).each do |file_path|
         filename = File.basename(file_path)
         next if filename.start_with?("agent-")
         next if File.zero?(file_path)
 
-        session_id = File.basename(filename, ".jsonl")
-        @sessions[session_id] = parse_session_file(file_path, session_id, filename)
+        records, summaries, warnings = parse_file(file_path, filename)
+        all_records.concat(records)
+        all_summaries.concat(summaries)
+        file_warnings[filename] = warnings
+      end
+
+      # Phase 2: Build children index (parentUuid -> [child records])
+      children_index = all_records.group_by(&:parent_uuid)
+
+      # Phase 3: Find roots and build sessions
+      roots = all_records.select { |r| r.parent_uuid.nil? }
+      roots.each do |root|
+        session_records = collect_tree(root, children_index)
+        session_id = File.basename(root.filename, ".jsonl")
+        session_uuids = Set.new(session_records.map(&:uuid))
+
+        # Match summaries whose leafUuid points to a record in this session
+        matching_summaries = all_summaries.select { |s| session_uuids.include?(s.leaf_uuid) }
+
+        # Collect warnings from files that contributed records to this session
+        warnings = collect_session_warnings(session_records, matching_summaries, file_warnings)
+
+        # Check for multiple roots in the same file
+        check_multiple_roots(session_id, roots, warnings)
+
+        @sessions[session_id] = Session.new(
+          id: session_id,
+          records: session_records + matching_summaries,
+          warnings: warnings
+        )
       end
     end
 
-    def parse_session_file(file_path, session_id, filename)
+    def parse_file(file_path, filename)
       records = []
+      summaries = []
       warnings = []
 
       File.foreach(file_path).with_index(1) do |line, line_number|
@@ -51,6 +89,8 @@ module ClaudeHistory
 
         if SKIPPED_TYPES.include?(type)
           next
+        elsif type == "summary"
+          summaries << Summary.new(data, line_number, filename)
         elsif RECORD_TYPES.key?(type)
           records << RECORD_TYPES[type].new(data, line_number, filename)
         else
@@ -64,7 +104,46 @@ module ClaudeHistory
         end
       end
 
-      Session.new(id: session_id, records: records, warnings: warnings)
+      [records, summaries, warnings]
+    end
+
+    def collect_tree(root, children_index)
+      result = [root]
+      queue = [root.uuid]
+
+      while (uuid = queue.shift)
+        children = children_index[uuid] || []
+        result.concat(children)
+        queue.concat(children.map(&:uuid))
+      end
+
+      result
+    end
+
+    def collect_session_warnings(records, summaries, file_warnings)
+      # Get unique filenames from records and summaries in this session
+      filenames = Set.new
+      records.each { |r| filenames << r.filename }
+      summaries.each { |s| filenames << s.filename }
+
+      # Collect warnings from those files
+      filenames.flat_map { |f| file_warnings[f] || [] }
+    end
+
+    def check_multiple_roots(session_id, all_roots, warnings)
+      filename = "#{session_id}.jsonl"
+      roots_in_file = all_roots.select { |r| r.filename == filename }
+
+      return unless roots_in_file.size > 1
+
+      root_uuids = roots_in_file.map(&:uuid).join(", ")
+      warnings << Warning.new(
+        type: :multiple_roots,
+        message: "Multiple root records found: #{root_uuids}",
+        line_number: roots_in_file.first.line_number,
+        filename: filename,
+        raw_data: nil
+      )
     end
   end
 end
