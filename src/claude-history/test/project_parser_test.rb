@@ -267,6 +267,37 @@ class ProjectParserTest < ClaudeHistory::TestCase
     assert_equal :unexpected_attributes, session.warnings.first.type
   end
 
+  # Session identity tests
+
+  def test_session_id_returns_filename_without_extension
+    project_dir = build_project(
+      "my-session.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("my-session")
+
+    assert_equal "my-session", session.id
+  end
+
+  def test_session_root_returns_record_with_null_parent_uuid
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root-id","parentUuid":null,"message":{"role":"user","content":"first"}}
+        {"type":"assistant","uuid":"2","parentUuid":"root-id","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"second"}}
+      JSONL
+    )
+
+    parser = ClaudeHistory::ProjectParser.new(project_dir)
+    session = parser.parse_session("test")
+
+    assert_equal "root-id", session.root.uuid
+    assert_nil session.root.parent_uuid
+  end
+
   # Sanity test against real fixture data
 
   def test_no_warnings_on_real_fixture_sessions

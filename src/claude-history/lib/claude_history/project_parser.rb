@@ -25,7 +25,7 @@ module ClaudeHistory
         records << build_record(data, line_number, filename)
       end
 
-      Session.new(records: records)
+      Session.new(id: session_id, records: records)
     end
 
     private
