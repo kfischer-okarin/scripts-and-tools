@@ -3,6 +3,12 @@
 require "json"
 
 module ClaudeHistory
+  # Represents a Claude Code project directory containing session files.
+  #
+  # Parses all session files at initialization and caches them. Agent files
+  # (prefixed "agent-"), empty files, and file-history-snapshot records are
+  # skipped. Unknown record types generate warnings but are excluded from
+  # the session's records.
   class Project
     RECORD_TYPES = {
       "user" => UserMessage,

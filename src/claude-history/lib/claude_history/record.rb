@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
+  # Base class for parsed JSONL records. Subclasses define EXPECTED_ATTRIBUTES
+  # to validate known fields; unexpected attributes generate warnings.
   class Record
     EXPECTED_ATTRIBUTES = [].freeze
 

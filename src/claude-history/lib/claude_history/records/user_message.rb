@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
+  # User message record. Classifies content into types: :text, :tool_result,
+  # :command, :interrupt, or :unknown (with warning).
   class UserMessage < Record
     INTERRUPT_MARKER = "[Request interrupted by user]"
 

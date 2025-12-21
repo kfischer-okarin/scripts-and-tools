@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
+  # A conversation session identified by its JSONL filename (UUID).
+  #
+  # The root record has parentUuid: null. Warnings are aggregated from both
+  # session-level issues (e.g., unknown record types) and record-level issues
+  # (e.g., unexpected attributes).
   class Session
     attr_reader :id, :records
 
