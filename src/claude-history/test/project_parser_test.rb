@@ -66,8 +66,7 @@ class ProjectParserTest < ClaudeHistory::TestCase
 
     warning = record.warnings.first
     assert_equal :unknown_record_type, warning.type
-    assert_equal 1, warning.line_number
-    assert_equal({ type: "unknown-future-type", foo: "bar" }, warning.raw_data)
+    assert_same record, warning.record
   end
 
   def test_session_aggregates_warnings_from_records

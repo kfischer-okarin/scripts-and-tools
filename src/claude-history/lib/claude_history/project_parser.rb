@@ -42,8 +42,7 @@ module ClaudeHistory
           Warning.new(
             type: :unknown_record_type,
             message: "Unknown record type: #{type}",
-            line_number: line_number,
-            raw_data: data
+            record: record
           )
         )
         record

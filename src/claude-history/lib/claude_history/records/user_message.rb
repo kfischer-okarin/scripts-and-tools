@@ -40,8 +40,7 @@ module ClaudeHistory
           add_warning(Warning.new(
             type: :unexpected_content_shape,
             message: "Unexpected user message content array: size=#{content.size}",
-            line_number: line_number,
-            raw_data: raw_data
+            record: self
           ))
           :unknown
         end
@@ -49,8 +48,7 @@ module ClaudeHistory
         add_warning(Warning.new(
           type: :unexpected_content_shape,
           message: "Unexpected user message content type: #{content.class}",
-          line_number: line_number,
-          raw_data: raw_data
+          record: self
         ))
         :unknown
       end

@@ -2,13 +2,24 @@
 
 module ClaudeHistory
   class Warning
-    attr_reader :type, :message, :line_number, :raw_data
+    attr_reader :type, :message, :record
 
-    def initialize(type:, message:, line_number: nil, raw_data: nil)
+    def initialize(type:, message:, record: nil)
       @type = type
       @message = message
-      @line_number = line_number
-      @raw_data = raw_data
+      @record = record
+    end
+
+    def line_number
+      record&.line_number
+    end
+
+    def filename
+      record&.filename
+    end
+
+    def raw_data
+      record&.raw_data
     end
   end
 end
