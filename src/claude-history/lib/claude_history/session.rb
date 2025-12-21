@@ -20,8 +20,41 @@ module ClaudeHistory
       records.find { |r| r.parent_uuid.nil? }
     end
 
+    def root_segment
+      @root_segment ||= build_root_segment
+    end
+
     def warnings
       @direct_warnings + (@records + @summaries).flat_map(&:warnings)
+    end
+
+    private
+
+    def build_root_segment
+      return nil if root.nil?
+
+      @children_index = records.group_by(&:parent_uuid)
+      build_segment_from(root)
+    end
+
+    def build_segment_from(start_record)
+      segment_records = []
+      current = start_record
+
+      loop do
+        segment_records << current
+        children = @children_index[current.uuid] || []
+
+        case children.size
+        when 0
+          return Segment.new(records: segment_records)
+        when 1
+          current = children.first
+        else
+          child_segments = children.map { |child| build_segment_from(child) }
+          return Segment.new(records: segment_records, children: child_segments)
+        end
+      end
     end
   end
 end

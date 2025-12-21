@@ -375,6 +375,73 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_nil session.root.parent_uuid
   end
 
+  # Segment tests
+
+  def test_root_segment_contains_all_records_for_linear_session
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"thanks"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_instance_of ClaudeHistory::Segment, session.root_segment
+    assert_equal 3, session.root_segment.records.size
+    assert_equal %w[1 2 3], session.root_segment.records.map(&:uuid)
+    assert_empty session.root_segment.children
+  end
+
+  def test_root_segment_has_children_at_branch_point
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","message":{"role":"user","content":"option a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    segment = session.root_segment
+
+    assert_equal %w[1 2], segment.records.map(&:uuid)
+    assert_equal 2, segment.children.size
+    assert_equal %w[3a 3b], segment.children.map { |s| s.records.first.uuid }.sort
+  end
+
+  def test_root_segment_handles_nested_branches
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"start"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","message":{"role":"user","content":"branch a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"branch b"}}
+        {"type":"assistant","uuid":"4a","parentUuid":"3a","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"5a1","parentUuid":"4a","message":{"role":"user","content":"nested 1"}}
+        {"type":"user","uuid":"5a2","parentUuid":"4a","message":{"role":"user","content":"nested 2"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    root = session.root_segment
+
+    # Root segment ends at first branch
+    assert_equal %w[1 2], root.records.map(&:uuid)
+    assert_equal 2, root.children.size
+
+    # Find branch 3a which has a nested branch
+    branch_3a = root.children.find { |s| s.records.first.uuid == "3a" }
+    assert_equal %w[3a 4a], branch_3a.records.map(&:uuid)
+    assert_equal 2, branch_3a.children.size
+    assert_equal %w[5a1 5a2], branch_3a.children.map { |s| s.records.first.uuid }.sort
+  end
+
   # Sanity test against real fixture data
 
   def test_no_warnings_on_real_fixture_sessions
