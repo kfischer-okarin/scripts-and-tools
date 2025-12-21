@@ -42,7 +42,9 @@ module ClaudeHistory
       add_warning(Warning.new(
         type: :unexpected_attributes,
         message: "Unexpected attributes: #{unexpected.join(", ")}",
-        record: self
+        line_number: line_number,
+        filename: filename,
+        raw_data: raw_data
       ))
     end
   end

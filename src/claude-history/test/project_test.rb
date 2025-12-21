@@ -75,7 +75,9 @@ class ProjectTest < ClaudeHistory::TestCase
 
     warning = record.warnings.first
     assert_equal :unknown_record_type, warning.type
-    assert_same record, warning.record
+    assert_equal 1, warning.line_number
+    assert_equal "test-session.jsonl", warning.filename
+    assert_equal({ type: "unknown-future-type", foo: "bar" }, warning.raw_data)
   end
 
   def test_session_aggregates_warnings_from_records
