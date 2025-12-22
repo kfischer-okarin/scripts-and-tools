@@ -28,6 +28,10 @@ module ClaudeHistory
       parse_all_sessions
     end
 
+    def id
+      File.basename(@project_path)
+    end
+
     def session(session_id)
       @sessions[session_id]
     end

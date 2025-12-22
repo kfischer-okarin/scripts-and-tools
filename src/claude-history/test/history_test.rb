@@ -13,4 +13,12 @@ class HistoryTest < ClaudeHistory::TestCase
     refute_nil session
     refute_empty session.records
   end
+
+  def test_projects_returns_all_projects
+    projects = @history.projects
+
+    assert_kind_of Array, projects
+    assert projects.all? { |p| p.is_a?(ClaudeHistory::Project) }
+    assert_includes projects.map(&:id), fixture_project_id
+  end
 end

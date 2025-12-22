@@ -10,6 +10,12 @@ module ClaudeHistory
       project(project_id).session(session_id)
     end
 
+    def projects
+      Dir.glob(File.join(@projects_path, "*"))
+         .select { |path| File.directory?(path) }
+         .map { |path| Project.new(path) }
+    end
+
     private
 
     def project(project_id)

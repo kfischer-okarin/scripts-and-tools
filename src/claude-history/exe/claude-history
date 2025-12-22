@@ -2,6 +2,40 @@
 # frozen_string_literal: true
 
 require_relative "../lib/claude_history"
+require "thor"
 
-# TODO: Add CLI when ready
-puts "claude-history CLI - not yet implemented"
+module ClaudeHistory
+  class CLI < Thor
+    PROJECTS_PATH = File.expand_path("~/.claude/projects")
+
+    desc "projects", "List all projects with last updated timestamp"
+    def projects
+      history = History.new(PROJECTS_PATH)
+      sorted = history.projects.sort_by { |p| p.last_updated_at || Time.at(0) }.reverse
+
+      print_projects_table(sorted)
+    end
+
+    private
+
+    def print_projects_table(projects)
+      return puts "No projects found." if projects.empty?
+
+      # Calculate column widths
+      id_width = [projects.map { |p| p.id.length }.max, "PROJECT ID".length].max
+      time_width = "LAST UPDATED AT".length
+
+      # Print header
+      puts format("%-#{id_width}s  %-#{time_width}s", "PROJECT ID", "LAST UPDATED AT")
+      puts "-" * (id_width + 2 + time_width)
+
+      # Print rows
+      projects.each do |project|
+        timestamp = project.last_updated_at&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
+        puts format("%-#{id_width}s  %-#{time_width}s", project.id, timestamp)
+      end
+    end
+  end
+end
+
+ClaudeHistory::CLI.start(ARGV)
