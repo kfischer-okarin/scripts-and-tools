@@ -7,5 +7,9 @@ module ClaudeHistory
     def leaf_uuid
       raw_data[:leafUuid]
     end
+
+    def text
+      raw_data[:summary]
+    end
   end
 end

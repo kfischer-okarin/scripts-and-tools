@@ -324,6 +324,21 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal :unexpected_attributes, session.warnings.first.type
   end
 
+  def test_summary_text_returns_summary_content
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"summary","summary":"the summary text","leafUuid":"root"}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    summary = session.root_segment.summaries.first
+
+    assert_equal "the summary text", summary.text
+  end
+
   # Session identity tests
 
   def test_session_id_returns_filename_without_extension
