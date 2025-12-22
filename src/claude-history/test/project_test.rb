@@ -486,6 +486,144 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal "conversation summary", session.root_segment.summaries.first.raw_data[:summary]
   end
 
+  # Thread tests
+
+  def test_linear_session_has_one_thread
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 1, session.threads.size
+    assert_instance_of ClaudeHistory::Thread, session.threads.first
+  end
+
+  def test_thread_messages_contains_records_in_order
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"thanks"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    thread = session.threads.first
+
+    assert_equal %w[1 2 3], thread.messages.map(&:uuid)
+  end
+
+  def test_branched_session_has_multiple_threads
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","message":{"role":"user","content":"option a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 2, session.threads.size
+  end
+
+  def test_each_thread_contains_full_path_from_root
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","message":{"role":"user","content":"option a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    thread_paths = session.threads.map { |t| t.messages.map(&:uuid) }.sort
+
+    assert_equal [%w[1 2 3a], %w[1 2 3b]], thread_paths
+  end
+
+  def test_thread_summary_is_nil_when_no_summary_exists
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    thread = session.threads.first
+
+    assert_nil thread.summary
+  end
+
+  def test_thread_summary_returns_summary_content_for_its_leaf
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"summary","summary":"conversation about greeting","leafUuid":"2"}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    thread = session.threads.first
+
+    assert_equal "conversation about greeting", thread.summary
+  end
+
+  def test_each_branch_can_have_its_own_summary
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","message":{"role":"user","content":"option a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
+        {"type":"summary","summary":"chose option a","leafUuid":"3a"}
+        {"type":"summary","summary":"chose option b","leafUuid":"3b"}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    summaries = session.threads.map(&:summary).sort
+
+    assert_equal ["chose option a", "chose option b"], summaries
+  end
+
+  def test_nested_branches_produce_correct_number_of_threads
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"start"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","message":{"role":"user","content":"branch a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"branch b"}}
+        {"type":"assistant","uuid":"4a","parentUuid":"3a","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"5a1","parentUuid":"4a","message":{"role":"user","content":"nested 1"}}
+        {"type":"user","uuid":"5a2","parentUuid":"4a","message":{"role":"user","content":"nested 2"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # 3 leaves: 3b, 5a1, 5a2
+    assert_equal 3, session.threads.size
+  end
+
   # Sanity test against real fixture data
 
   def test_no_warnings_on_real_fixture_sessions

@@ -25,7 +25,23 @@ module ClaudeHistory
       @direct_warnings + (@records + @summaries).flat_map(&:warnings)
     end
 
+    def threads
+      return [] if root_segment.nil?
+
+      collect_threads(root_segment, [])
+    end
+
     private
+
+    def collect_threads(segment, segment_path)
+      current_path = segment_path + [segment]
+
+      if segment.children.empty?
+        [Thread.new(segments: current_path)]
+      else
+        segment.children.flat_map { |child| collect_threads(child, current_path) }
+      end
+    end
 
     def build_root_segment
       return nil if root.nil?
