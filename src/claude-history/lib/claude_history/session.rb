@@ -31,6 +31,10 @@ module ClaudeHistory
       collect_threads(root_segment, [])
     end
 
+    def last_updated_at
+      threads.map(&:last_updated_at).compact.max
+    end
+
     private
 
     def collect_threads(segment, segment_path)

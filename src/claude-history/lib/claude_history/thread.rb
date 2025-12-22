@@ -18,5 +18,9 @@ module ClaudeHistory
     def summary
       segments.last.summaries.first&.text
     end
+
+    def last_updated_at
+      messages.last&.timestamp
+    end
   end
 end

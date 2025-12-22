@@ -167,6 +167,20 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_nil first_user.parent_uuid
   end
 
+  def test_record_exposes_timestamp_as_time_object
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:30:00.000Z","message":{"role":"user","content":"hi"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_instance_of Time, session.records.first.timestamp
+    assert_equal Time.utc(2025, 1, 15, 10, 30, 0), session.records.first.timestamp
+  end
+
   def test_record_exposes_line_number_and_filename
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
@@ -622,6 +636,53 @@ class ProjectTest < ClaudeHistory::TestCase
 
     # 3 leaves: 3b, 5a1, 5a2
     assert_equal 3, session.threads.size
+  end
+
+  def test_thread_last_updated_at_returns_last_message_timestamp
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-15T10:02:00.000Z","message":{"role":"user","content":"thanks"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    thread = session.threads.first
+
+    assert_equal Time.utc(2025, 1, 15, 10, 2, 0), thread.last_updated_at
+  end
+
+  def test_session_last_updated_at_returns_max_of_threads
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","timestamp":"2025-01-15T10:02:00.000Z","message":{"role":"user","content":"branch a"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","timestamp":"2025-01-15T10:05:00.000Z","message":{"role":"user","content":"branch b"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal Time.utc(2025, 1, 15, 10, 5, 0), session.last_updated_at
+  end
+
+  def test_project_last_updated_at_returns_max_of_sessions
+    project_dir = build_project(
+      "session-a.jsonl" => <<~JSONL,
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
+      JSONL
+      "session-b.jsonl" => <<~JSONL
+        {"type":"user","uuid":"2","parentUuid":null,"timestamp":"2025-01-15T12:00:00.000Z","message":{"role":"user","content":"hello"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+
+    assert_equal Time.utc(2025, 1, 15, 12, 0, 0), project.last_updated_at
   end
 
   # Sanity test against real fixture data

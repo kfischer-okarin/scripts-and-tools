@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "time"
+
 module ClaudeHistory
   # Base class for parsed JSONL records. Subclasses define EXPECTED_ATTRIBUTES
   # to validate known fields; unexpected attributes generate warnings.
@@ -26,6 +28,11 @@ module ClaudeHistory
 
     def parent_uuid
       raw_data[:parentUuid]
+    end
+
+    def timestamp
+      ts = raw_data[:timestamp]
+      ts ? Time.iso8601(ts) : nil
     end
 
     def add_warning(warning)

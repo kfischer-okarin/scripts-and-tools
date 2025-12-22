@@ -32,6 +32,14 @@ module ClaudeHistory
       @sessions[session_id]
     end
 
+    def sessions
+      @sessions.values
+    end
+
+    def last_updated_at
+      sessions.map(&:last_updated_at).compact.max
+    end
+
     private
 
     def parse_all_sessions
