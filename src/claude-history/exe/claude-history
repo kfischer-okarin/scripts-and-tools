@@ -18,12 +18,14 @@ module ClaudeHistory
 
     desc "sessions", "List all sessions in a project"
     method_option :project, type: :string, required: true, desc: "Project ID"
+    method_option :limit, type: :numeric, default: 20, desc: "Number of sessions to show"
     method_option :all_threads, type: :boolean, default: false, desc: "Show all threads per session"
     def sessions
       history = History.new(PROJECTS_PATH)
-      sessions_list = history.sessions(project_id: options[:project])
+      all_sessions = history.sessions(project_id: options[:project])
+      sessions_list = all_sessions.first(options[:limit])
 
-      print_sessions_table(sessions_list, show_threads: options[:all_threads])
+      print_sessions_table(sessions_list, total: all_sessions.size, show_threads: options[:all_threads])
     end
 
     private
@@ -46,13 +48,12 @@ module ClaudeHistory
       end
     end
 
-    def print_sessions_table(sessions, show_threads:)
+    def print_sessions_table(sessions, total:, show_threads:)
       return puts "No sessions found." if sessions.empty?
 
-      unless show_threads
-        puts "Tip: Use --all-threads to show individual conversation threads"
-        puts
-      end
+      puts "Showing #{sessions.size} of #{total} sessions"
+      puts "Tip: Use --all-threads to show individual conversation threads" unless show_threads
+      puts
 
       # Calculate column widths
       id_width = [sessions.map { |s| s.id.length }.max, "SESSION ID".length].max
