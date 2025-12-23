@@ -6,10 +6,13 @@ require "set"
 module ClaudeHistory
   # Represents a Claude Code project directory containing session files.
   #
-  # Parses all session files at initialization and builds sessions by tracing
-  # parentUuid chains. Sessions are created for each root record (null parentUuid)
-  # and include all connected records from any file. Summaries are matched to
-  # sessions via their leafUuid field.
+  # Parses session files lazily - full parsing only happens when sessions are
+  # accessed. For timestamp-only queries (last_updated_at), uses fast strategic
+  # parsing: newest files first, reading bottom-to-top until a timestamp is found.
+  #
+  # Sessions are built by tracing parentUuid chains. Sessions are created for each
+  # root record (null parentUuid) and include all connected records from any file.
+  # Summaries are matched to sessions via their leafUuid field.
   #
   # Agent files (prefixed "agent-"), empty files, and file-history-snapshot
   # records are skipped. Unknown record types generate warnings but are excluded.
@@ -24,8 +27,7 @@ module ClaudeHistory
 
     def initialize(project_path)
       @project_path = project_path
-      @sessions = {}
-      parse_all_sessions
+      @sessions = nil
     end
 
     def id
@@ -33,18 +35,54 @@ module ClaudeHistory
     end
 
     def session(session_id)
+      ensure_parsed
       @sessions[session_id]
     end
 
     def sessions
+      ensure_parsed
       @sessions.values
     end
 
     def last_updated_at
-      sessions.map(&:last_updated_at).compact.max
+      @last_updated_at ||= extract_last_updated_at
     end
 
     private
+
+    def ensure_parsed
+      return if @sessions
+
+      @sessions = {}
+      parse_all_sessions
+    end
+
+    # Fast timestamp extraction: read last timestamp from each file, return max
+    def extract_last_updated_at
+      session_files.filter_map { |f| extract_timestamp_from_file(f) }.max
+    end
+
+    def extract_timestamp_from_file(file_path)
+      lines = File.readlines(file_path)
+      lines.reverse_each do |line|
+        data = JSON.parse(line, symbolize_names: true)
+        next if data[:type] == "summary"
+
+        if data[:timestamp]
+          return Time.parse(data[:timestamp])
+        end
+      rescue JSON::ParserError
+        next
+      end
+      nil
+    end
+
+    def session_files
+      Dir.glob(File.join(@project_path, "*.jsonl"))
+         .reject { |f| File.basename(f).start_with?("agent-") }
+         .reject { |f| File.zero?(f) }
+         .sort_by { |f| -File.mtime(f).to_i }
+    end
 
     def parse_all_sessions
       all_records = []
@@ -52,11 +90,8 @@ module ClaudeHistory
       file_warnings = {}
 
       # Phase 1: Parse all files
-      Dir.glob(File.join(@project_path, "*.jsonl")).each do |file_path|
+      session_files.each do |file_path|
         filename = File.basename(file_path)
-        next if filename.start_with?("agent-")
-        next if File.zero?(file_path)
-
         records, summaries, warnings = parse_file(file_path, filename)
         all_records.concat(records)
         all_summaries.concat(summaries)
