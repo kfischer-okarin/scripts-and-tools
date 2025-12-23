@@ -685,6 +685,30 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal Time.utc(2025, 1, 15, 12, 0, 0), project.last_updated_at
   end
 
+  # Duplicate record handling
+
+  def test_session_deduplicates_records_with_same_uuid
+    project_dir = build_project(
+      "session.jsonl" => <<~JSONL,
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+      "duplicate.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+
+    # Only one session should exist (duplicates merged)
+    assert_equal 1, project.sessions.size
+
+    session = project.sessions.first
+    assert_equal 2, session.records.size
+    assert_equal %w[1 2], session.records.map(&:uuid)
+  end
+
   # Sanity test against real fixture data
 
   def test_no_warnings_on_real_fixture_sessions

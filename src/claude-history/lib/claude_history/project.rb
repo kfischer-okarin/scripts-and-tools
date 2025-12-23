@@ -63,6 +63,9 @@ module ClaudeHistory
         file_warnings[filename] = warnings
       end
 
+      # Deduplicate records by UUID (keep first occurrence)
+      all_records = all_records.uniq(&:uuid)
+
       # Phase 2: Build children index (parentUuid -> [child records])
       children_index = all_records.group_by(&:parent_uuid)
 
