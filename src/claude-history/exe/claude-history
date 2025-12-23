@@ -23,7 +23,7 @@ module ClaudeHistory
 
       # Calculate column widths
       id_width = [projects.map { |p| p.id.length }.max, "PROJECT ID".length].max
-      time_width = "LAST UPDATED AT".length
+      time_width = ["LAST UPDATED AT".length, "2025-12-23 00:07:04".length].max
 
       # Print header
       puts format("%-#{id_width}s  %-#{time_width}s", "PROJECT ID", "LAST UPDATED AT")
@@ -31,7 +31,7 @@ module ClaudeHistory
 
       # Print rows
       projects.each do |project|
-        timestamp = project.last_updated_at&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
+        timestamp = project.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
         puts format("%-#{id_width}s  %-#{time_width}s", project.id, timestamp)
       end
     end
