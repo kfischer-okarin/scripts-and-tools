@@ -37,8 +37,12 @@ module ClaudeHistory
       dir = Dir.mktmpdir
       @temp_dirs << dir
 
-      files.each do |filename, content|
-        File.write(File.join(dir, filename), content)
+      base_time = Time.now - files.size
+      files.each_with_index do |(filename, content), index|
+        path = File.join(dir, filename)
+        mtime = base_time + index
+        File.write(path, content)
+        File.utime(mtime, mtime, path)
       end
 
       dir
