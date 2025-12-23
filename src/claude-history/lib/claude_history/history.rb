@@ -10,6 +10,10 @@ module ClaudeHistory
       project(project_id).session(session_id)
     end
 
+    def sessions(project_id:)
+      project(project_id).sessions.sort_by { |s| s.last_updated_at || Time.at(0) }.reverse
+    end
+
     def projects
       Dir.glob(File.join(@projects_path, "*"))
          .select { |path| File.directory?(path) }

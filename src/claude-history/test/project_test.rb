@@ -670,6 +670,25 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal Time.utc(2025, 1, 15, 10, 5, 0), session.last_updated_at
   end
 
+  def test_threads_are_sorted_descending_by_last_updated_at
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3a","parentUuid":"2","timestamp":"2025-01-15T10:02:00.000Z","message":{"role":"user","content":"older branch"}}
+        {"type":"user","uuid":"3b","parentUuid":"2","timestamp":"2025-01-15T10:05:00.000Z","message":{"role":"user","content":"newer branch"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    threads = session.threads
+
+    assert_equal 2, threads.size
+    assert_equal Time.utc(2025, 1, 15, 10, 5, 0), threads[0].last_updated_at
+    assert_equal Time.utc(2025, 1, 15, 10, 2, 0), threads[1].last_updated_at
+  end
+
   def test_project_last_updated_at_returns_max_of_sessions
     project_dir = build_project(
       "session-a.jsonl" => <<~JSONL,

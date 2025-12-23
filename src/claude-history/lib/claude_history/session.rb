@@ -28,7 +28,7 @@ module ClaudeHistory
     def threads
       return [] if root_segment.nil?
 
-      collect_threads(root_segment, [])
+      collect_threads(root_segment, []).sort_by { |t| t.last_updated_at || Time.at(0) }.reverse
     end
 
     def last_updated_at

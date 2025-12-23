@@ -16,6 +16,16 @@ module ClaudeHistory
       print_projects_table(sorted)
     end
 
+    desc "sessions", "List all sessions in a project"
+    method_option :project, type: :string, required: true, desc: "Project ID"
+    method_option :all_threads, type: :boolean, default: false, desc: "Show all threads per session"
+    def sessions
+      history = History.new(PROJECTS_PATH)
+      sessions_list = history.sessions(project_id: options[:project])
+
+      print_sessions_table(sessions_list, show_threads: options[:all_threads])
+    end
+
     private
 
     def print_projects_table(projects)
@@ -34,6 +44,46 @@ module ClaudeHistory
         timestamp = project.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
         puts format("%-#{id_width}s  %-#{time_width}s", project.id, timestamp)
       end
+    end
+
+    def print_sessions_table(sessions, show_threads:)
+      return puts "No sessions found." if sessions.empty?
+
+      unless show_threads
+        puts "Tip: Use --all-threads to show individual conversation threads"
+        puts
+      end
+
+      # Calculate column widths
+      id_width = [sessions.map { |s| s.id.length }.max, "SESSION ID".length].max
+      time_width = ["LAST UPDATED AT".length, "2025-12-23 00:07:04".length].max
+      summary_width = 50
+
+      # Print header
+      puts format("%-#{id_width}s  %-#{time_width}s  %s", "SESSION ID", "LAST UPDATED AT", "SUMMARY")
+      puts "-" * (id_width + 2 + time_width + 2 + summary_width)
+
+      # Print rows
+      sessions.each do |session|
+        timestamp = session.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
+        summary = truncate_summary(session.threads.first&.summary, summary_width)
+        puts format("%-#{id_width}s  %-#{time_width}s  %s", session.id, timestamp, summary)
+
+        next unless show_threads
+
+        session.threads.each do |thread|
+          thread_timestamp = thread.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
+          thread_summary = truncate_summary(thread.summary, summary_width - 5)
+          puts format("  └─ %-#{id_width - 5}s  %-#{time_width}s  %s", thread.id[0..7] + "...", thread_timestamp, thread_summary)
+        end
+      end
+    end
+
+    def truncate_summary(text, max_length)
+      return "" if text.nil? || text.empty?
+
+      first_line = text.lines.first&.strip || ""
+      first_line.length > max_length ? first_line[0...max_length - 3] + "..." : first_line
     end
   end
 end

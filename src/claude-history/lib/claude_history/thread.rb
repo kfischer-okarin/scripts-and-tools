@@ -22,5 +22,9 @@ module ClaudeHistory
     def last_updated_at
       messages.last&.timestamp
     end
+
+    def id
+      segments.last.leaf_uuid
+    end
   end
 end
