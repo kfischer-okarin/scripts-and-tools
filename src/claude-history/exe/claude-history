@@ -63,21 +63,20 @@ module ClaudeHistory
       summary_width = 50
 
       # Print header
-      puts format("%-#{col_width}s  %-#{time_width}s  %s", "SESSION ID", "LAST UPDATED AT", "SUMMARY")
-      puts "-" * (col_width + 2 + time_width + 2 + summary_width)
+      puts format("%-#{col_width}s  %-#{summary_width}s  %s", "SESSION ID", "SUMMARY", "LAST UPDATED AT")
 
       # Print rows
       sessions.each do |session|
         timestamp = session.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
         summary = truncate_summary(session.threads.first&.summary, summary_width)
-        puts format("%-#{col_width}s  %-#{time_width}s  %s", truncate_id(session.id), timestamp, summary)
+        puts format("%-#{col_width}s  %-#{summary_width}s  %s", green(truncate_id(session.id)), summary, grey(timestamp))
 
         next unless show_threads
 
         session.threads.each do |thread|
           thread_timestamp = thread.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
           thread_summary = truncate_summary(thread.summary, summary_width)
-          puts format("#{thread_prefix}%-#{id_width}s  %-#{time_width}s  %s", truncate_id(thread.id), thread_timestamp, thread_summary)
+          puts format("#{thread_prefix}%-#{id_width}s  %-#{summary_width}s  %s", green(truncate_id(thread.id)), thread_summary, grey(thread_timestamp))
         end
       end
     end
@@ -91,6 +90,14 @@ module ClaudeHistory
 
     def truncate_id(id, length = 8)
       id.length > length ? "#{id[0, length]}..." : id
+    end
+
+    def green(text)
+      "\e[32m#{text}\e[0m"
+    end
+
+    def grey(text)
+      "\e[90m#{text}\e[0m"
     end
   end
 end
