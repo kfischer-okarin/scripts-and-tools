@@ -65,16 +65,24 @@ module ClaudeHistory
 
         case children.size
         when 0
-          segment_summaries = summaries_index[current.uuid] || []
+          segment_summaries = collect_summaries(segment_records, summaries_index)
           return Segment.new(records: segment_records, summaries: segment_summaries)
         when 1
           current = children.first
         else
-          segment_summaries = summaries_index[current.uuid] || []
+          segment_summaries = collect_summaries(segment_records, summaries_index)
           child_segments = children.map { |child| build_segment_from(child, children_index, summaries_index) }
           return Segment.new(records: segment_records, children: child_segments, summaries: segment_summaries)
         end
       end
+    end
+
+    def collect_summaries(records, summaries_index)
+      records.reverse_each do |record|
+        summaries = summaries_index[record.uuid]
+        return summaries if summaries&.any?
+      end
+      []
     end
   end
 end

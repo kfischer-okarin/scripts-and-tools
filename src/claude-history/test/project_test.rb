@@ -598,6 +598,24 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal "conversation about greeting", thread.summary
   end
 
+  def test_thread_summary_returns_latest_available_summary_not_just_leaf
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"summary","summary":"summary at record 2","leafUuid":"2"}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"continue"}}
+        {"type":"assistant","uuid":"4","parentUuid":"3","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    thread = session.threads.first
+
+    assert_equal "summary at record 2", thread.summary
+  end
+
   def test_each_branch_can_have_its_own_summary
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
