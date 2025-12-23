@@ -55,27 +55,29 @@ module ClaudeHistory
       puts "Tip: Use --all-threads to show individual conversation threads" unless show_threads
       puts
 
-      # Calculate column widths
-      id_width = [sessions.map { |s| s.id.length }.max, "SESSION ID".length].max
-      time_width = ["LAST UPDATED AT".length, "2025-12-23 00:07:04".length].max
+      # Calculate column widths (8 chars + "..." = 11)
+      id_width = 11
+      thread_prefix = "  └─ "
+      col_width = show_threads ? id_width + thread_prefix.length : id_width
+      time_width = "2025-12-23 00:07:04".length
       summary_width = 50
 
       # Print header
-      puts format("%-#{id_width}s  %-#{time_width}s  %s", "SESSION ID", "LAST UPDATED AT", "SUMMARY")
-      puts "-" * (id_width + 2 + time_width + 2 + summary_width)
+      puts format("%-#{col_width}s  %-#{time_width}s  %s", "SESSION ID", "LAST UPDATED AT", "SUMMARY")
+      puts "-" * (col_width + 2 + time_width + 2 + summary_width)
 
       # Print rows
       sessions.each do |session|
         timestamp = session.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
         summary = truncate_summary(session.threads.first&.summary, summary_width)
-        puts format("%-#{id_width}s  %-#{time_width}s  %s", session.id, timestamp, summary)
+        puts format("%-#{col_width}s  %-#{time_width}s  %s", truncate_id(session.id), timestamp, summary)
 
         next unless show_threads
 
         session.threads.each do |thread|
           thread_timestamp = thread.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
-          thread_summary = truncate_summary(thread.summary, summary_width - 5)
-          puts format("  └─ %-#{id_width - 5}s  %-#{time_width}s  %s", thread.id[0..7] + "...", thread_timestamp, thread_summary)
+          thread_summary = truncate_summary(thread.summary, summary_width)
+          puts format("#{thread_prefix}%-#{id_width}s  %-#{time_width}s  %s", truncate_id(thread.id), thread_timestamp, thread_summary)
         end
       end
     end
@@ -85,6 +87,10 @@ module ClaudeHistory
 
       first_line = text.lines.first&.strip || ""
       first_line.length > max_length ? first_line[0...max_length - 3] + "..." : first_line
+    end
+
+    def truncate_id(id, length = 8)
+      id.length > length ? "#{id[0, length]}..." : id
     end
   end
 end
