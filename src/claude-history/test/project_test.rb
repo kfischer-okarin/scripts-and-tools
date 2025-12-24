@@ -107,7 +107,7 @@ class ProjectTest < ClaudeHistory::TestCase
     # Command -> stdout -> assistant: stdout is skipped but assistant should still be in tree
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>done</local-command-stdout>"}}
         {"type":"assistant","uuid":"asst-1","parentUuid":"stdout-1","message":{"role":"assistant","content":[]}}
       JSONL
@@ -315,10 +315,87 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal :tool_result, session.records.first.content_type
   end
 
+  def test_session_excludes_clear_command_and_preserves_tree
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"clear-1","parentUuid":"2","message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"stdout-1","parentUuid":"clear-1","message":{"role":"user","content":"<local-command-stdout></local-command-stdout>"}}
+        {"type":"user","uuid":"3","parentUuid":"stdout-1","message":{"role":"user","content":"new question"}}
+        {"type":"assistant","uuid":"4","parentUuid":"3","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # Should have 4 records: user, assistant, user, assistant (clear command and stdout skipped)
+    assert_equal 4, session.records.size
+    assert_equal %w[1 2 3 4], session.records.map(&:uuid)
+  end
+
+  def test_session_excludes_resume_command_and_preserves_tree
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"user","uuid":"resume-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/resume</command-name>\\n<command-message>resume</command-message>\\n<command-args></command-args>"}}
+        {"type":"assistant","uuid":"2","parentUuid":"resume-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # Resume command skipped, assistant relinked to user
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+  end
+
+  def test_slash_command_record_parses_user_defined_command
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/commit</command-name>\\n<command-message>commit</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"# Commit Instructions\\n\\nYou are an expert..."}]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # Should only have one record (expanded prompt is embedded in slash command)
+    assert_equal 1, session.records.size
+    record = session.records.first
+
+    assert_instance_of ClaudeHistory::SlashCommandRecord, record
+    assert_equal "/commit", record.command_name
+    assert_equal "commit", record.command_display_name
+    assert_equal "# Commit Instructions\n\nYou are an expert...", record.expanded_prompt
+  end
+
+  def test_slash_command_record_with_assistant_response
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"}}
+        {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the branch..."}]}}
+        {"type":"assistant","uuid":"asst-1","parentUuid":"prompt-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # Should have slash command and assistant (prompt merged, tree preserved)
+    assert_equal 2, session.records.size
+    assert_instance_of ClaudeHistory::SlashCommandRecord, session.records.first
+    assert_instance_of ClaudeHistory::AssistantMessage, session.records.last
+    assert_equal "main", session.records.first.command_args
+  end
+
   def test_command_record_parses_command_parts
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
       JSONL
     )
 
@@ -327,8 +404,8 @@ class ProjectTest < ClaudeHistory::TestCase
     record = session.records.first
 
     assert_instance_of ClaudeHistory::CommandRecord, record
-    assert_equal "/clear", record.command_name
-    assert_equal "clear", record.command_display_name
+    assert_equal "/init", record.command_name
+    assert_equal "init", record.command_display_name
     assert_equal "", record.command_args
     assert_nil record.stdout_content
   end
@@ -353,8 +430,8 @@ class ProjectTest < ClaudeHistory::TestCase
   def test_command_record_includes_paired_stdout
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
-        {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>Context cleared</local-command-stdout>"}}
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>Initialized</local-command-stdout>"}}
       JSONL
     )
 
@@ -366,13 +443,13 @@ class ProjectTest < ClaudeHistory::TestCase
     record = session.records.first
 
     assert_instance_of ClaudeHistory::CommandRecord, record
-    assert_equal "Context cleared", record.stdout_content
+    assert_equal "Initialized", record.stdout_content
   end
 
   def test_command_record_with_empty_stdout
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout></local-command-stdout>"}}
       JSONL
     )

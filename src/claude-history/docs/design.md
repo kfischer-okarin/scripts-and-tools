@@ -9,7 +9,8 @@ CLI (Thor, humble object - just delegates to History)
               └── Session (logical session: aggregates conversation tree across files)
                     ├── Record (base class for parsed lines)
                     │     ├── UserMessage
-                    │     │     └── CommandRecord (slash commands with optional stdout)
+                    │     │     ├── CommandRecord (built-in commands with optional stdout)
+                    │     │     └── SlashCommandRecord (user-defined skills with expanded prompt)
                     │     ├── AssistantMessage
                     │     └── Summary
                     ├── Segment (contiguous records between branch points)

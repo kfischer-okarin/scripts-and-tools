@@ -32,6 +32,7 @@ module ClaudeHistory
       }.freeze
 
       SKIPPED_TYPES = %w[file-history-snapshot system].freeze
+      SKIPPED_COMMANDS = %w[/clear /resume].freeze
 
       attr_reader :sessions
 
@@ -111,20 +112,33 @@ module ClaudeHistory
       # Phase 3: Construct record objects
 
       def construct_all_records
-        # Index stdout by parent for command pairing
+        index_command_children
+        construct_records_from_entries
+      end
+
+      def index_command_children
+        # Index stdout messages by parent for built-in command pairing
         @stdout_by_parent = {}
+        # Index expanded prompts by parent for slash command pairing
+        @expanded_prompt_by_parent = {}
+
         @all_raw_entries.each do |entry|
           data = entry[:data]
           next unless data[:type] == "user"
 
           content = data.dig(:message, :content)
-          next unless stdout_message?(content)
-
           parent_uuid = data[:parentUuid]
-          @stdout_by_parent[parent_uuid] = data if parent_uuid
-        end
+          next unless parent_uuid
 
-        # Construct records, skipping entries that should be excluded
+          if stdout_message?(content)
+            @stdout_by_parent[parent_uuid] = data
+          elsif data[:isMeta] == true && content.is_a?(Array)
+            @expanded_prompt_by_parent[parent_uuid] = data
+          end
+        end
+      end
+
+      def construct_records_from_entries
         @all_raw_entries.each do |entry|
           data = entry[:data]
           next if skip_entry?(data)
@@ -140,9 +154,22 @@ module ClaudeHistory
         content = data.dig(:message, :content)
 
         return true if type == "user" && stdout_message?(content)
+        return true if type == "user" && skipped_command?(content)
         return true if SKIPPED_TYPES.include?(type)
 
         false
+      end
+
+      def skipped_command?(content)
+        return false unless content.is_a?(String) && content.start_with?("<command-name>")
+
+        command_name = extract_command_name(content)
+        SKIPPED_COMMANDS.include?(command_name)
+      end
+
+      def extract_command_name(content)
+        match = content.match(/<command-name>(.*?)<\/command-name>/)
+        match ? match[1] : nil
       end
 
       def construct_record(entry)
@@ -161,8 +188,7 @@ module ClaudeHistory
         if type == "summary"
           @all_summaries << Summary.new(data, line_number, filename)
         elsif command_message?(type, content)
-          stdout_data = @stdout_by_parent[data[:uuid]]
-          @all_records << CommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
+          construct_command_record(data, line_number, filename)
         elsif RECORD_TYPES.key?(type)
           @all_records << RECORD_TYPES[type].new(data, line_number, filename)
         else
@@ -183,6 +209,20 @@ module ClaudeHistory
 
       def command_message?(type, content)
         type == "user" && content.is_a?(String) && content.start_with?("<command-name>")
+      end
+
+      def construct_command_record(data, line_number, filename)
+        uuid = data[:uuid]
+        expanded_prompt_data = @expanded_prompt_by_parent[uuid]
+        stdout_data = @stdout_by_parent[uuid]
+
+        if expanded_prompt_data
+          # User-defined slash command (skill)
+          @all_records << SlashCommandRecord.new(data, line_number, filename, expanded_prompt_data: expanded_prompt_data)
+        else
+          # Built-in command
+          @all_records << CommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
+        end
       end
 
       # Phase 4: Deduplicate
