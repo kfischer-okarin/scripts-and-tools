@@ -92,22 +92,62 @@ module ClaudeHistory
       text.length > length ? "#{text[0, length - 3]}..." : text
     end
 
-    def self.green(text)
-      $stdout.tty? ? "\e[32m#{text}\e[0m" : text
+    module Colors
+      def self.green(text)
+        $stdout.tty? ? "\e[32m#{text}\e[0m" : text
+      end
+
+      def self.grey(text)
+        $stdout.tty? ? "\e[90m#{text}\e[0m" : text
+      end
     end
 
-    def self.grey(text)
-      $stdout.tty? ? "\e[90m#{text}\e[0m" : text
+    class TablePrinter
+      def initialize(columns)
+        @columns = columns
+      end
+
+      def print(rows)
+        column_widths = @columns.each_with_index.map { |col, idx|
+          if col[:width]
+            col[:width]
+          else
+            value_lengths = rows.map { |row| row[idx].length }
+            [value_lengths.max || 0, col[:name].length].max
+          end
+        }
+
+        headers = @columns.each_with_index.map { |col, idx|
+          col[:name].ljust(column_widths[idx])
+        }
+        header_line = headers.join("  ")
+        puts header_line
+        puts "-" * header_line.length
+
+        rows.each do |row|
+          printed_values = @columns.each_with_index.map { |col, idx|
+            value = row[idx].ljust(column_widths[idx])
+            if col[:colorize]
+              col[:colorize].call(value)
+            elsif col[:color]
+              Colors.send(col[:color], value)
+            else
+              value
+            end
+          }
+          puts printed_values.join("  ")
+        end
+      end
     end
 
-    SESSION_COLUMNS = [
+    SESSION_TABLE_PRINTER = TablePrinter.new([
       {
         name: "SESSION ID",
         colorize: ->(id) {
           if id.start_with?(THREAD_PREFIX)
-            THREAD_PREFIX + green(id[THREAD_PREFIX.length..-1])
+            THREAD_PREFIX + Colors.green(id[THREAD_PREFIX.length..-1])
           else
-            green(id)
+            Colors.green(id)
           end
         }
       },
@@ -117,9 +157,9 @@ module ClaudeHistory
       },
       {
         name: "LAST UPDATED AT",
-        colorize: method(:grey)
+        color: :grey
       }
-    ]
+    ])
 
     def print_sessions_table(sessions, total:, show_threads:, full_ids:)
       return puts "No sessions found." if sessions.empty?
@@ -148,34 +188,7 @@ module ClaudeHistory
         end
       end
 
-      print_table(rows, columns: SESSION_COLUMNS)
-    end
-
-    def print_table(rows, columns:)
-      column_widths = columns.each_with_index.map { |col, idx|
-        if col[:width]
-          col[:width]
-        else
-          value_lengths = rows.map { |row| row[idx].length }
-          [value_lengths.max, col[:name].length].max
-        end
-      }
-
-      headers = columns.each_with_index.map { |col, idx|
-        col[:name].ljust(column_widths[idx])
-      }
-      header_line = headers.join("  ")
-      puts header_line
-      puts "-" * header_line.length
-
-      # Print rows
-      rows.each do |row|
-        printed_values = columns.each_with_index.map { |col, idx|
-          colorize = col[:colorize] || ->(text) { text }
-          colorize.call(row[idx].ljust(column_widths[idx]))
-        }
-        puts printed_values.join("  ")
-      end
+      SESSION_TABLE_PRINTER.print(rows)
     end
 
     def format_timestamp(timestamp)
