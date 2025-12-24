@@ -49,6 +49,23 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_empty session.warnings
   end
 
+  def test_session_excludes_system_records
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"system","subtype":"local_command","uuid":"sys-1","content":"<command-name>/add-dir</command-name>\\n<command-message>add-dir</command-message>\\n<command-args></command-args>"}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+    assert_empty session.warnings
+  end
+
   def test_session_excludes_is_meta_records
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
@@ -260,17 +277,74 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal :tool_result, session.records.first.content_type
   end
 
-  def test_user_message_content_type_command
+  def test_command_record_parses_command_parts
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"123","message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    record = session.records.first
+
+    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_equal "/clear", record.command_name
+    assert_equal "clear", record.command_display_name
+    assert_equal "", record.command_args
+    assert_nil record.stdout_content
+  end
+
+  def test_command_record_parses_command_with_args
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/add-dir</command-name>\\n<command-message>add-dir</command-message>\\n<command-args>src/lib</command-args>"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    record = session.records.first
+
+    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_equal "/add-dir", record.command_name
+    assert_equal "add-dir", record.command_display_name
+    assert_equal "src/lib", record.command_args
+  end
+
+  def test_command_record_includes_paired_stdout
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>Context cleared</local-command-stdout>"}}
       JSONL
     )
 
     project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
-    assert_equal :command, session.records.first.content_type
+    # Should only have one record (stdout is embedded in command)
+    assert_equal 1, session.records.size
+    record = session.records.first
+
+    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_equal "Context cleared", record.stdout_content
+  end
+
+  def test_command_record_with_empty_stdout
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout></local-command-stdout>"}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+    record = session.records.first
+
+    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_equal "", record.stdout_content
   end
 
   def test_user_message_content_type_interrupt

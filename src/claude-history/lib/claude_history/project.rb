@@ -24,7 +24,7 @@ module ClaudeHistory
       "summary" => Summary
     }.freeze
 
-    SKIPPED_TYPES = %w[file-history-snapshot].freeze
+    SKIPPED_TYPES = %w[file-history-snapshot system].freeze
 
     def initialize(project_path)
       @project_path = project_path
@@ -134,17 +134,49 @@ module ClaudeHistory
       summaries = []
       warnings = []
 
+      # First pass: collect raw data with line numbers
+      raw_entries = []
       File.foreach(file_path).with_index(1) do |line, line_number|
         data = JSON.parse(line, symbolize_names: true)
+        raw_entries << { data: data, line_number: line_number }
+      end
+
+      # Identify stdout messages and map them by parentUuid
+      stdout_by_parent = {}
+      raw_entries.each do |entry|
+        data = entry[:data]
+        next unless data[:type] == "user"
+
+        content = data.dig(:message, :content)
+        next unless content.is_a?(String) && content.start_with?("<local-command-stdout>")
+
+        parent_uuid = data[:parentUuid]
+        stdout_by_parent[parent_uuid] = data if parent_uuid
+      end
+
+      # Second pass: construct records, pairing commands with their stdout
+      raw_entries.each do |entry|
+        data = entry[:data]
+        line_number = entry[:line_number]
         type = data[:type]
 
         # Skip meta messages (system-injected, not user content)
         next if data[:isMeta] == true
 
+        # Skip stdout messages (they're embedded in CommandRecord)
+        content = data.dig(:message, :content)
+        if type == "user" && content.is_a?(String) && content.start_with?("<local-command-stdout>")
+          next
+        end
+
         if SKIPPED_TYPES.include?(type)
           next
         elsif type == "summary"
           summaries << Summary.new(data, line_number, filename)
+        elsif type == "user" && content.is_a?(String) && content.start_with?("<command-name>")
+          # Command message - pair with stdout if available
+          stdout_data = stdout_by_parent[data[:uuid]]
+          records << CommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
         elsif RECORD_TYPES.key?(type)
           records << RECORD_TYPES[type].new(data, line_number, filename)
         else

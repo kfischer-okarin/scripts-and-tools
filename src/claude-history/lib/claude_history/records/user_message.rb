@@ -2,7 +2,8 @@
 
 module ClaudeHistory
   # User message record. Classifies content into types: :text, :tool_result,
-  # :command, :interrupt, or :unknown (with warning).
+  # :command, :interrupt, or :unknown (with warning). Note: command messages
+  # are constructed as CommandRecord subclass by Project.
   class UserMessage < Record
     INTERRUPT_MARKER = "[Request interrupted by user]"
 
