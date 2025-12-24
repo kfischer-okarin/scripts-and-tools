@@ -667,16 +667,84 @@ System messages not part of conversation flow:
 
 ### Command Messages
 
-Slash commands are logged as user messages:
+Slash commands are logged as user messages with XML-like tags:
 
 ```json
 {
   "type": "user",
+  "uuid": "b981afe9-...",
   "message": {
     "content": "<command-name>/clear</command-name>\n<command-message>clear</command-message>\n<command-args></command-args>"
   }
 }
 ```
+
+**Content structure**:
+- `<command-name>`: The slash command (e.g., `/clear`, `/init`)
+- `<command-message>`: Display name of the command
+- `<command-args>`: Command arguments (may be empty)
+
+#### Built-in Commands (with stdout)
+
+Built-in commands like `/clear` produce a child stdout message:
+
+```json
+{
+  "type": "user",
+  "parentUuid": "b981afe9-...",
+  "uuid": "e8e28ecc-...",
+  "message": {
+    "content": "<local-command-stdout>output here</local-command-stdout>"
+  }
+}
+```
+
+**Key characteristics**:
+- The stdout message's `parentUuid` points directly to the command message's `uuid`
+- Timestamps are typically milliseconds apart
+- Stdout content may be empty (`<local-command-stdout></local-command-stdout>`)
+
+#### User-Defined Slash Commands (with expanded prompt)
+
+User-defined slash commands (skills) produce a child message with the expanded prompt:
+
+```json
+{
+  "type": "user",
+  "parentUuid": "b8f5ed6b-...",
+  "isMeta": true,
+  "message": {
+    "content": [{"type": "text", "text": "# Review Instructions\n\nYou are an expert..."}]
+  }
+}
+```
+
+**Key characteristics**:
+- Has `isMeta: true` (distinguishes from regular user messages)
+- Content is an array with a text block, not a simple string
+- Contains the full expanded skill prompt
+- No `<local-command-stdout>` message is produced
+
+#### System Command Variant
+
+Some commands appear as system records instead of user records:
+
+```json
+{
+  "type": "system",
+  "subtype": "local_command",
+  "content": "<command-name>/add-dir</command-name>\n<command-message>add-dir</command-message>\n<command-args></command-args>",
+  "uuid": "bdfd8daf-..."
+}
+```
+
+**Differences from user-type commands**:
+- `type` is `"system"` instead of `"user"`
+- Has `subtype: "local_command"`
+- Content is at top level, not wrapped in `message` object
+- Typically used for IDE/workspace commands (e.g., `/add-dir`)
+
+The same parent-child stdout pattern applies to system commands
 
 ### Empty Sessions
 
