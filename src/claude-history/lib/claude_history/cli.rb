@@ -157,6 +157,8 @@ module ClaudeHistory
       end
     end
 
+    SUMMARY_WIDTH = 60
+
     SESSION_TABLE_PRINTER = TablePrinter.new([
       {
         name: "SESSION ID",
@@ -170,7 +172,7 @@ module ClaudeHistory
       },
       {
         name: "SUMMARY",
-        width: 50
+        width: SUMMARY_WIDTH
       },
       {
         name: "BRANCH",
@@ -193,7 +195,7 @@ module ClaudeHistory
       sessions.each do |session|
         rows << [
           full_ids ? session.id : truncate_id(session.id),
-          CLI.session_summary(session, max_length: 50),
+          CLI.session_summary(session, max_length: SUMMARY_WIDTH),
           session.git_branch || "",
           format_timestamp(session.last_updated_at),
         ]
@@ -204,7 +206,7 @@ module ClaudeHistory
           id = full_ids ? thread.id : truncate_id(thread.id)
           rows << [
             "#{THREAD_PREFIX}#{id}",
-            CLI.thread_summary(thread, max_length: 50),
+            CLI.thread_summary(thread, max_length: SUMMARY_WIDTH),
             thread.git_branch || "",
             format_timestamp(thread.last_updated_at)
           ]
