@@ -8,7 +8,7 @@ class HistoryTest < ClaudeHistory::TestCase
   end
 
   def test_show_session_returns_parsed_session_with_records
-    session = @history.show_session(fixture_main_session_id, project_id: fixture_project_id)
+    session = @history.show_session(fixture_main_session_id, project_id_query: fixture_project_id)
 
     refute_nil session
     refute_empty session.records
@@ -23,10 +23,53 @@ class HistoryTest < ClaudeHistory::TestCase
   end
 
   def test_sessions_returns_all_sessions_for_project
-    sessions = @history.sessions(project_id: fixture_project_id)
+    sessions = @history.sessions(project_id_query: fixture_project_id)
 
     assert_kind_of Array, sessions
     assert sessions.all? { |s| s.is_a?(ClaudeHistory::Session) }
+  end
+
+  def test_sessions_raises_error_when_no_project_matches
+    history = ClaudeHistory::History.new(projects_fixture_path)
+
+    error = assert_raises(ArgumentError) do
+      history.sessions(project_id_query: "nonexistent-xyz-123")
+    end
+
+    assert_includes error.message, "No project found"
+    assert_includes error.message, "nonexistent-xyz-123"
+  end
+
+  def test_sessions_raises_error_for_ambiguous_partial_project_id
+    # Create parent dir with two projects that share a common substring
+    projects_path = Dir.mktmpdir
+    @temp_dirs << projects_path
+
+    FileUtils.mkdir(File.join(projects_path, "foo-bar"))
+    FileUtils.mkdir(File.join(projects_path, "foo-baz"))
+
+    history = ClaudeHistory::History.new(projects_path)
+
+    error = assert_raises(ArgumentError) do
+      history.sessions(project_id_query: "foo")
+    end
+
+    assert_includes error.message, "foo-bar"
+    assert_includes error.message, "foo-baz"
+  end
+
+  def test_sessions_resolves_unique_partial_project_id
+    project_path = build_project({
+      "session.jsonl" => build_session_jsonl("test", "2025-01-01T10:00:00Z")
+    })
+    projects_path = File.dirname(project_path)
+    project_id = File.basename(project_path)  # e.g., "test-project-abc123"
+    partial_id = project_id[5..15]  # grab middle portion as partial match
+
+    history = ClaudeHistory::History.new(projects_path)
+    sessions = history.sessions(project_id_query: partial_id)
+
+    assert_equal 1, sessions.size
   end
 
   def test_sessions_returns_sessions_sorted_descending_by_last_updated
@@ -39,7 +82,7 @@ class HistoryTest < ClaudeHistory::TestCase
     project_id = File.basename(project_path)
 
     history = ClaudeHistory::History.new(projects_path)
-    sessions = history.sessions(project_id: project_id)
+    sessions = history.sessions(project_id_query: project_id)
 
     assert_equal 2, sessions.size
     assert_equal "newer-session", sessions[0].id

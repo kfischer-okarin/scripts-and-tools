@@ -21,7 +21,7 @@ module ClaudeHistory
     method_option :full_ids, type: :boolean, default: false, desc: "Show full session/thread IDs"
     def sessions
       history = History.new(PROJECTS_PATH)
-      all_sessions = history.sessions(project_id: options[:project])
+      all_sessions = history.sessions(project_id_query: options[:project])
       sessions_list = all_sessions.first(options[:limit])
 
       print_sessions_table(sessions_list, total: all_sessions.size, show_threads: options[:all_threads], full_ids: options[:full_ids])
