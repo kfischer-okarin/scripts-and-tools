@@ -20,6 +20,10 @@ module ClaudeHistory
   class Project
     # Parses all JSONL files in a project directory and builds sessions.
     # Handles command/stdout pairing, deduplication, and tree construction.
+    #
+    # Key design: Raw entries are collected first, then parent remapping handles
+    # skipped records (meta, stdout, system) so their children remain connected
+    # to the tree via the skipped record's parent.
     class Parser
       RECORD_TYPES = {
         "user" => UserMessage,
@@ -34,13 +38,16 @@ module ClaudeHistory
       def initialize(session_files)
         @session_files = session_files
         @sessions = {}
+        @all_raw_entries = []
         @all_records = []
         @all_summaries = []
         @file_warnings = {}
       end
 
       def parse
-        parse_all_files
+        collect_all_raw_entries
+        remap_skipped_parents
+        construct_all_records
         deduplicate_records
         build_sessions
         self
@@ -48,36 +55,65 @@ module ClaudeHistory
 
       private
 
-      # Phase 1: Parse all files
+      # Phase 1: Collect all raw entries from all files
 
-      def parse_all_files
+      def collect_all_raw_entries
         @session_files.each do |file_path|
-          parse_file(file_path)
+          collect_file_entries(file_path)
         end
       end
 
-      def parse_file(file_path)
-        @current_filename = File.basename(file_path)
-        @current_raw_entries = []
-        @current_stdout_by_parent = {}
-        @current_warnings = []
-
-        collect_raw_entries(file_path)
-        index_stdout_messages
-        construct_records
-
-        @file_warnings[@current_filename] = @current_warnings
-      end
-
-      def collect_raw_entries(file_path)
+      def collect_file_entries(file_path)
+        filename = File.basename(file_path)
         File.foreach(file_path).with_index(1) do |line, line_number|
           data = JSON.parse(line, symbolize_names: true)
-          @current_raw_entries << { data: data, line_number: line_number }
+          @all_raw_entries << { data: data, line_number: line_number, filename: filename }
         end
       end
 
-      def index_stdout_messages
-        @current_raw_entries.each do |entry|
+      # Phase 2: Remap parent pointers for skipped records
+      # When a record is skipped, its children should point to its parent instead
+
+      def remap_skipped_parents
+        # Build uuid -> parent_uuid map for all entries
+        @parent_map = {}
+        @all_raw_entries.each do |entry|
+          uuid = entry[:data][:uuid]
+          parent_uuid = entry[:data][:parentUuid]
+          @parent_map[uuid] = parent_uuid if uuid
+        end
+
+        # Identify skipped record UUIDs
+        @skipped_uuids = Set.new
+        @all_raw_entries.each do |entry|
+          @skipped_uuids << entry[:data][:uuid] if skip_entry?(entry[:data])
+        end
+
+        # Build remapping: for each skipped uuid, find its nearest non-skipped ancestor
+        @remap = {}
+        @skipped_uuids.each do |skipped_uuid|
+          ancestor = @parent_map[skipped_uuid]
+          while ancestor && @skipped_uuids.include?(ancestor)
+            ancestor = @parent_map[ancestor]
+          end
+          @remap[skipped_uuid] = ancestor
+        end
+      end
+
+      def remapped_parent(entry)
+        original_parent = entry[:data][:parentUuid]
+        return original_parent unless original_parent
+        return original_parent unless @skipped_uuids.include?(original_parent)
+
+        @remap[original_parent]
+      end
+
+      # Phase 3: Construct record objects
+
+      def construct_all_records
+        # Index stdout by parent for command pairing
+        @stdout_by_parent = {}
+        @all_raw_entries.each do |entry|
           data = entry[:data]
           next unless data[:type] == "user"
 
@@ -85,18 +121,15 @@ module ClaudeHistory
           next unless stdout_message?(content)
 
           parent_uuid = data[:parentUuid]
-          @current_stdout_by_parent[parent_uuid] = data if parent_uuid
+          @stdout_by_parent[parent_uuid] = data if parent_uuid
         end
-      end
 
-      def construct_records
-        @current_raw_entries.each do |entry|
+        # Construct records, skipping entries that should be excluded
+        @all_raw_entries.each do |entry|
           data = entry[:data]
-          line_number = entry[:line_number]
-
           next if skip_entry?(data)
 
-          construct_record(data, line_number)
+          construct_record(entry)
         end
       end
 
@@ -112,23 +145,33 @@ module ClaudeHistory
         false
       end
 
-      def construct_record(data, line_number)
+      def construct_record(entry)
+        data = entry[:data]
+        line_number = entry[:line_number]
+        filename = entry[:filename]
         type = data[:type]
         content = data.dig(:message, :content)
 
+        # Apply parent remapping for records whose parent was skipped
+        remapped = remapped_parent(entry)
+        if remapped != data[:parentUuid]
+          data = data.merge(parentUuid: remapped)
+        end
+
         if type == "summary"
-          @all_summaries << Summary.new(data, line_number, @current_filename)
+          @all_summaries << Summary.new(data, line_number, filename)
         elsif command_message?(type, content)
-          stdout_data = @current_stdout_by_parent[data[:uuid]]
-          @all_records << CommandRecord.new(data, line_number, @current_filename, stdout_record_data: stdout_data)
+          stdout_data = @stdout_by_parent[data[:uuid]]
+          @all_records << CommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
         elsif RECORD_TYPES.key?(type)
-          @all_records << RECORD_TYPES[type].new(data, line_number, @current_filename)
+          @all_records << RECORD_TYPES[type].new(data, line_number, filename)
         else
-          @current_warnings << Warning.new(
+          @file_warnings[filename] ||= []
+          @file_warnings[filename] << Warning.new(
             type: :unknown_record_type,
             message: "Unknown record type: #{type}",
             line_number: line_number,
-            filename: @current_filename,
+            filename: filename,
             raw_data: data
           )
         end
@@ -142,13 +185,13 @@ module ClaudeHistory
         type == "user" && content.is_a?(String) && content.start_with?("<command-name>")
       end
 
-      # Phase 2: Deduplicate
+      # Phase 4: Deduplicate
 
       def deduplicate_records
         @all_records = @all_records.uniq(&:uuid)
       end
 
-      # Phase 3: Build sessions
+      # Phase 5: Build sessions
 
       def build_sessions
         @children_index = @all_records.group_by(&:parent_uuid)

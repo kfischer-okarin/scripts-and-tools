@@ -84,6 +84,44 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_empty session.warnings
   end
 
+  def test_session_preserves_tree_when_meta_record_in_middle_of_chain
+    # Meta record is a child of the first user message, and assistant is child of meta
+    # The tree should still be connected: user -> assistant (skipping meta)
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"user","uuid":"meta","parentUuid":"1","isMeta":true,"message":{"role":"user","content":"Caveat..."}}
+        {"type":"assistant","uuid":"2","parentUuid":"meta","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # Should have both user and assistant, with assistant relinked to user
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+  end
+
+  def test_session_preserves_tree_when_stdout_record_in_middle_of_chain
+    # Command -> stdout -> assistant: stdout is skipped but assistant should still be in tree
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/clear</command-name>\\n<command-message>clear</command-message>\\n<command-args></command-args>"}}
+        {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>done</local-command-stdout>"}}
+        {"type":"assistant","uuid":"asst-1","parentUuid":"stdout-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    # Should have command and assistant (stdout embedded in command)
+    assert_equal 2, session.records.size
+    assert_includes session.records.map(&:class), ClaudeHistory::CommandRecord
+    assert_includes session.records.map(&:class), ClaudeHistory::AssistantMessage
+  end
+
   def test_session_records_excludes_summaries
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
