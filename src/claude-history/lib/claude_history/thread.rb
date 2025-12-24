@@ -26,5 +26,9 @@ module ClaudeHistory
     def id
       segments.last.leaf_uuid
     end
+
+    def git_branch
+      messages.last&.git_branch
+    end
   end
 end

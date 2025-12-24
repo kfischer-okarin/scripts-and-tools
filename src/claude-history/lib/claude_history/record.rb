@@ -35,6 +35,10 @@ module ClaudeHistory
       ts ? Time.iso8601(ts) : nil
     end
 
+    def git_branch
+      raw_data[:gitBranch]
+    end
+
     def add_warning(warning)
       @warnings << warning
     end

@@ -35,6 +35,10 @@ module ClaudeHistory
       threads.map(&:last_updated_at).compact.max
     end
 
+    def git_branch
+      threads.first&.git_branch
+    end
+
     private
 
     def collect_threads(segment, segment_path)

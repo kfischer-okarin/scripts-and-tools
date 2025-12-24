@@ -110,6 +110,10 @@ module ClaudeHistory
         $stdout.tty? ? "\e[32m#{text}\e[0m" : text
       end
 
+      def self.cyan(text)
+        $stdout.tty? ? "\e[36m#{text}\e[0m" : text
+      end
+
       def self.grey(text)
         $stdout.tty? ? "\e[90m#{text}\e[0m" : text
       end
@@ -169,6 +173,10 @@ module ClaudeHistory
         width: 50
       },
       {
+        name: "BRANCH",
+        color: :cyan
+      },
+      {
         name: "LAST UPDATED AT",
         color: :grey
       }
@@ -186,6 +194,7 @@ module ClaudeHistory
         rows << [
           full_ids ? session.id : truncate_id(session.id),
           CLI.session_summary(session, max_length: 50),
+          session.git_branch || "",
           format_timestamp(session.last_updated_at),
         ]
 
@@ -196,6 +205,7 @@ module ClaudeHistory
           rows << [
             "#{THREAD_PREFIX}#{id}",
             CLI.thread_summary(thread, max_length: 50),
+            thread.git_branch || "",
             format_timestamp(thread.last_updated_at)
           ]
         end
