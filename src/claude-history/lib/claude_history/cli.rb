@@ -202,7 +202,7 @@ module ClaudeHistory
 
         next unless show_threads
 
-        session.threads.each do |thread|
+        session.threads.drop(1).each do |thread|
           id = full_ids ? thread.id : truncate_id(thread.id)
           rows << [
             "#{THREAD_PREFIX}#{id}",
