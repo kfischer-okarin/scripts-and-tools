@@ -52,11 +52,11 @@ module ClaudeHistory
     THREAD_PREFIX = "  └─ "
 
     def self.green(text)
-      "\e[32m#{text}\e[0m"
+      $stdout.tty? ? "\e[32m#{text}\e[0m" : text
     end
 
     def self.grey(text)
-      "\e[90m#{text}\e[0m"
+      $stdout.tty? ? "\e[90m#{text}\e[0m" : text
     end
 
     SESSION_COLUMNS = [
