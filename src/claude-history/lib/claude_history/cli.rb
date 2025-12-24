@@ -64,14 +64,15 @@ module ClaudeHistory
     end
 
     def self.fallback_summary(thread, max_length)
-      user_messages = thread.messages.select { |r| summarizable_message?(r) }
-      return "" if user_messages.empty?
+      first_segment_msg = thread.segments.first&.records&.find { |r| summarizable_message?(r) }
+      last_segment_msg = thread.segments.last&.records&.find { |r| summarizable_message?(r) }
+      return "" unless first_segment_msg
 
-      first_text = message_display_text(user_messages.first)
-      last_text = message_display_text(user_messages.last)
+      first_text = message_display_text(first_segment_msg)
+      last_text = last_segment_msg ? message_display_text(last_segment_msg) : nil
 
-      # Single message or same first/last: just show the first
-      return truncate_text(first_text, max_length) if first_text == last_text
+      # Single segment or same message: just show the first
+      return truncate_text(first_text, max_length) if last_text.nil? || first_text == last_text
 
       arrow = " -> "
       available = max_length - arrow.length

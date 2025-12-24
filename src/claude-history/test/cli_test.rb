@@ -43,9 +43,10 @@ class CLITest < ClaudeHistory::TestCase
   def test_thread_summary_fallback_distributes_length_when_first_is_short
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Hi"}}
-        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
-        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"Tell me about Ruby programming please"}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Hi"},"timestamp":"2025-01-01T00:00:00Z"}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]},"timestamp":"2025-01-01T00:00:01Z"}
+        {"type":"user","uuid":"branch","parentUuid":"2","message":{"role":"user","content":"branch"},"timestamp":"2025-01-01T00:00:02Z"}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"Tell me about Ruby programming please"},"timestamp":"2025-01-01T00:00:03Z"}
       JSONL
     )
 
@@ -62,9 +63,10 @@ class CLITest < ClaudeHistory::TestCase
   def test_thread_summary_fallback_distributes_length_when_second_is_short
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Tell me about Ruby programming please"}}
-        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
-        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"Ok"}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Tell me about Ruby programming please"},"timestamp":"2025-01-01T00:00:00Z"}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]},"timestamp":"2025-01-01T00:00:01Z"}
+        {"type":"user","uuid":"branch","parentUuid":"2","message":{"role":"user","content":"branch"},"timestamp":"2025-01-01T00:00:02Z"}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"Ok"},"timestamp":"2025-01-01T00:00:03Z"}
       JSONL
     )
 
@@ -96,10 +98,11 @@ class CLITest < ClaudeHistory::TestCase
   def test_thread_summary_fallback_includes_user_defined_command_names
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Help me review code"}}
-        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
-        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"}}
-        {"type":"user","uuid":"4","parentUuid":"3","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review instructions..."}]}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Help me review code"},"timestamp":"2025-01-01T00:00:00Z"}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]},"timestamp":"2025-01-01T00:00:01Z"}
+        {"type":"user","uuid":"branch","parentUuid":"2","message":{"role":"user","content":"branch"},"timestamp":"2025-01-01T00:00:02Z"}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"},"timestamp":"2025-01-01T00:00:03Z"}
+        {"type":"user","uuid":"4","parentUuid":"3","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review instructions..."}]},"timestamp":"2025-01-01T00:00:04Z"}
       JSONL
     )
 
@@ -115,10 +118,11 @@ class CLITest < ClaudeHistory::TestCase
     # Claude Code changed tag order: command-message before command-name
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Help me review code"}}
-        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
-        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"<command-message>review-branch</command-message>\\n<command-name>/review-branch</command-name>"}}
-        {"type":"user","uuid":"4","parentUuid":"3","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review instructions..."}]}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Help me review code"},"timestamp":"2025-01-01T00:00:00Z"}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]},"timestamp":"2025-01-01T00:00:01Z"}
+        {"type":"user","uuid":"branch","parentUuid":"2","message":{"role":"user","content":"branch"},"timestamp":"2025-01-01T00:00:02Z"}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"<command-message>review-branch</command-message>\\n<command-name>/review-branch</command-name>"},"timestamp":"2025-01-01T00:00:03Z"}
+        {"type":"user","uuid":"4","parentUuid":"3","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review instructions..."}]},"timestamp":"2025-01-01T00:00:04Z"}
       JSONL
     )
 
