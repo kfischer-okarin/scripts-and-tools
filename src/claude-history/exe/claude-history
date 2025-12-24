@@ -20,12 +20,13 @@ module ClaudeHistory
     method_option :project, type: :string, required: true, desc: "Project ID"
     method_option :limit, type: :numeric, default: 20, desc: "Number of sessions to show"
     method_option :all_threads, type: :boolean, default: false, desc: "Show all threads per session"
+    method_option :full_ids, type: :boolean, default: false, desc: "Show full session/thread IDs"
     def sessions
       history = History.new(PROJECTS_PATH)
       all_sessions = history.sessions(project_id: options[:project])
       sessions_list = all_sessions.first(options[:limit])
 
-      print_sessions_table(sessions_list, total: all_sessions.size, show_threads: options[:all_threads])
+      print_sessions_table(sessions_list, total: all_sessions.size, show_threads: options[:all_threads], full_ids: options[:full_ids])
     end
 
     private
@@ -48,37 +49,96 @@ module ClaudeHistory
       end
     end
 
-    def print_sessions_table(sessions, total:, show_threads:)
+    THREAD_PREFIX = "  └─ "
+
+    def self.green(text)
+      "\e[32m#{text}\e[0m"
+    end
+
+    def self.grey(text)
+      "\e[90m#{text}\e[0m"
+    end
+
+    SESSION_COLUMNS = [
+      {
+        name: "SESSION ID",
+        colorize: ->(id) {
+          if id.start_with?(THREAD_PREFIX)
+            THREAD_PREFIX + green(id[THREAD_PREFIX.length..-1])
+          else
+            green(id)
+          end
+        }
+      },
+      {
+        name: "SUMMARY",
+        width: 50
+      },
+      {
+        name: "LAST UPDATED AT",
+        colorize: method(:grey)
+      }
+    ]
+
+    def print_sessions_table(sessions, total:, show_threads:, full_ids:)
       return puts "No sessions found." if sessions.empty?
 
       puts "Showing #{sessions.size} of #{total} sessions"
       puts "Tip: Use --all-threads to show individual conversation threads" unless show_threads
       puts
 
-      # Calculate column widths (8 chars + "..." = 11)
-      id_width = 11
-      thread_prefix = "  └─ "
-      col_width = show_threads ? id_width + thread_prefix.length : id_width
-      time_width = "2025-12-23 00:07:04".length
-      summary_width = 50
-
-      # Print header
-      puts format("%-#{col_width}s  %-#{summary_width}s  %s", "SESSION ID", "SUMMARY", "LAST UPDATED AT")
-
-      # Print rows
+      rows = []
       sessions.each do |session|
-        timestamp = session.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
-        summary = truncate_summary(session.threads.first&.summary, summary_width)
-        puts format("%-#{col_width}s  %-#{summary_width}s  %s", green(truncate_id(session.id)), summary, grey(timestamp))
+        rows << [
+          full_ids ? session.id : truncate_id(session.id),
+          truncate_summary(session.threads.first&.summary, 50),
+          format_timestamp(session.last_updated_at),
+        ]
 
         next unless show_threads
 
         session.threads.each do |thread|
-          thread_timestamp = thread.last_updated_at&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
-          thread_summary = truncate_summary(thread.summary, summary_width)
-          puts format("#{thread_prefix}%-#{id_width}s  %-#{summary_width}s  %s", green(truncate_id(thread.id)), thread_summary, grey(thread_timestamp))
+          id = full_ids ? thread.id : truncate_id(thread.id)
+          rows << [
+            "#{THREAD_PREFIX}#{id}",
+            truncate_summary(thread.summary, 50),
+            format_timestamp(thread.last_updated_at)
+          ]
         end
       end
+
+      print_table(rows, columns: SESSION_COLUMNS)
+    end
+
+    def print_table(rows, columns:)
+      column_widths = columns.each_with_index.map { |col, idx|
+        if col[:width]
+          col[:width]
+        else
+          value_lengths = rows.map { |row| row[idx].length }
+          [value_lengths.max, col[:name].length].max
+        end
+      }
+
+      headers = columns.each_with_index.map { |col, idx|
+        col[:name].ljust(column_widths[idx])
+      }
+      header_line = headers.join("  ")
+      puts header_line
+      puts "-" * header_line.length
+
+      # Print rows
+      rows.each do |row|
+        printed_values = columns.each_with_index.map { |col, idx|
+          colorize = col[:colorize] || ->(text) { text }
+          colorize.call(row[idx].ljust(column_widths[idx]))
+        }
+        puts printed_values.join("  ")
+      end
+    end
+
+    def format_timestamp(timestamp)
+      timestamp&.getlocal&.strftime("%Y-%m-%d %H:%M:%S") || "N/A"
     end
 
     def truncate_summary(text, max_length)
@@ -89,15 +149,7 @@ module ClaudeHistory
     end
 
     def truncate_id(id, length = 8)
-      id.length > length ? "#{id[0, length]}..." : id
-    end
-
-    def green(text)
-      "\e[32m#{text}\e[0m"
-    end
-
-    def grey(text)
-      "\e[90m#{text}\e[0m"
+      id[0, length]
     end
   end
 end
