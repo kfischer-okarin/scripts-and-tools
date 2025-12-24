@@ -64,12 +64,14 @@ module ClaudeHistory
     end
 
     def self.fallback_summary(thread, max_length)
-      user_messages = thread.messages.select { |r| r.is_a?(UserMessage) && r.content.is_a?(String) }
-      return "" if user_messages.size < 2
+      user_messages = thread.messages.select { |r| summarizable_message?(r) }
+      return "" if user_messages.empty?
 
-      first_text = user_messages.first.content
-      last_text = user_messages.last.content
-      return "" if first_text == last_text
+      first_text = message_display_text(user_messages.first)
+      last_text = message_display_text(user_messages.last)
+
+      # Single message or same first/last: just show the first
+      return truncate_text(first_text, max_length) if first_text == last_text
 
       arrow = " -> "
       available = max_length - arrow.length
@@ -86,6 +88,16 @@ module ClaudeHistory
       last_len += first_unused
 
       "#{truncate_text(first_text, first_len)}#{arrow}#{truncate_text(last_text, last_len)}"
+    end
+
+    def self.summarizable_message?(record)
+      return true if record.is_a?(UserDefinedCommandRecord)
+      record.is_a?(UserMessage) && record.content.is_a?(String)
+    end
+
+    def self.message_display_text(record)
+      return record.command_name if record.is_a?(UserDefinedCommandRecord)
+      record.content
     end
 
     def self.truncate_text(text, length)

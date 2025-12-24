@@ -392,6 +392,26 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal "main", session.records.first.command_args
   end
 
+  def test_user_defined_command_record_with_reversed_tag_order
+    # Claude Code changed tag order: command-message before command-name
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-message>review-branch</command-message>\\n<command-name>/review-branch</command-name>"}}
+        {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the branch..."}]}}
+        {"type":"assistant","uuid":"asst-1","parentUuid":"prompt-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 2, session.records.size
+    record = session.records.first
+    assert_instance_of ClaudeHistory::UserDefinedCommandRecord, record
+    assert_equal "/review-branch", record.command_name
+    assert_equal "review-branch", record.command_display_name
+  end
+
   def test_command_record_parses_command_parts
     project_dir = build_project(
       "test.jsonl" => <<~JSONL

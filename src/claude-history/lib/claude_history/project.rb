@@ -161,7 +161,7 @@ module ClaudeHistory
       end
 
       def skipped_command?(content)
-        return false unless content.is_a?(String) && content.start_with?("<command-name>")
+        return false unless content.is_a?(String) && content.include?("<command-name>")
 
         command_name = extract_command_name(content)
         SKIPPED_COMMANDS.include?(command_name)
@@ -208,7 +208,7 @@ module ClaudeHistory
       end
 
       def command_message?(type, content)
-        type == "user" && content.is_a?(String) && content.start_with?("<command-name>")
+        type == "user" && content.is_a?(String) && content.include?("<command-name>")
       end
 
       def construct_command_record(data, line_number, filename)

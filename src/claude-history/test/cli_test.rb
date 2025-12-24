@@ -77,7 +77,7 @@ class CLITest < ClaudeHistory::TestCase
     assert_equal "Tell me about Ruby pr... -> Ok", result
   end
 
-  def test_thread_summary_returns_empty_for_single_segment_without_summary
+  def test_thread_summary_fallback_with_single_message
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Hello"}}
@@ -90,7 +90,44 @@ class CLITest < ClaudeHistory::TestCase
 
     result = ClaudeHistory::CLI.thread_summary(thread, max_length: 50)
 
-    assert_equal "", result
+    assert_equal "Hello", result
+  end
+
+  def test_thread_summary_fallback_includes_user_defined_command_names
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Help me review code"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"}}
+        {"type":"user","uuid":"4","parentUuid":"3","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review instructions..."}]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    thread = project.session("test").threads.first
+
+    result = ClaudeHistory::CLI.thread_summary(thread, max_length: 50)
+
+    assert_equal "Help me review code -> /review-branch", result
+  end
+
+  def test_thread_summary_fallback_with_reversed_tag_order
+    # Claude Code changed tag order: command-message before command-name
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Help me review code"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"<command-message>review-branch</command-message>\\n<command-name>/review-branch</command-name>"}}
+        {"type":"user","uuid":"4","parentUuid":"3","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review instructions..."}]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    thread = project.session("test").threads.first
+
+    result = ClaudeHistory::CLI.thread_summary(thread, max_length: 50)
+
+    assert_equal "Help me review code -> /review-branch", result
   end
 
   def test_session_summary_uses_latest_thread
