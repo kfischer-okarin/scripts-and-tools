@@ -49,6 +49,24 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_empty session.warnings
   end
 
+  def test_session_excludes_is_meta_records
+    project_dir = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"meta","parentUuid":null,"isMeta":true,"message":{"role":"user","content":"Caveat: The messages below..."}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+
+    project = ClaudeHistory::Project.new(project_dir)
+    session = project.session("test")
+
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+    assert_equal %w[1 2], session.records.map(&:uuid)
+    assert_empty session.warnings
+  end
+
   def test_session_records_excludes_summaries
     project_dir = build_project(
       "test.jsonl" => <<~JSONL

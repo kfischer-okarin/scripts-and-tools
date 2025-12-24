@@ -14,8 +14,9 @@ module ClaudeHistory
   # root record (null parentUuid) and include all connected records from any file.
   # Summaries are matched to sessions via their leafUuid field.
   #
-  # Agent files (prefixed "agent-"), empty files, and file-history-snapshot
-  # records are skipped. Unknown record types generate warnings but are excluded.
+  # Agent files (prefixed "agent-"), empty files, isMeta records, and
+  # file-history-snapshot records are skipped. Unknown record types generate
+  # warnings but are excluded.
   class Project
     RECORD_TYPES = {
       "user" => UserMessage,
@@ -136,6 +137,9 @@ module ClaudeHistory
       File.foreach(file_path).with_index(1) do |line, line_number|
         data = JSON.parse(line, symbolize_names: true)
         type = data[:type]
+
+        # Skip meta messages (system-injected, not user content)
+        next if data[:isMeta] == true
 
         if SKIPPED_TYPES.include?(type)
           next
