@@ -119,7 +119,7 @@ module ClaudeHistory
       def index_command_children
         # Index stdout messages by parent for built-in command pairing
         @stdout_by_parent = {}
-        # Index expanded prompts by parent for slash command pairing
+        # Index expanded prompts by parent for user-defined command pairing
         @expanded_prompt_by_parent = {}
 
         @all_raw_entries.each do |entry|
@@ -217,11 +217,11 @@ module ClaudeHistory
         stdout_data = @stdout_by_parent[uuid]
 
         if expanded_prompt_data
-          # User-defined slash command (skill)
-          @all_records << SlashCommandRecord.new(data, line_number, filename, expanded_prompt_data: expanded_prompt_data)
+          # User-defined command (reusable prompt)
+          @all_records << UserDefinedCommandRecord.new(data, line_number, filename, expanded_prompt_data: expanded_prompt_data)
         else
           # Built-in command
-          @all_records << CommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
+          @all_records << BuiltInCommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
         end
       end
 

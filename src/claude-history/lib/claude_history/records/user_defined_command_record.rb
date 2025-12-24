@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
-  # Slash command record for user-defined commands (skills) like /commit, /review-branch.
+  # User-defined command record for reusable prompts like /commit, /review-branch.
   # Subclass of UserMessage that parses command tags and includes the expanded prompt
   # from the paired isMeta child record.
-  class SlashCommandRecord < UserMessage
+  class UserDefinedCommandRecord < UserMessage
     attr_reader :command_name, :command_display_name, :command_args, :expanded_prompt
 
     def initialize(data, line_number, filename, expanded_prompt_data: nil)

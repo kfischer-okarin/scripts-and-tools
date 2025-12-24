@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
-  # Command record for slash commands like /clear, /add-dir.
+  # Built-in command record for commands like /init, /add-dir.
   # Subclass of UserMessage that parses command tags and optionally
   # includes paired stdout data.
-  class CommandRecord < UserMessage
+  class BuiltInCommandRecord < UserMessage
     attr_reader :command_name, :command_display_name, :command_args, :stdout_content
 
     def initialize(data, line_number, filename, stdout_record_data: nil)

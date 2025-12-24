@@ -118,7 +118,7 @@ class ProjectTest < ClaudeHistory::TestCase
 
     # Should have command and assistant (stdout embedded in command)
     assert_equal 2, session.records.size
-    assert_includes session.records.map(&:class), ClaudeHistory::CommandRecord
+    assert_includes session.records.map(&:class), ClaudeHistory::BuiltInCommandRecord
     assert_includes session.records.map(&:class), ClaudeHistory::AssistantMessage
   end
 
@@ -352,7 +352,7 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal %w[user assistant], session.records.map(&:type)
   end
 
-  def test_slash_command_record_parses_user_defined_command
+  def test_user_defined_command_record_parses_reusable_prompt
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/commit</command-name>\\n<command-message>commit</command-message>\\n<command-args></command-args>"}}
@@ -367,13 +367,13 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal 1, session.records.size
     record = session.records.first
 
-    assert_instance_of ClaudeHistory::SlashCommandRecord, record
+    assert_instance_of ClaudeHistory::UserDefinedCommandRecord, record
     assert_equal "/commit", record.command_name
     assert_equal "commit", record.command_display_name
     assert_equal "# Commit Instructions\n\nYou are an expert...", record.expanded_prompt
   end
 
-  def test_slash_command_record_with_assistant_response
+  def test_user_defined_command_record_with_assistant_response
     project_dir = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"}}
@@ -387,7 +387,7 @@ class ProjectTest < ClaudeHistory::TestCase
 
     # Should have slash command and assistant (prompt merged, tree preserved)
     assert_equal 2, session.records.size
-    assert_instance_of ClaudeHistory::SlashCommandRecord, session.records.first
+    assert_instance_of ClaudeHistory::UserDefinedCommandRecord, session.records.first
     assert_instance_of ClaudeHistory::AssistantMessage, session.records.last
     assert_equal "main", session.records.first.command_args
   end
@@ -403,7 +403,7 @@ class ProjectTest < ClaudeHistory::TestCase
     session = project.session("test")
     record = session.records.first
 
-    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_instance_of ClaudeHistory::BuiltInCommandRecord, record
     assert_equal "/init", record.command_name
     assert_equal "init", record.command_display_name
     assert_equal "", record.command_args
@@ -421,7 +421,7 @@ class ProjectTest < ClaudeHistory::TestCase
     session = project.session("test")
     record = session.records.first
 
-    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_instance_of ClaudeHistory::BuiltInCommandRecord, record
     assert_equal "/add-dir", record.command_name
     assert_equal "add-dir", record.command_display_name
     assert_equal "src/lib", record.command_args
@@ -442,7 +442,7 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal 1, session.records.size
     record = session.records.first
 
-    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_instance_of ClaudeHistory::BuiltInCommandRecord, record
     assert_equal "Initialized", record.stdout_content
   end
 
@@ -458,7 +458,7 @@ class ProjectTest < ClaudeHistory::TestCase
     session = project.session("test")
     record = session.records.first
 
-    assert_instance_of ClaudeHistory::CommandRecord, record
+    assert_instance_of ClaudeHistory::BuiltInCommandRecord, record
     assert_equal "", record.stdout_content
   end
 
