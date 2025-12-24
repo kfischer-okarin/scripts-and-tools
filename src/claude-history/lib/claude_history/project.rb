@@ -18,13 +18,200 @@ module ClaudeHistory
   # file-history-snapshot records are skipped. Unknown record types generate
   # warnings but are excluded.
   class Project
-    RECORD_TYPES = {
-      "user" => UserMessage,
-      "assistant" => AssistantMessage,
-      "summary" => Summary
-    }.freeze
+    # Parses all JSONL files in a project directory and builds sessions.
+    # Handles command/stdout pairing, deduplication, and tree construction.
+    class Parser
+      RECORD_TYPES = {
+        "user" => UserMessage,
+        "assistant" => AssistantMessage,
+        "summary" => Summary
+      }.freeze
 
-    SKIPPED_TYPES = %w[file-history-snapshot system].freeze
+      SKIPPED_TYPES = %w[file-history-snapshot system].freeze
+
+      attr_reader :sessions
+
+      def initialize(session_files)
+        @session_files = session_files
+        @sessions = {}
+        @all_records = []
+        @all_summaries = []
+        @file_warnings = {}
+      end
+
+      def parse
+        parse_all_files
+        deduplicate_records
+        build_sessions
+        self
+      end
+
+      private
+
+      # Phase 1: Parse all files
+
+      def parse_all_files
+        @session_files.each do |file_path|
+          parse_file(file_path)
+        end
+      end
+
+      def parse_file(file_path)
+        @current_filename = File.basename(file_path)
+        @current_raw_entries = []
+        @current_stdout_by_parent = {}
+        @current_warnings = []
+
+        collect_raw_entries(file_path)
+        index_stdout_messages
+        construct_records
+
+        @file_warnings[@current_filename] = @current_warnings
+      end
+
+      def collect_raw_entries(file_path)
+        File.foreach(file_path).with_index(1) do |line, line_number|
+          data = JSON.parse(line, symbolize_names: true)
+          @current_raw_entries << { data: data, line_number: line_number }
+        end
+      end
+
+      def index_stdout_messages
+        @current_raw_entries.each do |entry|
+          data = entry[:data]
+          next unless data[:type] == "user"
+
+          content = data.dig(:message, :content)
+          next unless stdout_message?(content)
+
+          parent_uuid = data[:parentUuid]
+          @current_stdout_by_parent[parent_uuid] = data if parent_uuid
+        end
+      end
+
+      def construct_records
+        @current_raw_entries.each do |entry|
+          data = entry[:data]
+          line_number = entry[:line_number]
+
+          next if skip_entry?(data)
+
+          construct_record(data, line_number)
+        end
+      end
+
+      def skip_entry?(data)
+        return true if data[:isMeta] == true
+
+        type = data[:type]
+        content = data.dig(:message, :content)
+
+        return true if type == "user" && stdout_message?(content)
+        return true if SKIPPED_TYPES.include?(type)
+
+        false
+      end
+
+      def construct_record(data, line_number)
+        type = data[:type]
+        content = data.dig(:message, :content)
+
+        if type == "summary"
+          @all_summaries << Summary.new(data, line_number, @current_filename)
+        elsif command_message?(type, content)
+          stdout_data = @current_stdout_by_parent[data[:uuid]]
+          @all_records << CommandRecord.new(data, line_number, @current_filename, stdout_record_data: stdout_data)
+        elsif RECORD_TYPES.key?(type)
+          @all_records << RECORD_TYPES[type].new(data, line_number, @current_filename)
+        else
+          @current_warnings << Warning.new(
+            type: :unknown_record_type,
+            message: "Unknown record type: #{type}",
+            line_number: line_number,
+            filename: @current_filename,
+            raw_data: data
+          )
+        end
+      end
+
+      def stdout_message?(content)
+        content.is_a?(String) && content.start_with?("<local-command-stdout>")
+      end
+
+      def command_message?(type, content)
+        type == "user" && content.is_a?(String) && content.start_with?("<command-name>")
+      end
+
+      # Phase 2: Deduplicate
+
+      def deduplicate_records
+        @all_records = @all_records.uniq(&:uuid)
+      end
+
+      # Phase 3: Build sessions
+
+      def build_sessions
+        @children_index = @all_records.group_by(&:parent_uuid)
+        @roots = @all_records.select { |r| r.parent_uuid.nil? }
+
+        @roots.each do |root|
+          build_session(root)
+        end
+      end
+
+      def build_session(root)
+        session_id = File.basename(root.filename, ".jsonl")
+        session_records = collect_tree(root)
+        session_uuids = Set.new(session_records.map(&:uuid))
+
+        matching_summaries = @all_summaries.select { |s| session_uuids.include?(s.leaf_uuid) }
+        warnings = collect_session_warnings(session_records, matching_summaries)
+        check_multiple_roots(session_id, warnings)
+
+        @sessions[session_id] = Session.new(
+          id: session_id,
+          records: session_records + matching_summaries,
+          warnings: warnings
+        )
+      end
+
+      def collect_tree(root)
+        result = [root]
+        queue = [root.uuid]
+
+        while (uuid = queue.shift)
+          children = @children_index[uuid] || []
+          result.concat(children)
+          queue.concat(children.map(&:uuid))
+        end
+
+        result
+      end
+
+      def collect_session_warnings(records, summaries)
+        filenames = Set.new
+        records.each { |r| filenames << r.filename }
+        summaries.each { |s| filenames << s.filename }
+
+        filenames.flat_map { |f| @file_warnings[f] || [] }
+      end
+
+      def check_multiple_roots(session_id, warnings)
+        filename = "#{session_id}.jsonl"
+        roots_in_file = @roots.select { |r| r.filename == filename }
+
+        return unless roots_in_file.size > 1
+
+        root_uuids = roots_in_file.map(&:uuid).join(", ")
+        warnings << Warning.new(
+          type: :multiple_roots,
+          message: "Multiple root records found: #{root_uuids}",
+          line_number: roots_in_file.first.line_number,
+          filename: filename,
+          raw_data: nil
+        )
+      end
+    end
 
     def initialize(project_path)
       @project_path = project_path
@@ -54,8 +241,8 @@ module ClaudeHistory
     def ensure_parsed
       return if @sessions
 
-      @sessions = {}
-      parse_all_sessions
+      parser = Parser.new(session_files).parse
+      @sessions = parser.sessions
     end
 
     # Fast timestamp extraction: read last timestamp from each file, return max
@@ -83,153 +270,6 @@ module ClaudeHistory
          .reject { |f| File.basename(f).start_with?("agent-") }
          .reject { |f| File.zero?(f) }
          .sort_by { |f| -File.mtime(f).to_i }
-    end
-
-    def parse_all_sessions
-      all_records = []
-      all_summaries = []
-      file_warnings = {}
-
-      # Phase 1: Parse all files
-      session_files.each do |file_path|
-        filename = File.basename(file_path)
-        records, summaries, warnings = parse_file(file_path, filename)
-        all_records.concat(records)
-        all_summaries.concat(summaries)
-        file_warnings[filename] = warnings
-      end
-
-      # Deduplicate records by UUID (keep first occurrence)
-      all_records = all_records.uniq(&:uuid)
-
-      # Phase 2: Build children index (parentUuid -> [child records])
-      children_index = all_records.group_by(&:parent_uuid)
-
-      # Phase 3: Find roots and build sessions
-      roots = all_records.select { |r| r.parent_uuid.nil? }
-      roots.each do |root|
-        session_records = collect_tree(root, children_index)
-        session_id = File.basename(root.filename, ".jsonl")
-        session_uuids = Set.new(session_records.map(&:uuid))
-
-        # Match summaries whose leafUuid points to a record in this session
-        matching_summaries = all_summaries.select { |s| session_uuids.include?(s.leaf_uuid) }
-
-        # Collect warnings from files that contributed records to this session
-        warnings = collect_session_warnings(session_records, matching_summaries, file_warnings)
-
-        # Check for multiple roots in the same file
-        check_multiple_roots(session_id, roots, warnings)
-
-        @sessions[session_id] = Session.new(
-          id: session_id,
-          records: session_records + matching_summaries,
-          warnings: warnings
-        )
-      end
-    end
-
-    def parse_file(file_path, filename)
-      records = []
-      summaries = []
-      warnings = []
-
-      # First pass: collect raw data with line numbers
-      raw_entries = []
-      File.foreach(file_path).with_index(1) do |line, line_number|
-        data = JSON.parse(line, symbolize_names: true)
-        raw_entries << { data: data, line_number: line_number }
-      end
-
-      # Identify stdout messages and map them by parentUuid
-      stdout_by_parent = {}
-      raw_entries.each do |entry|
-        data = entry[:data]
-        next unless data[:type] == "user"
-
-        content = data.dig(:message, :content)
-        next unless content.is_a?(String) && content.start_with?("<local-command-stdout>")
-
-        parent_uuid = data[:parentUuid]
-        stdout_by_parent[parent_uuid] = data if parent_uuid
-      end
-
-      # Second pass: construct records, pairing commands with their stdout
-      raw_entries.each do |entry|
-        data = entry[:data]
-        line_number = entry[:line_number]
-        type = data[:type]
-
-        # Skip meta messages (system-injected, not user content)
-        next if data[:isMeta] == true
-
-        # Skip stdout messages (they're embedded in CommandRecord)
-        content = data.dig(:message, :content)
-        if type == "user" && content.is_a?(String) && content.start_with?("<local-command-stdout>")
-          next
-        end
-
-        if SKIPPED_TYPES.include?(type)
-          next
-        elsif type == "summary"
-          summaries << Summary.new(data, line_number, filename)
-        elsif type == "user" && content.is_a?(String) && content.start_with?("<command-name>")
-          # Command message - pair with stdout if available
-          stdout_data = stdout_by_parent[data[:uuid]]
-          records << CommandRecord.new(data, line_number, filename, stdout_record_data: stdout_data)
-        elsif RECORD_TYPES.key?(type)
-          records << RECORD_TYPES[type].new(data, line_number, filename)
-        else
-          warnings << Warning.new(
-            type: :unknown_record_type,
-            message: "Unknown record type: #{type}",
-            line_number: line_number,
-            filename: filename,
-            raw_data: data
-          )
-        end
-      end
-
-      [records, summaries, warnings]
-    end
-
-    def collect_tree(root, children_index)
-      result = [root]
-      queue = [root.uuid]
-
-      while (uuid = queue.shift)
-        children = children_index[uuid] || []
-        result.concat(children)
-        queue.concat(children.map(&:uuid))
-      end
-
-      result
-    end
-
-    def collect_session_warnings(records, summaries, file_warnings)
-      # Get unique filenames from records and summaries in this session
-      filenames = Set.new
-      records.each { |r| filenames << r.filename }
-      summaries.each { |s| filenames << s.filename }
-
-      # Collect warnings from those files
-      filenames.flat_map { |f| file_warnings[f] || [] }
-    end
-
-    def check_multiple_roots(session_id, all_roots, warnings)
-      filename = "#{session_id}.jsonl"
-      roots_in_file = all_roots.select { |r| r.filename == filename }
-
-      return unless roots_in_file.size > 1
-
-      root_uuids = roots_in_file.map(&:uuid).join(", ")
-      warnings << Warning.new(
-        type: :multiple_roots,
-        message: "Multiple root records found: #{root_uuids}",
-        line_number: roots_in_file.first.line_number,
-        filename: filename,
-        raw_data: nil
-      )
     end
   end
 end
