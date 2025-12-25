@@ -21,10 +21,11 @@ module ClaudeHistory
     method_option :full_ids, type: :boolean, default: false, desc: "Show full session/thread IDs"
     def sessions
       history = History.new(PROJECTS_PATH)
-      all_sessions = history.sessions(project_id_query: options[:project])
+      project_id = history.resolve_project_id(options[:project])
+      all_sessions = history.sessions(project_id: project_id)
       sessions_list = all_sessions.first(options[:limit])
 
-      print_sessions_table(sessions_list, total: all_sessions.size, show_threads: options[:all_threads], full_ids: options[:full_ids])
+      print_sessions_table(sessions_list, project_id: project_id, total: all_sessions.size, show_threads: options[:all_threads], full_ids: options[:full_ids])
     end
 
     private
@@ -184,10 +185,10 @@ module ClaudeHistory
       }
     ])
 
-    def print_sessions_table(sessions, total:, show_threads:, full_ids:)
+    def print_sessions_table(sessions, project_id:, total:, show_threads:, full_ids:)
       return puts "No sessions found." if sessions.empty?
 
-      puts "Showing #{sessions.size} of #{total} sessions"
+      puts "Showing #{sessions.size} of #{total} sessions in #{project_id}"
       puts "Tip: Use --all-threads to show individual conversation threads" unless show_threads
       puts
 
