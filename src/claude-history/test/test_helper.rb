@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "minitest/autorun"
+require "securerandom"
 require "tmpdir"
 require_relative "../lib/claude_history"
 
@@ -9,11 +10,11 @@ module ClaudeHistory
   class TestCase < Minitest::Test
     def before_setup
       super
-      @temp_dirs = []
+      @projects_path = Dir.mktmpdir
     end
 
     def after_teardown
-      @temp_dirs.each { |dir| FileUtils.rm_rf(dir) }
+      FileUtils.rm_rf(@projects_path)
       super
     end
 
@@ -33,19 +34,27 @@ module ClaudeHistory
       "be89c3cd-bfbf-4c4f-a515-5af6e13249bf"
     end
 
-    def build_project(files)
-      dir = Dir.mktmpdir
-      @temp_dirs << dir
+    def build_project(name_or_files = nil, files = {})
+      # Handle both build_project({...}) and build_project("name", {...})
+      if name_or_files.is_a?(Hash)
+        files = name_or_files
+        name = "project-#{SecureRandom.uuid}"
+      else
+        name = name_or_files || "project-#{SecureRandom.uuid}"
+      end
+
+      project_path = File.join(@projects_path, name)
+      FileUtils.mkdir_p(project_path)
 
       base_time = Time.now - files.size
       files.each_with_index do |(filename, content), index|
-        path = File.join(dir, filename)
+        path = File.join(project_path, filename)
         mtime = base_time + index
         File.write(path, content)
         File.utime(mtime, mtime, path)
       end
 
-      dir
+      Project.new(project_path)
     end
   end
 end

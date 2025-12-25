@@ -41,14 +41,10 @@ class HistoryTest < ClaudeHistory::TestCase
   end
 
   def test_sessions_raises_error_for_ambiguous_partial_project_id
-    # Create parent dir with two projects that share a common substring
-    projects_path = Dir.mktmpdir
-    @temp_dirs << projects_path
+    build_project("foo-bar")
+    build_project("foo-baz")
 
-    FileUtils.mkdir(File.join(projects_path, "foo-bar"))
-    FileUtils.mkdir(File.join(projects_path, "foo-baz"))
-
-    history = ClaudeHistory::History.new(projects_path)
+    history = ClaudeHistory::History.new(@projects_path)
 
     error = assert_raises(ArgumentError) do
       history.sessions(project_id_query: "foo")
@@ -59,30 +55,25 @@ class HistoryTest < ClaudeHistory::TestCase
   end
 
   def test_sessions_resolves_unique_partial_project_id
-    project_path = build_project({
+    build_project("unique-test-project", {
       "session.jsonl" => build_session_jsonl("test", "2025-01-01T10:00:00Z")
     })
-    projects_path = File.dirname(project_path)
-    project_id = File.basename(project_path)  # e.g., "test-project-abc123"
-    partial_id = project_id[5..15]  # grab middle portion as partial match
 
-    history = ClaudeHistory::History.new(projects_path)
-    sessions = history.sessions(project_id_query: partial_id)
+    history = ClaudeHistory::History.new(@projects_path)
+    sessions = history.sessions(project_id_query: "unique-test")
 
     assert_equal 1, sessions.size
   end
 
   def test_sessions_returns_sessions_sorted_descending_by_last_updated
     # Files are created with ascending mtime (older first, newer last)
-    project_path = build_project({
+    project = build_project("sort-test", {
       "older-session.jsonl" => build_session_jsonl("older", "2025-01-01T10:00:00Z"),
       "newer-session.jsonl" => build_session_jsonl("newer", "2025-01-02T10:00:00Z")
     })
-    projects_path = File.dirname(project_path)
-    project_id = File.basename(project_path)
 
-    history = ClaudeHistory::History.new(projects_path)
-    sessions = history.sessions(project_id_query: project_id)
+    history = ClaudeHistory::History.new(@projects_path)
+    sessions = history.sessions(project_id_query: project.id)
 
     assert_equal 2, sessions.size
     assert_equal "newer-session", sessions[0].id

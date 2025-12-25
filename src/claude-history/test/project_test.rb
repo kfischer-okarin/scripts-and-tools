@@ -33,15 +33,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_file_history_snapshot_records
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"file-history-snapshot","messageId":"123","snapshot":{},"isSnapshotUpdate":false}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 2, session.records.size
@@ -50,15 +48,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_system_records
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"system","subtype":"local_command","uuid":"sys-1","content":"<command-name>/add-dir</command-name>\\n<command-message>add-dir</command-message>\\n<command-args></command-args>"}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 2, session.records.size
@@ -67,15 +63,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_is_meta_records
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"meta","parentUuid":null,"isMeta":true,"message":{"role":"user","content":"Caveat: The messages below..."}}
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 2, session.records.size
@@ -87,15 +81,13 @@ class ProjectTest < ClaudeHistory::TestCase
   def test_session_preserves_tree_when_meta_record_in_middle_of_chain
     # Meta record is a child of the first user message, and assistant is child of meta
     # The tree should still be connected: user -> assistant (skipping meta)
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"meta","parentUuid":"1","isMeta":true,"message":{"role":"user","content":"Caveat..."}}
         {"type":"assistant","uuid":"2","parentUuid":"meta","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Should have both user and assistant, with assistant relinked to user
@@ -105,15 +97,13 @@ class ProjectTest < ClaudeHistory::TestCase
 
   def test_session_preserves_tree_when_stdout_record_in_middle_of_chain
     # Command -> stdout -> assistant: stdout is skipped but assistant should still be in tree
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>done</local-command-stdout>"}}
         {"type":"assistant","uuid":"asst-1","parentUuid":"stdout-1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Should have command and assistant (stdout embedded in command)
@@ -123,15 +113,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_records_excludes_summaries
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"summary","summary":"test summary","leafUuid":"2"}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 2, session.records.size
@@ -139,7 +127,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_summary_only_files_do_not_create_sessions
-    project_dir = build_project(
+    project = build_project(
       "main-session.jsonl" => <<~JSONL,
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
       JSONL
@@ -147,15 +135,12 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"summary","summary":"test","leafUuid":"root"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
-
     refute_nil project.session("main-session")
     assert_nil project.session("summary-only")
   end
 
   def test_session_merges_records_from_continuation_files
-    project_dir = build_project(
+    project = build_project(
       "main.jsonl" => <<~JSONL,
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"assistant","uuid":"a1","parentUuid":"root","message":{"role":"assistant","content":[]}}
@@ -164,8 +149,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"u2","parentUuid":"a1","message":{"role":"user","content":"continued"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("main")
 
     assert_equal 3, session.records.size
@@ -173,14 +156,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_warns_on_multiple_roots_in_session
-    project_dir = build_project(
+    project = build_project(
       "session.jsonl" => <<~JSONL
         {"type":"user","uuid":"root1","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"user","uuid":"root2","parentUuid":null,"message":{"role":"user","content":"second"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("session")
 
     warning = session.warnings.find { |w| w.type == :multiple_roots }
@@ -188,14 +169,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_unknown_record_types_but_warns
-    project_dir = build_project(
+    project = build_project(
       "test-session.jsonl" => <<~JSONL
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"unknown-future-type","foo":"bar"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test-session")
 
     assert_equal 1, session.records.size
@@ -209,15 +188,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_aggregates_warnings_from_records_and_unknown_types
-    project_dir = build_project(
+    project = build_project(
       "test-session.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":"hi"}}
         {"type":"unknown-type-1","foo":"bar"}
         {"type":"unknown-type-2","baz":"qux"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test-session")
 
     # Only the user record is included
@@ -241,13 +218,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_record_exposes_timestamp_as_time_object
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:30:00.000Z","message":{"role":"user","content":"hi"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_instance_of Time, session.records.first.timestamp
@@ -255,15 +230,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_record_exposes_line_number_and_filename
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
         {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"third"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 1, session.records[0].line_number
@@ -276,13 +249,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_with_simple_text_content
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","parentUuid":null,"message":{"role":"user","content":"Hello world"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     user_msg = session.records.first
 
@@ -290,33 +261,29 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_content_type_text
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":"Hello world"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal :text, session.records.first.content_type
   end
 
   def test_user_message_content_type_tool_result
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"file contents"}]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal :tool_result, session.records.first.content_type
   end
 
   def test_session_excludes_clear_command_and_preserves_tree
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -326,8 +293,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"assistant","uuid":"4","parentUuid":"3","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Should have 4 records: user, assistant, user, assistant (clear command and stdout skipped)
@@ -336,15 +301,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_resume_command_and_preserves_tree
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"resume-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/resume</command-name>\\n<command-message>resume</command-message>\\n<command-args></command-args>"}}
         {"type":"assistant","uuid":"2","parentUuid":"resume-1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Resume command skipped, assistant relinked to user
@@ -353,14 +316,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_defined_command_record_parses_reusable_prompt
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/commit</command-name>\\n<command-message>commit</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"# Commit Instructions\\n\\nYou are an expert..."}]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Should only have one record (expanded prompt is embedded in slash command)
@@ -374,15 +335,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_defined_command_record_with_assistant_response
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"}}
         {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the branch..."}]}}
         {"type":"assistant","uuid":"asst-1","parentUuid":"prompt-1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Should have slash command and assistant (prompt merged, tree preserved)
@@ -394,15 +353,13 @@ class ProjectTest < ClaudeHistory::TestCase
 
   def test_user_defined_command_record_with_reversed_tag_order
     # Claude Code changed tag order: command-message before command-name
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-message>review-branch</command-message>\\n<command-name>/review-branch</command-name>"}}
         {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the branch..."}]}}
         {"type":"assistant","uuid":"asst-1","parentUuid":"prompt-1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 2, session.records.size
@@ -413,13 +370,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_parses_command_parts
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     record = session.records.first
 
@@ -431,13 +386,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_parses_command_with_args
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/add-dir</command-name>\\n<command-message>add-dir</command-message>\\n<command-args>src/lib</command-args>"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     record = session.records.first
 
@@ -448,14 +401,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_includes_paired_stdout
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>Initialized</local-command-stdout>"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # Should only have one record (stdout is embedded in command)
@@ -467,14 +418,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_with_empty_stdout
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout></local-command-stdout>"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     record = session.records.first
 
@@ -483,13 +432,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_content_type_interrupt
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal :interrupt, session.records.first.content_type
@@ -504,13 +451,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_warns_on_unexpected_content_array_shape
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"1"},{"type":"tool_result","tool_use_id":"2"}]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     user_msg = session.records.first
 
@@ -519,13 +464,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_warns_on_unexpected_attributes
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":"hi"},"newField":"x","anotherNew":"y"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     user_msg = session.records.first
 
@@ -537,13 +480,11 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_assistant_message_warns_on_unexpected_attributes
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"assistant","uuid":"123","message":{"role":"assistant","content":[]},"futureField":"x"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 1, session.warnings.size
@@ -551,14 +492,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_summary_warns_on_unexpected_attributes
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"summary","summary":"test","leafUuid":"root","futureField":"x"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 1, session.warnings.size
@@ -566,14 +505,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_summary_text_returns_summary_content
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"summary","summary":"the summary text","leafUuid":"root"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     summary = session.root_segment.summaries.first
 
@@ -583,28 +520,24 @@ class ProjectTest < ClaudeHistory::TestCase
   # Session identity tests
 
   def test_session_id_returns_filename_without_extension
-    project_dir = build_project(
+    project = build_project(
       "my-session.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("my-session")
 
     assert_equal "my-session", session.id
   end
 
   def test_session_root_returns_record_with_null_parent_uuid
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"root-id","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"assistant","uuid":"2","parentUuid":"root-id","message":{"role":"assistant","content":[]}}
         {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"second"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal "root-id", session.root.uuid
@@ -614,7 +547,7 @@ class ProjectTest < ClaudeHistory::TestCase
   # Segment tests
 
   def test_segment_includes_summaries_from_other_files
-    project_dir = build_project(
+    project = build_project(
       "main-session.jsonl" => <<~JSONL,
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"leaf","parentUuid":"root","message":{"role":"assistant","content":[]}}
@@ -623,8 +556,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"summary","summary":"external summary","leafUuid":"leaf"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("main-session")
 
     assert_equal 1, session.root_segment.summaries.size
@@ -632,15 +563,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_root_segment_contains_all_records_for_linear_session
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
         {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"thanks"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_instance_of ClaudeHistory::Segment, session.root_segment
@@ -650,7 +579,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_root_segment_has_children_at_branch_point
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -658,8 +587,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     segment = session.root_segment
 
@@ -669,7 +596,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_root_segment_handles_nested_branches
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"start"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -680,8 +607,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"5a2","parentUuid":"4a","message":{"role":"user","content":"nested 2"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     root = session.root_segment
 
@@ -697,30 +622,26 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_segment_exposes_leaf_uuid
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
         {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"thanks"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal "3", session.root_segment.leaf_uuid
   end
 
   def test_segment_contains_summaries_for_its_leaf
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
         {"type":"summary","summary":"conversation summary","leafUuid":"2"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 1, session.root_segment.summaries.size
@@ -730,14 +651,12 @@ class ProjectTest < ClaudeHistory::TestCase
   # Thread tests
 
   def test_linear_session_has_one_thread
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 1, session.threads.size
@@ -745,15 +664,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_messages_contains_records_in_order
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
         {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":"thanks"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     thread = session.threads.first
 
@@ -761,7 +678,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_branched_session_has_multiple_threads
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -769,15 +686,13 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal 2, session.threads.size
   end
 
   def test_each_thread_contains_full_path_from_root
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -785,8 +700,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"3b","parentUuid":"2","message":{"role":"user","content":"option b"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     thread_paths = session.threads.map { |t| t.messages.map(&:uuid) }.sort
@@ -795,14 +708,12 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_summary_is_nil_when_no_summary_exists
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     thread = session.threads.first
 
@@ -810,15 +721,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_summary_returns_summary_content_for_its_leaf
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
         {"type":"summary","summary":"conversation about greeting","leafUuid":"2"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     thread = session.threads.first
 
@@ -826,7 +735,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_summary_returns_latest_available_summary_not_just_leaf
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -835,8 +744,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"assistant","uuid":"4","parentUuid":"3","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     thread = session.threads.first
 
@@ -844,7 +751,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_each_branch_can_have_its_own_summary
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -854,8 +761,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"summary","summary":"chose option b","leafUuid":"3b"}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     summaries = session.threads.map(&:summary).sort
@@ -864,7 +769,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_nested_branches_produce_correct_number_of_threads
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"start"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -875,8 +780,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"5a2","parentUuid":"4a","message":{"role":"user","content":"nested 2"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     # 3 leaves: 3b, 5a1, 5a2
@@ -884,15 +787,13 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_last_updated_at_returns_last_message_timestamp
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
         {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-15T10:02:00.000Z","message":{"role":"user","content":"thanks"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     thread = session.threads.first
 
@@ -900,7 +801,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_last_updated_at_returns_max_of_threads
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
@@ -908,15 +809,13 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"3b","parentUuid":"2","timestamp":"2025-01-15T10:05:00.000Z","message":{"role":"user","content":"branch b"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
 
     assert_equal Time.utc(2025, 1, 15, 10, 5, 0), session.last_updated_at
   end
 
   def test_threads_are_sorted_descending_by_last_updated_at
-    project_dir = build_project(
+    project = build_project(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
@@ -924,8 +823,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"3b","parentUuid":"2","timestamp":"2025-01-15T10:05:00.000Z","message":{"role":"user","content":"newer branch"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
     session = project.session("test")
     threads = session.threads
 
@@ -935,7 +832,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_project_last_updated_at_returns_max_of_sessions
-    project_dir = build_project(
+    project = build_project(
       "session-a.jsonl" => <<~JSONL,
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
       JSONL
@@ -943,16 +840,13 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"user","uuid":"2","parentUuid":null,"timestamp":"2025-01-15T12:00:00.000Z","message":{"role":"user","content":"hello"}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
-
     assert_equal Time.utc(2025, 1, 15, 12, 0, 0), project.last_updated_at
   end
 
   # Duplicate record handling
 
   def test_session_deduplicates_records_with_same_uuid
-    project_dir = build_project(
+    project = build_project(
       "session.jsonl" => <<~JSONL,
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -962,9 +856,6 @@ class ProjectTest < ClaudeHistory::TestCase
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
       JSONL
     )
-
-    project = ClaudeHistory::Project.new(project_dir)
-
     # Only one session should exist (duplicates merged)
     assert_equal 1, project.sessions.size
 
