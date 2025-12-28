@@ -34,15 +34,22 @@ module Joplin
       (@children[folder.id] || []).sort_by(&:title)
     end
 
+    def display_width(str)
+      Unicode::DisplayWidth.of(str, emoji: :all)
+    end
+
     def render_folder(folder, lines, prefix:, is_last:)
+      icon = folder.icon || "📁"
+      title_with_icon = "#{icon} #{folder.title}"
+
       if prefix.empty?
-        left = folder.title
+        left = title_with_icon
       else
         connector = is_last ? "└─" : "├─"
-        left = "#{prefix}#{connector} #{folder.title}"
+        left = "#{prefix}#{connector} #{title_with_icon}"
       end
 
-      padding = @width - Unicode::DisplayWidth.of(left) - folder.id.length
+      padding = @width - display_width(left) - folder.id.length
       padding = 1 if padding < 1
       lines << "#{left}#{" " * padding}#{folder.id}"
 

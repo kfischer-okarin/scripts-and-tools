@@ -17,7 +17,7 @@ module Joplin
       page = 1
 
       loop do
-        response = get("/folders", query: { page: page })
+        response = get("/folders", query: { page: page, fields: "id,title,parent_id,icon" })
         data = JSON.parse(response.body)
         all_items.concat(data["items"])
         break unless data["has_more"]
@@ -25,10 +25,18 @@ module Joplin
         page += 1
       end
 
-      all_items.map { |item| Folder.new(id: item["id"], title: item["title"], parent_id: item["parent_id"]) }
+      all_items.map { |item| Folder.new(id: item["id"], title: item["title"], parent_id: item["parent_id"], icon: parse_icon(item["icon"])) }
     end
 
     private
+
+    def parse_icon(icon_json)
+      return nil if icon_json.nil? || icon_json.empty?
+
+      JSON.parse(icon_json)["emoji"]
+    rescue JSON::ParserError
+      nil
+    end
 
     def get(path, query: {})
       query_string = URI.encode_www_form({ token: @token }.merge(query))
