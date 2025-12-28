@@ -92,4 +92,29 @@ class SearchResultRendererTest < Joplin::TestCase
     assert_includes output, "日本語ノート"
     assert_includes output, "テスト"
   end
+
+  def test_colorizes_output_when_color_enabled
+    notes = [
+      Joplin::Note.new(id: "abc", title: "Test Note", body: "line with match here")
+    ]
+
+    output = Joplin::SearchResultRenderer.new(notes, query: "match", width: 50, color: true).render
+
+    # Title should be bold magenta
+    assert_includes output, "\e[1m\e[35mTest Note\e[0m"
+    # Line number should be green
+    assert_includes output, "\e[32m1\e[0m"
+    # Match should be bold red
+    assert_includes output, "\e[1m\e[31mmatch\e[0m"
+  end
+
+  def test_no_color_codes_when_color_disabled
+    notes = [
+      Joplin::Note.new(id: "abc", title: "Test Note", body: "line with match here")
+    ]
+
+    output = Joplin::SearchResultRenderer.new(notes, query: "match", width: 50, color: false).render
+
+    refute_includes output, "\e["
+  end
 end

@@ -23,7 +23,7 @@ module Joplin
 
     desc "search QUERY", "Search notes and show matching lines"
     def search(query)
-      puts SearchResultRenderer.new(client.search(query), query: query).render
+      puts SearchResultRenderer.new(client.search(query), query: query, color: $stdout.tty?).render
     end
 
     private

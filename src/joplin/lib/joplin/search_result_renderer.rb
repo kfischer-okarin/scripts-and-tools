@@ -6,10 +6,18 @@ module Joplin
   class SearchResultRenderer
     DEFAULT_WIDTH = 90
 
-    def initialize(notes, query:, width: DEFAULT_WIDTH)
+    # ANSI color codes
+    BOLD = "\e[1m"
+    RED = "\e[31m"
+    GREEN = "\e[32m"
+    MAGENTA = "\e[35m"
+    RESET = "\e[0m"
+
+    def initialize(notes, query:, width: DEFAULT_WIDTH, color: false)
       @notes = notes
       @query = query
       @width = width
+      @color = color
     end
 
     def render
@@ -25,9 +33,10 @@ module Joplin
     end
 
     def render_header(note)
+      title = @color ? "#{BOLD}#{MAGENTA}#{note.title}#{RESET}" : note.title
       padding = @width - display_width(note.title) - note.id.length
       padding = 1 if padding < 1
-      "#{note.title}#{" " * padding}#{note.id}"
+      "#{title}#{" " * padding}#{note.id}"
     end
 
     def render_matching_lines(note)
@@ -44,7 +53,13 @@ module Joplin
     end
 
     def format_line(line_num, content)
-      "  #{line_num}: #{content}"
+      line_num_str = @color ? "#{GREEN}#{line_num}#{RESET}" : line_num.to_s
+      highlighted_content = @color ? highlight_matches(content) : content
+      "  #{line_num_str}: #{highlighted_content}"
+    end
+
+    def highlight_matches(content)
+      content.gsub(/#{Regexp.escape(@query)}/i) { |match| "#{BOLD}#{RED}#{match}#{RESET}" }
     end
 
     def display_width(str)
