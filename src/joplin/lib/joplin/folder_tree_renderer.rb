@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "unicode/display_width"
+
 module Joplin
   class FolderTreeRenderer
     DEFAULT_WIDTH = 90
@@ -40,7 +42,7 @@ module Joplin
         left = "#{prefix}#{connector} #{folder.title}"
       end
 
-      padding = @width - left.length - folder.id.length
+      padding = @width - Unicode::DisplayWidth.of(left) - folder.id.length
       padding = 1 if padding < 1
       lines << "#{left}#{" " * padding}#{folder.id}"
 

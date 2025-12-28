@@ -9,3 +9,5 @@ group :development, :test do
   gem "rake", "~> 13.3"
   gem "webmock", "~> 3.26"
 end
+
+gem "unicode-display_width", "~> 3.2"

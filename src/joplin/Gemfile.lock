@@ -15,6 +15,9 @@ GEM
     rake (13.3.1)
     rexml (3.4.4)
     thor (1.4.0)
+    unicode-display_width (3.2.0)
+      unicode-emoji (~> 4.1)
+    unicode-emoji (4.2.0)
     webmock (3.26.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
@@ -28,6 +31,7 @@ DEPENDENCIES
   minitest (~> 6.0)
   rake (~> 13.3)
   thor (~> 1.4)
+  unicode-display_width (~> 3.2)
   webmock (~> 3.26)
 
 BUNDLED WITH

@@ -42,4 +42,22 @@ class FolderTreeRendererTest < Joplin::TestCase
     TEXT
     assert_equal expected, output
   end
+
+  def test_handles_fullwidth_cjk_characters
+    folders = [
+      Joplin::Folder.new(id: "aaa", title: "Games", parent_id: ""),
+      Joplin::Folder.new(id: "bbb", title: "日本語", parent_id: "aaa"),
+      Joplin::Folder.new(id: "ccc", title: "Notes", parent_id: "aaa")
+    ]
+
+    output = Joplin::FolderTreeRenderer.new(folders, width: 30).render
+
+    # 日本語 is 3 chars but 6 display columns
+    expected = <<~TEXT.chomp
+      Games                      aaa
+         ├─ Notes                ccc
+         └─ 日本語               bbb
+    TEXT
+    assert_equal expected, output
+  end
 end
