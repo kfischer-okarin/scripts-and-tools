@@ -11,6 +11,11 @@ module Joplin
       puts FolderTreeRenderer.new(client.folders).render
     end
 
+    desc "list-notes FOLDER_ID", "List all notes in a folder"
+    def list_notes(folder_id)
+      puts NoteListRenderer.new(client.notes(folder_id)).render
+    end
+
     private
 
     def client

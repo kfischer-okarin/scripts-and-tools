@@ -28,6 +28,22 @@ module Joplin
       all_items.map { |item| Folder.new(id: item["id"], title: item["title"], parent_id: item["parent_id"], icon: parse_icon(item["icon"])) }
     end
 
+    def notes(folder_id)
+      all_items = []
+      page = 1
+
+      loop do
+        response = get("/folders/#{folder_id}/notes", query: { page: page, fields: "id,title,parent_id" })
+        data = JSON.parse(response.body)
+        all_items.concat(data["items"])
+        break unless data["has_more"]
+
+        page += 1
+      end
+
+      all_items.map { |item| Note.new(id: item["id"], title: item["title"], parent_id: item["parent_id"]) }
+    end
+
     private
 
     def parse_icon(icon_json)

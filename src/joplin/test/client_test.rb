@@ -62,4 +62,40 @@ class ClientTest < Joplin::TestCase
     assert_equal 200, logged[0][:response][:status]
     assert_includes logged[0][:response][:body], "Test"
   end
+
+  def test_notes_returns_all_notes_for_folder
+    folder_id = "folder123"
+    stub_api_get("/folders/#{folder_id}/notes",
+      query: { page: 1, fields: "id,title,parent_id" },
+      items: [
+        { "id" => "note1", "title" => "First Note", "parent_id" => folder_id },
+        { "id" => "note2", "title" => "Second Note", "parent_id" => folder_id }
+      ])
+
+    notes = @client.notes(folder_id)
+
+    assert_equal 2, notes.size
+    assert_equal "note1", notes[0].id
+    assert_equal "First Note", notes[0].title
+    assert_equal folder_id, notes[0].parent_id
+    assert_equal "note2", notes[1].id
+    assert_equal "Second Note", notes[1].title
+  end
+
+  def test_notes_paginates_when_has_more_is_true
+    folder_id = "folder456"
+    stub_api_get("/folders/#{folder_id}/notes",
+      query: { page: 1, fields: "id,title,parent_id" },
+      items: [{ "id" => "note1", "title" => "First", "parent_id" => folder_id }],
+      has_more: true)
+    stub_api_get("/folders/#{folder_id}/notes",
+      query: { page: 2, fields: "id,title,parent_id" },
+      items: [{ "id" => "note2", "title" => "Second", "parent_id" => folder_id }])
+
+    notes = @client.notes(folder_id)
+
+    assert_equal 2, notes.size
+    assert_equal "note1", notes[0].id
+    assert_equal "note2", notes[1].id
+  end
 end
