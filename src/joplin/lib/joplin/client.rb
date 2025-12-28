@@ -13,27 +13,25 @@ module Joplin
     end
 
     def folders
-      all_items = []
-      page = 1
-
-      loop do
-        response = get("/folders", query: { page: page, fields: "id,title,parent_id,icon" })
-        data = JSON.parse(response.body)
-        all_items.concat(data["items"])
-        break unless data["has_more"]
-
-        page += 1
+      paginate("/folders", fields: "id,title,parent_id,icon") do |item|
+        Folder.new(id: item["id"], title: item["title"], parent_id: item["parent_id"], icon: parse_icon(item["icon"]))
       end
-
-      all_items.map { |item| Folder.new(id: item["id"], title: item["title"], parent_id: item["parent_id"], icon: parse_icon(item["icon"])) }
     end
 
     def notes(folder_id)
+      paginate("/folders/#{folder_id}/notes", fields: "id,title,parent_id") do |item|
+        Note.new(id: item["id"], title: item["title"], parent_id: item["parent_id"])
+      end
+    end
+
+    private
+
+    def paginate(path, query: {}, **options, &block)
       all_items = []
       page = 1
 
       loop do
-        response = get("/folders/#{folder_id}/notes", query: { page: page, fields: "id,title,parent_id" })
+        response = get(path, query: { page: page, **options }.merge(query))
         data = JSON.parse(response.body)
         all_items.concat(data["items"])
         break unless data["has_more"]
@@ -41,10 +39,8 @@ module Joplin
         page += 1
       end
 
-      all_items.map { |item| Note.new(id: item["id"], title: item["title"], parent_id: item["parent_id"]) }
+      all_items.map(&block)
     end
-
-    private
 
     def parse_icon(icon_json)
       return nil if icon_json.nil? || icon_json.empty?
