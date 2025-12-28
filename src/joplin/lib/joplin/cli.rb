@@ -16,6 +16,11 @@ module Joplin
       puts NoteListRenderer.new(client.notes(folder_id)).render
     end
 
+    desc "show-note NOTE_ID", "Show a note with front matter"
+    def show_note(note_id)
+      puts NoteRenderer.new(client.note(note_id)).render
+    end
+
     private
 
     def client

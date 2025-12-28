@@ -98,4 +98,31 @@ class ClientTest < Joplin::TestCase
     assert_equal "note1", notes[0].id
     assert_equal "note2", notes[1].id
   end
+
+  def test_note_returns_single_note_with_body
+    note_id = "note123"
+    stub_request(:get, "#{API_BASE_URL}/notes/#{note_id}")
+      .with(query: { token: @token, fields: "id,title,body,created_time,updated_time,source_url" })
+      .to_return(
+        status: 200,
+        body: JSON.generate({
+          "id" => note_id,
+          "title" => "My Note",
+          "body" => "# Hello\n\nThis is the content.",
+          "created_time" => 1703980800000,
+          "updated_time" => 1704067200000,
+          "source_url" => "https://example.com/article"
+        }),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    note = @client.note(note_id)
+
+    assert_equal note_id, note.id
+    assert_equal "My Note", note.title
+    assert_equal "# Hello\n\nThis is the content.", note.body
+    assert_equal 1703980800000, note.created_time
+    assert_equal 1704067200000, note.updated_time
+    assert_equal "https://example.com/article", note.source_url
+  end
 end

@@ -24,6 +24,19 @@ module Joplin
       end
     end
 
+    def note(id)
+      response = get("/notes/#{id}", query: { fields: "id,title,body,created_time,updated_time,source_url" })
+      data = JSON.parse(response.body)
+      Note.new(
+        id: data["id"],
+        title: data["title"],
+        body: data["body"],
+        created_time: data["created_time"],
+        updated_time: data["updated_time"],
+        source_url: data["source_url"]
+      )
+    end
+
     private
 
     def paginate(path, query: {}, **options, &block)
