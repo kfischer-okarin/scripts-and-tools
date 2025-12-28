@@ -21,6 +21,11 @@ module Joplin
       puts NoteRenderer.new(client.note(note_id)).render
     end
 
+    desc "search QUERY", "Search notes and show matching lines"
+    def search(query)
+      puts SearchResultRenderer.new(client.search(query), query: query).render
+    end
+
     private
 
     def client

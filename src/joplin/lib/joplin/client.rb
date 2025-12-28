@@ -37,6 +37,12 @@ module Joplin
       )
     end
 
+    def search(query_string)
+      paginate("/search", query: { query: query_string }, fields: "id,title,body,parent_id") do |item|
+        Note.new(id: item["id"], title: item["title"], body: item["body"], parent_id: item["parent_id"])
+      end
+    end
+
     private
 
     def paginate(path, query: {}, **options, &block)
