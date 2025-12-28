@@ -1,0 +1,2 @@
+[env]
+JOPLIN_TOKEN = "your-joplin-api-token-here"
