@@ -9,18 +9,12 @@ class ClientTest < Joplin::TestCase
   end
 
   def test_folders_returns_all_folders_with_icons
-    stub_request(:get, "http://localhost:41184/folders?token=#{@token}&page=1&fields=id,title,parent_id,icon")
-      .to_return(
-        status: 200,
-        body: JSON.generate({
-          "items" => [
-            { "id" => "folder1", "title" => "Work", "parent_id" => "", "icon" => '{"emoji":"💻","name":"laptop"}' },
-            { "id" => "folder2", "title" => "Projects", "parent_id" => "folder1", "icon" => "" }
-          ],
-          "has_more" => false
-        }),
-        headers: { "Content-Type" => "application/json" }
-      )
+    stub_api_get("/folders",
+      query: { page: 1, fields: "id,title,parent_id,icon" },
+      items: [
+        { "id" => "folder1", "title" => "Work", "parent_id" => "", "icon" => '{"emoji":"💻","name":"laptop"}' },
+        { "id" => "folder2", "title" => "Projects", "parent_id" => "folder1", "icon" => "" }
+      ])
 
     folders = @client.folders
 
@@ -36,25 +30,13 @@ class ClientTest < Joplin::TestCase
   end
 
   def test_folders_paginates_when_has_more_is_true
-    stub_request(:get, "http://localhost:41184/folders?token=#{@token}&page=1&fields=id,title,parent_id,icon")
-      .to_return(
-        status: 200,
-        body: JSON.generate({
-          "items" => [{ "id" => "folder1", "title" => "First", "parent_id" => "", "icon" => "" }],
-          "has_more" => true
-        }),
-        headers: { "Content-Type" => "application/json" }
-      )
-
-    stub_request(:get, "http://localhost:41184/folders?token=#{@token}&page=2&fields=id,title,parent_id,icon")
-      .to_return(
-        status: 200,
-        body: JSON.generate({
-          "items" => [{ "id" => "folder2", "title" => "Second", "parent_id" => "", "icon" => "" }],
-          "has_more" => false
-        }),
-        headers: { "Content-Type" => "application/json" }
-      )
+    stub_api_get("/folders",
+      query: { page: 1, fields: "id,title,parent_id,icon" },
+      items: [{ "id" => "folder1", "title" => "First", "parent_id" => "", "icon" => "" }],
+      has_more: true)
+    stub_api_get("/folders",
+      query: { page: 2, fields: "id,title,parent_id,icon" },
+      items: [{ "id" => "folder2", "title" => "Second", "parent_id" => "", "icon" => "" }])
 
     folders = @client.folders
 
@@ -64,15 +46,9 @@ class ClientTest < Joplin::TestCase
   end
 
   def test_calls_logger_with_request_and_response
-    stub_request(:get, "http://localhost:41184/folders?token=#{@token}&page=1&fields=id,title,parent_id,icon")
-      .to_return(
-        status: 200,
-        body: JSON.generate({
-          "items" => [{ "id" => "f1", "title" => "Test", "parent_id" => "", "icon" => "" }],
-          "has_more" => false
-        }),
-        headers: { "Content-Type" => "application/json" }
-      )
+    stub_api_get("/folders",
+      query: { page: 1, fields: "id,title,parent_id,icon" },
+      items: [{ "id" => "f1", "title" => "Test", "parent_id" => "", "icon" => "" }])
 
     logged = []
     logger = ->(request:, response:) { logged << { request: request, response: response } }
