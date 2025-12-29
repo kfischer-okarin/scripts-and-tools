@@ -25,6 +25,17 @@ module Joplin
       end
     end
 
+    class RenameError < StandardError
+      attr_reader :resource_type, :resource_id, :api_error
+
+      def initialize(resource_type, resource_id, api_error)
+        @resource_type = resource_type
+        @resource_id = resource_id
+        @api_error = api_error
+        super("Failed to rename #{resource_type} #{resource_id}: #{api_error}")
+      end
+    end
+
     def initialize(token:, host: "localhost", port: 41184, logger: nil)
       @token = token
       @host = host
@@ -98,6 +109,30 @@ module Joplin
 
       response = post("/folders", body: body)
       build_folder(JSON.parse(response.body))
+    end
+
+    def rename_note(note_id, new_title)
+      response = put("/notes/#{note_id}", body: { title: new_title })
+      data = JSON.parse(response.body)
+
+      unless response.code.to_i == 200
+        error_message = data["error"] || response.body
+        raise RenameError.new("note", note_id, error_message)
+      end
+
+      build_note(data)
+    end
+
+    def rename_folder(folder_id, new_title)
+      response = put("/folders/#{folder_id}", body: { title: new_title })
+      data = JSON.parse(response.body)
+
+      unless response.code.to_i == 200
+        error_message = data["error"] || response.body
+        raise RenameError.new("folder", folder_id, error_message)
+      end
+
+      build_folder(data)
     end
 
     private

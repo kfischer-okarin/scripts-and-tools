@@ -311,4 +311,83 @@ class ClientTest < Joplin::TestCase
     assert_equal "Child Folder", folder.title
     assert_equal "parent123", folder.parent_id
   end
+
+  def test_rename_note_updates_note_title
+    note_id = "note123"
+    new_title = "Updated Title"
+
+    stub_api_put("/notes/#{note_id}",
+      body: { title: new_title },
+      response_body: {
+        "id" => note_id,
+        "title" => new_title,
+        "parent_id" => "folder456"
+      })
+
+    note = @client.rename_note(note_id, new_title)
+
+    assert_equal note_id, note.id
+    assert_equal new_title, note.title
+  end
+
+  def test_rename_note_raises_error_on_failure
+    note_id = "invalid_note"
+    new_title = "New Title"
+
+    stub_request(:put, "#{API_BASE_URL}/notes/#{note_id}")
+      .with(query: { token: @token })
+      .to_return(
+        status: 404,
+        body: JSON.generate({ "error" => "Note not found" }),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    error = assert_raises(Joplin::Client::RenameError) do
+      @client.rename_note(note_id, new_title)
+    end
+
+    assert_equal "note", error.resource_type
+    assert_equal note_id, error.resource_id
+    assert_equal "Note not found", error.api_error
+  end
+
+  def test_rename_folder_updates_folder_title
+    folder_id = "folder123"
+    new_title = "Updated Folder"
+
+    stub_api_put("/folders/#{folder_id}",
+      body: { title: new_title },
+      response_body: {
+        "id" => folder_id,
+        "title" => new_title,
+        "parent_id" => "",
+        "icon" => ""
+      })
+
+    folder = @client.rename_folder(folder_id, new_title)
+
+    assert_equal folder_id, folder.id
+    assert_equal new_title, folder.title
+  end
+
+  def test_rename_folder_raises_error_on_failure
+    folder_id = "invalid_folder"
+    new_title = "New Title"
+
+    stub_request(:put, "#{API_BASE_URL}/folders/#{folder_id}")
+      .with(query: { token: @token })
+      .to_return(
+        status: 404,
+        body: JSON.generate({ "error" => "Folder not found" }),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    error = assert_raises(Joplin::Client::RenameError) do
+      @client.rename_folder(folder_id, new_title)
+    end
+
+    assert_equal "folder", error.resource_type
+    assert_equal folder_id, error.resource_id
+    assert_equal "Folder not found", error.api_error
+  end
 end

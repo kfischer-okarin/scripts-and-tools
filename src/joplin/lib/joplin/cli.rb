@@ -95,10 +95,42 @@ module Joplin
       puts "Created: #{folder.title} (#{folder.id})"
     end
 
+    desc "rename-note NOTE_ID NEW_TITLE", "Rename a note"
+    def rename_note(note_id, new_title)
+      note = client.rename_note(note_id, new_title)
+      puts "Renamed note #{note.id} to \"#{note.title}\""
+    rescue Client::RenameError => e
+      warn "Error: #{e.message}"
+      exit 1
+    end
+
+    desc "rename-folder FOLDER_ID NEW_TITLE", "Rename a folder"
+    def rename_folder(folder_id, new_title)
+      folder = client.rename_folder(folder_id, new_title)
+      puts "Renamed folder #{folder.id} to \"#{folder.title}\""
+    rescue Client::RenameError => e
+      warn "Error: #{e.message}"
+      exit 1
+    end
+
     private
 
     def client
       @client ||= Client.new(token: ENV.fetch("JOPLIN_TOKEN"), logger: debug_logger)
+    end
+
+    def folder_path(folder_id)
+      parts = []
+      current = client.folder(folder_id)
+
+      loop do
+        parts.unshift(current.title)
+        break if current.parent_id.nil? || current.parent_id.empty?
+
+        current = client.folder(current.parent_id)
+      end
+
+      parts.join("/")
     end
 
     def debug_logger
