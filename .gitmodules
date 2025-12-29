@@ -1,0 +1,3 @@
+[submodule "src/joplin-fuse/vendor/ffi-libfuse"]
+	path = src/joplin-fuse/vendor/ffi-libfuse
+	url = https://github.com/lwoggardner/ffi-libfuse.git

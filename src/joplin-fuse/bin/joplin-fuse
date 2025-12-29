@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require_relative "../lib/joplin_fuse"
+
+token = ENV["JOPLIN_TOKEN"]
+
+if token.nil? || token.empty?
+  warn "Error: JOPLIN_TOKEN environment variable required"
+  warn "Get your token from Joplin Desktop: Tools > Options > Web Clipper"
+  exit 1
+end
+
+client = JoplinFuse::Client.new(token: token)
+fs = JoplinFuse::FuseAdapter.new(client: client)
+
+exit(FFI::Libfuse.fuse_main(ARGV, operations: fs))
