@@ -39,7 +39,7 @@ module Joplin
       note_ids = args
       renderer = MoveNotesProgressRenderer.new
 
-      renderer.render_headline(note_ids.length, folder_id)
+      renderer.render_headline(note_ids.length, folder_path(folder_id))
 
       success_count = 0
       failure_count = 0
