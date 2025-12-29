@@ -180,4 +180,63 @@ class ClientTest < Joplin::TestCase
     assert_equal "", folder.parent_id
     assert_equal "📁", folder.icon
   end
+
+  def test_move_note_updates_note_parent_id
+    note_id = "note123"
+    folder_id = "folder456"
+
+    stub_api_put("/notes/#{note_id}",
+      body: { parent_id: folder_id },
+      response_body: {
+        "id" => note_id,
+        "title" => "My Note",
+        "parent_id" => folder_id
+      })
+
+    note = @client.move_note(note_id, folder_id)
+
+    assert_equal note_id, note.id
+    assert_equal "My Note", note.title
+    assert_equal folder_id, note.parent_id
+  end
+
+  def test_move_note_raises_error_on_failure
+    note_id = "invalid_note"
+    folder_id = "folder456"
+
+    stub_request(:put, "#{API_BASE_URL}/notes/#{note_id}")
+      .with(query: { token: @token })
+      .to_return(
+        status: 404,
+        body: JSON.generate({ "error" => "Note not found" }),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    error = assert_raises(Joplin::Client::MoveError) do
+      @client.move_note(note_id, folder_id)
+    end
+
+    assert_equal note_id, error.note_id
+    assert_equal "Note not found", error.api_error
+  end
+
+  def test_move_note_calls_logger_with_put_request
+    note_id = "note789"
+    folder_id = "folder012"
+
+    stub_api_put("/notes/#{note_id}",
+      body: { parent_id: folder_id },
+      response_body: { "id" => note_id, "title" => "Test", "parent_id" => folder_id })
+
+    logged = []
+    logger = ->(request:, response:) { logged << { request: request, response: response } }
+    client = Joplin::Client.new(token: @token, logger: logger)
+
+    client.move_note(note_id, folder_id)
+
+    assert_equal 1, logged.size
+    assert_equal "PUT", logged[0][:request][:method]
+    assert_includes logged[0][:request][:path], "/notes/#{note_id}"
+    assert_equal 200, logged[0][:response][:status]
+  end
 end

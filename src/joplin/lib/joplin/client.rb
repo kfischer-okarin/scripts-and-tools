@@ -5,6 +5,16 @@ require "json"
 
 module Joplin
   class Client
+    class MoveError < StandardError
+      attr_reader :note_id, :api_error
+
+      def initialize(note_id, api_error)
+        @note_id = note_id
+        @api_error = api_error
+        super("Failed to move note #{note_id}: #{api_error}")
+      end
+    end
+
     def initialize(token:, host: "localhost", port: 41184, logger: nil)
       @token = token
       @host = host
@@ -25,27 +35,31 @@ module Joplin
 
     def notes(folder_id)
       paginate("/folders/#{folder_id}/notes", fields: "id,title,parent_id") do |item|
-        Note.new(id: item["id"], title: item["title"], parent_id: item["parent_id"])
+        build_note(item)
       end
     end
 
     def note(id)
       response = get("/notes/#{id}", query: { fields: "id,title,body,created_time,updated_time,source_url" })
-      data = JSON.parse(response.body)
-      Note.new(
-        id: data["id"],
-        title: data["title"],
-        body: data["body"],
-        created_time: data["created_time"],
-        updated_time: data["updated_time"],
-        source_url: data["source_url"]
-      )
+      build_note(JSON.parse(response.body))
     end
 
     def search(query_string)
       paginate("/search", query: { query: query_string }, fields: "id,title,body,parent_id") do |item|
-        Note.new(id: item["id"], title: item["title"], body: item["body"], parent_id: item["parent_id"])
+        build_note(item)
       end
+    end
+
+    def move_note(note_id, folder_id)
+      response = put("/notes/#{note_id}", body: { parent_id: folder_id })
+      data = JSON.parse(response.body)
+
+      unless response.code.to_i == 200
+        error_message = data["error"] || response.body
+        raise MoveError.new(note_id, error_message)
+      end
+
+      build_note(data)
     end
 
     private
@@ -70,6 +84,18 @@ module Joplin
       Folder.new(id: data["id"], title: data["title"], parent_id: data["parent_id"], icon: parse_icon(data["icon"]))
     end
 
+    def build_note(data)
+      Note.new(
+        id: data["id"],
+        title: data["title"],
+        parent_id: data["parent_id"],
+        body: data["body"],
+        created_time: data["created_time"],
+        updated_time: data["updated_time"],
+        source_url: data["source_url"]
+      )
+    end
+
     def parse_icon(icon_json)
       return nil if icon_json.nil? || icon_json.empty?
 
@@ -87,6 +113,24 @@ module Joplin
       if @logger
         @logger.call(
           request: { method: "GET", path: full_path },
+          response: { status: response.code.to_i, body: response.body }
+        )
+      end
+
+      response
+    end
+
+    def put(path, body:)
+      uri = URI("http://#{@host}:#{@port}#{path}?token=#{@token}")
+      request = Net::HTTP::Put.new(uri)
+      request.content_type = "application/json"
+      request.body = JSON.generate(body)
+
+      response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) }
+
+      if @logger
+        @logger.call(
+          request: { method: "PUT", path: "#{path}?token=#{@token}" },
           response: { status: response.code.to_i, body: response.body }
         )
       end
