@@ -11,9 +11,6 @@ The joplin data API documentation can be found in `docs/joplin-api-spec.md`.
 # Run all tests
 bundle exec rake test
 
-# Run a single test file
-bundle exec ruby -Itest test/client_test.rb
-
 # Run the CLI locally
 bundle exec ./exe/joplin folders
 bundle exec ./exe/joplin folders --debug  # Shows raw HTTP requests/responses
