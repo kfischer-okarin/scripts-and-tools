@@ -125,48 +125,34 @@ module Joplin
     end
 
     def get(path, query: {})
-      query_string = URI.encode_www_form({ token: @token }.merge(query))
-      full_path = "#{path}?#{query_string}"
-      uri = URI("http://#{@host}:#{@port}#{full_path}")
-      response = Net::HTTP.get_response(uri)
-
-      if @logger
-        @logger.call(
-          request: { method: "GET", path: full_path },
-          response: { status: response.code.to_i, body: response.body }
-        )
-      end
-
-      response
+      query_params = { token: @token }.merge(query)
+      request(Net::HTTP::Get, path, query: query_params)
     end
 
     def put(path, body:)
-      uri = URI("http://#{@host}:#{@port}#{path}?token=#{@token}")
-      request = Net::HTTP::Put.new(uri)
-      request.content_type = "application/json"
-      request.body = JSON.generate(body)
-
-      response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) }
-
-      if @logger
-        @logger.call(
-          request: { method: "PUT", path: "#{path}?token=#{@token}" },
-          response: { status: response.code.to_i, body: response.body }
-        )
-      end
-
-      response
+      request(Net::HTTP::Put, path, query: { token: @token }, body: body)
     end
 
     def delete(path)
-      uri = URI("http://#{@host}:#{@port}#{path}?token=#{@token}")
-      request = Net::HTTP::Delete.new(uri)
+      request(Net::HTTP::Delete, path, query: { token: @token })
+    end
 
-      response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) }
+    def request(method_class, path, query: {}, body: nil)
+      query_string = URI.encode_www_form(query)
+      full_path = "#{path}?#{query_string}"
+      uri = URI("http://#{@host}:#{@port}#{full_path}")
+
+      req = method_class.new(uri)
+      if body
+        req.content_type = "application/json"
+        req.body = JSON.generate(body)
+      end
+
+      response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(req) }
 
       if @logger
         @logger.call(
-          request: { method: "DELETE", path: "#{path}?token=#{@token}" },
+          request: { method: method_class::METHOD, path: full_path },
           response: { status: response.code.to_i, body: response.body }
         )
       end
