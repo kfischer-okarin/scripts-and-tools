@@ -31,5 +31,15 @@ module Joplin
           headers: { "Content-Type" => "application/json" }
         )
     end
+
+    def stub_api_delete(path, status: 200, response_body: "")
+      stub_request(:delete, "#{API_BASE_URL}#{path}")
+        .with(query: { token: @token })
+        .to_return(
+          status: status,
+          body: response_body.is_a?(String) ? response_body : JSON.generate(response_body),
+          headers: { "Content-Type" => "application/json" }
+        )
+    end
   end
 end

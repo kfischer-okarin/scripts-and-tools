@@ -239,4 +239,29 @@ class ClientTest < Joplin::TestCase
     assert_includes logged[0][:request][:path], "/notes/#{note_id}"
     assert_equal 200, logged[0][:response][:status]
   end
+
+  def test_delete_note_sends_delete_request
+    note_id = "note123"
+
+    stub = stub_api_delete("/notes/#{note_id}")
+
+    @client.delete_note(note_id)
+
+    assert_requested(stub)
+  end
+
+  def test_delete_note_raises_error_on_failure
+    note_id = "invalid_note"
+
+    stub_api_delete("/notes/#{note_id}",
+      status: 404,
+      response_body: { "error" => "Note not found" })
+
+    error = assert_raises(Joplin::Client::DeleteError) do
+      @client.delete_note(note_id)
+    end
+
+    assert_equal note_id, error.note_id
+    assert_equal "Note not found", error.api_error
+  end
 end

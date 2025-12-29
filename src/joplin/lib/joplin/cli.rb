@@ -59,6 +59,35 @@ module Joplin
       exit 1 if failure_count > 0
     end
 
+    desc "rm-note NOTE_ID [NOTE_ID...]", "Delete one or more notes (moves to trash)"
+    def rm_note(*note_ids)
+      if note_ids.empty?
+        warn "Error: Requires at least one note ID"
+        exit 1
+      end
+
+      renderer = DeleteNotesProgressRenderer.new
+
+      renderer.render_headline(note_ids.length)
+
+      success_count = 0
+      failure_count = 0
+
+      note_ids.each do |note_id|
+        begin
+          client.delete_note(note_id)
+          renderer.render_note_deleted(note_id)
+          success_count += 1
+        rescue Client::DeleteError => e
+          renderer.render_note_delete_failure(e.note_id, e.api_error)
+          failure_count += 1
+        end
+      end
+
+      renderer.render_summary(success_count, failure_count)
+      exit 1 if failure_count > 0
+    end
+
     private
 
     def client

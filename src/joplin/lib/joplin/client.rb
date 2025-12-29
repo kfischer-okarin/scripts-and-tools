@@ -15,6 +15,16 @@ module Joplin
       end
     end
 
+    class DeleteError < StandardError
+      attr_reader :note_id, :api_error
+
+      def initialize(note_id, api_error)
+        @note_id = note_id
+        @api_error = api_error
+        super("Failed to delete note #{note_id}: #{api_error}")
+      end
+    end
+
     def initialize(token:, host: "localhost", port: 41184, logger: nil)
       @token = token
       @host = host
@@ -60,6 +70,16 @@ module Joplin
       end
 
       build_note(data)
+    end
+
+    def delete_note(note_id)
+      response = delete("/notes/#{note_id}")
+
+      unless response.code.to_i == 200
+        data = JSON.parse(response.body) rescue {}
+        error_message = data["error"] || response.body
+        raise DeleteError.new(note_id, error_message)
+      end
     end
 
     private
@@ -131,6 +151,22 @@ module Joplin
       if @logger
         @logger.call(
           request: { method: "PUT", path: "#{path}?token=#{@token}" },
+          response: { status: response.code.to_i, body: response.body }
+        )
+      end
+
+      response
+    end
+
+    def delete(path)
+      uri = URI("http://#{@host}:#{@port}#{path}?token=#{@token}")
+      request = Net::HTTP::Delete.new(uri)
+
+      response = Net::HTTP.start(uri.hostname, uri.port) { |http| http.request(request) }
+
+      if @logger
+        @logger.call(
+          request: { method: "DELETE", path: "#{path}?token=#{@token}" },
           response: { status: response.code.to_i, body: response.body }
         )
       end
