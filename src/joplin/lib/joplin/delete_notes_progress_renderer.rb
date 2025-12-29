@@ -11,8 +11,8 @@ module Joplin
       @output.puts "Deleting #{note_count} note#{'s' if note_count != 1}..."
     end
 
-    def render_note_deleted(note_id)
-      @output.puts "  Deleted: #{note_id}"
+    def render_note_deleted(note)
+      @output.puts "  Deleted: #{note.title} (#{note.id})"
     end
 
     def render_note_delete_failure(note_id, error)

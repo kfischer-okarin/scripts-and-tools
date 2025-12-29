@@ -73,6 +73,14 @@ module Joplin
     end
 
     def delete_note(note_id)
+      note_response = get("/notes/#{note_id}", query: { fields: "id,title" })
+      note_data = JSON.parse(note_response.body)
+
+      unless note_response.code.to_i == 200
+        error_message = note_data["error"] || note_response.body
+        raise DeleteError.new(note_id, error_message)
+      end
+
       response = delete("/notes/#{note_id}")
 
       unless response.code.to_i == 200
@@ -80,6 +88,8 @@ module Joplin
         error_message = data["error"] || response.body
         raise DeleteError.new(note_id, error_message)
       end
+
+      build_note(note_data)
     end
 
     private

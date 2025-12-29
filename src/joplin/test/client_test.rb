@@ -240,22 +240,35 @@ class ClientTest < Joplin::TestCase
     assert_equal 200, logged[0][:response][:status]
   end
 
-  def test_delete_note_sends_delete_request
+  def test_delete_note_returns_deleted_note
     note_id = "note123"
 
-    stub = stub_api_delete("/notes/#{note_id}")
+    stub_request(:get, "#{API_BASE_URL}/notes/#{note_id}")
+      .with(query: { token: @token, fields: "id,title" })
+      .to_return(
+        status: 200,
+        body: JSON.generate({ "id" => note_id, "title" => "Note to Delete" }),
+        headers: { "Content-Type" => "application/json" }
+      )
+    delete_stub = stub_api_delete("/notes/#{note_id}")
 
-    @client.delete_note(note_id)
+    note = @client.delete_note(note_id)
 
-    assert_requested(stub)
+    assert_requested(delete_stub)
+    assert_equal note_id, note.id
+    assert_equal "Note to Delete", note.title
   end
 
-  def test_delete_note_raises_error_on_failure
+  def test_delete_note_raises_error_when_note_not_found
     note_id = "invalid_note"
 
-    stub_api_delete("/notes/#{note_id}",
-      status: 404,
-      response_body: { "error" => "Note not found" })
+    stub_request(:get, "#{API_BASE_URL}/notes/#{note_id}")
+      .with(query: { token: @token, fields: "id,title" })
+      .to_return(
+        status: 404,
+        body: JSON.generate({ "error" => "Note not found" }),
+        headers: { "Content-Type" => "application/json" }
+      )
 
     error = assert_raises(Joplin::Client::DeleteError) do
       @client.delete_note(note_id)

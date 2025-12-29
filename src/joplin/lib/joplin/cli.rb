@@ -75,8 +75,8 @@ module Joplin
 
       note_ids.each do |note_id|
         begin
-          client.delete_note(note_id)
-          renderer.render_note_deleted(note_id)
+          note = client.delete_note(note_id)
+          renderer.render_note_deleted(note)
           success_count += 1
         rescue Client::DeleteError => e
           renderer.render_note_delete_failure(e.note_id, e.api_error)
