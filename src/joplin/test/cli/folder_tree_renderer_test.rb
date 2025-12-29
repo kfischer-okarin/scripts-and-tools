@@ -10,7 +10,7 @@ class FolderTreeRendererTest < Joplin::TestCase
       Joplin::Folder.new(id: "ccc", title: "Archive", parent_id: "", icon: "📦")
     ]
 
-    output = Joplin::FolderTreeRenderer.new(folders, width: 35).render
+    output = Joplin::CLI::FolderTreeRenderer.new(folders, width: 35).render
 
     expected = <<~TEXT.chomp
       📦 Archive                      ccc
@@ -28,7 +28,7 @@ class FolderTreeRendererTest < Joplin::TestCase
       Joplin::Folder.new(id: "ddd", title: "Done", parent_id: "bbb", icon: "✅")
     ]
 
-    output = Joplin::FolderTreeRenderer.new(folders, width: 35).render
+    output = Joplin::CLI::FolderTreeRenderer.new(folders, width: 35).render
 
     expected = <<~TEXT.chomp
       💼 Work                         aaa
@@ -46,7 +46,7 @@ class FolderTreeRendererTest < Joplin::TestCase
       Joplin::Folder.new(id: "ccc", title: "Notes", parent_id: "aaa", icon: nil)
     ]
 
-    output = Joplin::FolderTreeRenderer.new(folders, width: 35).render
+    output = Joplin::CLI::FolderTreeRenderer.new(folders, width: 35).render
 
     # 日本語 is 3 chars but 6 display columns
     expected = <<~TEXT.chomp

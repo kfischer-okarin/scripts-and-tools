@@ -12,7 +12,7 @@ class SearchResultRendererTest < Joplin::TestCase
       )
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "match", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "match", width: 50).render
 
     assert_includes output, "Test Note"
     assert_includes output, "abc123"
@@ -29,7 +29,7 @@ class SearchResultRendererTest < Joplin::TestCase
       )
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "match", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "match", width: 50).render
 
     assert_includes output, "1:"
     assert_includes output, "First match"
@@ -43,7 +43,7 @@ class SearchResultRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "bbb", title: "Note B", body: "more ruby")
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "ruby", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "ruby", width: 50).render
 
     assert_includes output, "Note A"
     assert_includes output, "aaa"
@@ -56,7 +56,7 @@ class SearchResultRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "abc", title: "Case Test", body: "TDD is great\ntdd works")
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "tdd", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "tdd", width: 50).render
 
     assert_includes output, "1:"
     assert_includes output, "TDD"
@@ -69,7 +69,7 @@ class SearchResultRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "abc", title: "Title Match", body: "no matching content")
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "Title", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "Title", width: 50).render
 
     # Should still show the note (title matched in search)
     assert_includes output, "Title Match"
@@ -77,7 +77,7 @@ class SearchResultRendererTest < Joplin::TestCase
   end
 
   def test_handles_empty_results
-    output = Joplin::SearchResultRenderer.new([], query: "nothing", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new([], query: "nothing", width: 50).render
 
     assert_equal "", output
   end
@@ -87,7 +87,7 @@ class SearchResultRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "abc", title: "日本語ノート", body: "これはテストです")
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "テスト", width: 50).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "テスト", width: 50).render
 
     assert_includes output, "日本語ノート"
     assert_includes output, "テスト"
@@ -98,7 +98,7 @@ class SearchResultRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "abc", title: "Test Note", body: "line with match here")
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "match", width: 50, color: true).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "match", width: 50, color: true).render
 
     # Title should be bold magenta
     assert_includes output, "\e[1m\e[35mTest Note\e[0m"
@@ -113,7 +113,7 @@ class SearchResultRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "abc", title: "Test Note", body: "line with match here")
     ]
 
-    output = Joplin::SearchResultRenderer.new(notes, query: "match", width: 50, color: false).render
+    output = Joplin::CLI::SearchResultRenderer.new(notes, query: "match", width: 50, color: false).render
 
     refute_includes output, "\e["
   end

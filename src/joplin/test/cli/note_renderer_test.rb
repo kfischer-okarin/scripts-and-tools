@@ -13,7 +13,7 @@ class NoteRendererTest < Joplin::TestCase
       source_url: "https://example.com/article"
     )
 
-    output = Joplin::NoteRenderer.new(note).render
+    output = Joplin::CLI::NoteRenderer.new(note).render
 
     assert_includes output, "title: My Test Note"
     assert_includes output, "source: https://example.com/article"
@@ -34,7 +34,7 @@ class NoteRendererTest < Joplin::TestCase
       source_url: nil
     )
 
-    output = Joplin::NoteRenderer.new(note).render
+    output = Joplin::CLI::NoteRenderer.new(note).render
 
     assert_includes output, "title: Note Without Source"
     refute_includes output, "source:"
@@ -51,7 +51,7 @@ class NoteRendererTest < Joplin::TestCase
       source_url: ""
     )
 
-    output = Joplin::NoteRenderer.new(note).render
+    output = Joplin::CLI::NoteRenderer.new(note).render
 
     refute_includes output, "source:"
   end

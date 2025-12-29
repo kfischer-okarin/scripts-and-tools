@@ -10,7 +10,7 @@ class NoteListRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "bbb", title: "Second Note", parent_id: "folder1")
     ]
 
-    output = Joplin::NoteListRenderer.new(folder, notes, width: 40).render
+    output = Joplin::CLI::NoteListRenderer.new(folder, notes, width: 40).render
 
     expected = <<~TEXT.chomp
       Notes in "Work Notes" (folder1)
@@ -24,7 +24,7 @@ class NoteListRendererTest < Joplin::TestCase
   def test_handles_empty_notes_list
     folder = Joplin::Folder.new(id: "folder1", title: "Empty Folder", parent_id: "", icon: nil)
 
-    output = Joplin::NoteListRenderer.new(folder, [], width: 40).render
+    output = Joplin::CLI::NoteListRenderer.new(folder, [], width: 40).render
 
     assert_equal %(No notes in "Empty Folder" (folder1)), output
   end
@@ -35,7 +35,7 @@ class NoteListRendererTest < Joplin::TestCase
       Joplin::Note.new(id: "aaa", title: "日本語ノート", parent_id: "folder1")
     ]
 
-    output = Joplin::NoteListRenderer.new(folder, notes, width: 40).render
+    output = Joplin::CLI::NoteListRenderer.new(folder, notes, width: 40).render
 
     expected = <<~TEXT.chomp
       Notes in "日本語フォルダ" (folder1)
