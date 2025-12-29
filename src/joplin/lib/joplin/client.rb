@@ -92,6 +92,14 @@ module Joplin
       build_note(note_data)
     end
 
+    def create_folder(title, parent_id: nil)
+      body = { title: title }
+      body[:parent_id] = parent_id if parent_id
+
+      response = post("/folders", body: body)
+      build_folder(JSON.parse(response.body))
+    end
+
     private
 
     def paginate(path, query: {}, **options, &block)
@@ -145,6 +153,10 @@ module Joplin
 
     def delete(path)
       request(Net::HTTP::Delete, path, query: { token: @token })
+    end
+
+    def post(path, body:)
+      request(Net::HTTP::Post, path, query: { token: @token }, body: body)
     end
 
     def request(method_class, path, query: {}, body: nil)

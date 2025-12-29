@@ -88,6 +88,13 @@ module Joplin
       exit 1 if failure_count > 0
     end
 
+    desc "create-folder NAME", "Create a new folder"
+    option :parent_folder_id, type: :string, desc: "Parent folder ID"
+    def create_folder(name)
+      folder = client.create_folder(name, parent_id: options[:parent_folder_id])
+      puts "Created: #{folder.title} (#{folder.id})"
+    end
+
     private
 
     def client

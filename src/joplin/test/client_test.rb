@@ -277,4 +277,38 @@ class ClientTest < Joplin::TestCase
     assert_equal note_id, error.note_id
     assert_equal "Note not found", error.api_error
   end
+
+  def test_create_folder_creates_folder_and_returns_it
+    stub_api_post("/folders",
+      body: { title: "New Folder" },
+      response_body: {
+        "id" => "folder123",
+        "title" => "New Folder",
+        "parent_id" => "",
+        "icon" => ""
+      })
+
+    folder = @client.create_folder("New Folder")
+
+    assert_equal "folder123", folder.id
+    assert_equal "New Folder", folder.title
+    assert_equal "", folder.parent_id
+  end
+
+  def test_create_folder_with_parent_id
+    stub_api_post("/folders",
+      body: { title: "Child Folder", parent_id: "parent123" },
+      response_body: {
+        "id" => "child456",
+        "title" => "Child Folder",
+        "parent_id" => "parent123",
+        "icon" => ""
+      })
+
+    folder = @client.create_folder("Child Folder", parent_id: "parent123")
+
+    assert_equal "child456", folder.id
+    assert_equal "Child Folder", folder.title
+    assert_equal "parent123", folder.parent_id
+  end
 end

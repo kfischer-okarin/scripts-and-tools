@@ -41,5 +41,19 @@ module Joplin
           headers: { "Content-Type" => "application/json" }
         )
     end
+
+    def stub_api_post(path, body:, response_body:, status: 200)
+      stub_request(:post, "#{API_BASE_URL}#{path}")
+        .with(
+          query: { token: @token },
+          body: JSON.generate(body),
+          headers: { "Content-Type" => "application/json" }
+        )
+        .to_return(
+          status: status,
+          body: JSON.generate(response_body),
+          headers: { "Content-Type" => "application/json" }
+        )
+    end
   end
 end
