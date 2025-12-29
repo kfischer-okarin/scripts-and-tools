@@ -14,8 +14,13 @@ module Joplin
 
     def folders
       paginate("/folders", fields: "id,title,parent_id,icon") do |item|
-        Folder.new(id: item["id"], title: item["title"], parent_id: item["parent_id"], icon: parse_icon(item["icon"]))
+        build_folder(item)
       end
+    end
+
+    def folder(id)
+      response = get("/folders/#{id}", query: { fields: "id,title,parent_id,icon" })
+      build_folder(JSON.parse(response.body))
     end
 
     def notes(folder_id)
@@ -59,6 +64,10 @@ module Joplin
       end
 
       all_items.map(&block)
+    end
+
+    def build_folder(data)
+      Folder.new(id: data["id"], title: data["title"], parent_id: data["parent_id"], icon: parse_icon(data["icon"]))
     end
 
     def parse_icon(icon_json)

@@ -13,7 +13,9 @@ module Joplin
 
     desc "list-notes FOLDER_ID", "List all notes in a folder"
     def list_notes(folder_id)
-      puts NoteListRenderer.new(client.notes(folder_id)).render
+      folder = client.folder(folder_id)
+      notes = client.notes(folder_id)
+      puts NoteListRenderer.new(folder, notes).render
     end
 
     desc "show-note NOTE_ID", "Show a note with front matter"

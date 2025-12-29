@@ -6,16 +6,25 @@ module Joplin
   class NoteListRenderer
     DEFAULT_WIDTH = 90
 
-    def initialize(notes, width: DEFAULT_WIDTH)
+    def initialize(folder, notes, width: DEFAULT_WIDTH)
+      @folder = folder
       @notes = notes
       @width = width
     end
 
     def render
-      @notes.map { |note| render_note(note) }.join("\n")
+      return %(No notes in "#{@folder.title}" (#{@folder.id})) if @notes.empty?
+
+      lines = [render_header, ""]
+      lines.concat(@notes.map { |note| render_note(note) })
+      lines.join("\n")
     end
 
     private
+
+    def render_header
+      %(Notes in "#{@folder.title}" (#{@folder.id}))
+    end
 
     def render_note(note)
       padding = @width - display_width(note.title) - note.id.length

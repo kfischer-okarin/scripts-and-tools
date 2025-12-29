@@ -157,4 +157,27 @@ class ClientTest < Joplin::TestCase
     assert_equal "note1", notes[0].id
     assert_equal "note2", notes[1].id
   end
+
+  def test_folder_returns_single_folder
+    folder_id = "folder123"
+    stub_request(:get, "#{API_BASE_URL}/folders/#{folder_id}")
+      .with(query: { token: @token, fields: "id,title,parent_id,icon" })
+      .to_return(
+        status: 200,
+        body: JSON.generate({
+          "id" => folder_id,
+          "title" => "Work Notes",
+          "parent_id" => "",
+          "icon" => '{"emoji":"📁","name":"folder"}'
+        }),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    folder = @client.folder(folder_id)
+
+    assert_equal folder_id, folder.id
+    assert_equal "Work Notes", folder.title
+    assert_equal "", folder.parent_id
+    assert_equal "📁", folder.icon
+  end
 end
