@@ -391,6 +391,26 @@ class ClientTest < Joplin::TestCase
     assert_equal "Folder not found", error.api_error
   end
 
+  def test_note_raises_not_found_error_when_note_missing
+    note_id = "nonexistent123"
+
+    stub_request(:get, "#{API_BASE_URL}/notes/#{note_id}")
+      .with(query: { token: @token, fields: "id,title,body,created_time,updated_time,source_url" })
+      .to_return(
+        status: 404,
+        body: JSON.generate({ "error" => "Not Found" }),
+        headers: { "Content-Type" => "application/json" }
+      )
+
+    error = assert_raises(Joplin::Client::NotFoundError) do
+      @client.note(note_id)
+    end
+
+    assert_equal "note", error.resource_type
+    assert_equal note_id, error.resource_id
+    assert_equal "Note not found: #{note_id}", error.message
+  end
+
   def test_note_resources_returns_resources_for_note
     note_id = "note123"
 

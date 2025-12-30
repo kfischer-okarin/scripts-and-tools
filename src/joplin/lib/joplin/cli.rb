@@ -23,6 +23,9 @@ module Joplin
       note = client.note(note_id)
       resources = client.note_resources(note_id)
       puts NoteRenderer.new(note, resources: resources).render
+    rescue Client::NotFoundError => e
+      warn "Error: #{e.message}"
+      exit 1
     end
 
     desc "search QUERY", "Search notes and show matching lines"

@@ -36,6 +36,16 @@ module Joplin
       end
     end
 
+    class NotFoundError < StandardError
+      attr_reader :resource_type, :resource_id
+
+      def initialize(resource_type, resource_id)
+        @resource_type = resource_type
+        @resource_id = resource_id
+        super("#{resource_type.capitalize} not found: #{resource_id}")
+      end
+    end
+
     def initialize(token:, host: "localhost", port: 41184, logger: nil)
       @token = token
       @host = host
@@ -62,6 +72,8 @@ module Joplin
 
     def note(id)
       response = get("/notes/#{id}", query: { fields: "id,title,body,created_time,updated_time,source_url" })
+      raise NotFoundError.new("note", id) if response.code.to_i == 404
+
       build_note(JSON.parse(response.body))
     end
 
@@ -150,7 +162,10 @@ module Joplin
       loop do
         response = get(path, query: { page: page, **options }.merge(query))
         data = JSON.parse(response.body)
-        all_items.concat(data["items"])
+        items = data["items"]
+        break if items.nil?  # error response or empty
+
+        all_items.concat(items)
         break unless data["has_more"]
 
         page += 1
