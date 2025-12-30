@@ -115,9 +115,10 @@ module Joplin
       build_note(note_data)
     end
 
-    def create_folder(title, parent_id: nil)
+    def create_folder(title, parent_id: nil, icon: nil)
       body = { title: title }
       body[:parent_id] = parent_id if parent_id
+      body[:icon] = JSON.generate({ emoji: icon }) if icon
 
       response = post("/folders", body: body)
       build_folder(JSON.parse(response.body))

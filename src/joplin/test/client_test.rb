@@ -312,6 +312,23 @@ class ClientTest < Joplin::TestCase
     assert_equal "parent123", folder.parent_id
   end
 
+  def test_create_folder_with_icon
+    stub_api_post("/folders",
+      body: { title: "Work", icon: '{"emoji":"💻"}' },
+      response_body: {
+        "id" => "folder123",
+        "title" => "Work",
+        "parent_id" => "",
+        "icon" => '{"emoji":"💻"}'
+      })
+
+    folder = @client.create_folder("Work", icon: "💻")
+
+    assert_equal "folder123", folder.id
+    assert_equal "Work", folder.title
+    assert_equal "💻", folder.icon
+  end
+
   def test_rename_note_updates_note_title
     note_id = "note123"
     new_title = "Updated Title"

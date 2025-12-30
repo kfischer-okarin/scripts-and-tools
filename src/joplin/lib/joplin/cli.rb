@@ -95,8 +95,9 @@ module Joplin
 
     desc "create-folder NAME", "Create a new folder"
     option :parent_folder_id, type: :string, desc: "Parent folder ID"
+    option :icon, type: :string, desc: "Emoji icon for the folder"
     def create_folder(name)
-      folder = client.create_folder(name, parent_id: options[:parent_folder_id])
+      folder = client.create_folder(name, parent_id: options[:parent_folder_id], icon: options[:icon])
       puts "Created: #{folder.title} (#{folder.id})"
     end
 
