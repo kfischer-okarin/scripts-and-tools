@@ -158,6 +158,11 @@ module Joplin
       build_folder(data)
     end
 
+    def change_folder_icon(folder_id, new_icon)
+      response = put("/folders/#{folder_id}", body: { icon: JSON.generate({ emoji: new_icon }) })
+      build_folder(JSON.parse(response.body))
+    end
+
     def note_resources(note_id)
       paginate("/notes/#{note_id}/resources", fields: "id,file_extension,mime") do |item|
         build_resource(item)

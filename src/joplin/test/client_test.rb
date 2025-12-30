@@ -387,6 +387,25 @@ class ClientTest < Joplin::TestCase
     assert_equal new_title, folder.title
   end
 
+  def test_change_folder_icon_updates_folder_icon
+    folder_id = "folder123"
+    new_icon = "📁"
+
+    stub_api_put("/folders/#{folder_id}",
+      body: { icon: '{"emoji":"📁"}' },
+      response_body: {
+        "id" => folder_id,
+        "title" => "My Folder",
+        "parent_id" => "",
+        "icon" => '{"emoji":"📁"}'
+      })
+
+    folder = @client.change_folder_icon(folder_id, new_icon)
+
+    assert_equal folder_id, folder.id
+    assert_equal "📁", folder.icon
+  end
+
   def test_rename_folder_raises_error_on_failure
     folder_id = "invalid_folder"
     new_title = "New Title"

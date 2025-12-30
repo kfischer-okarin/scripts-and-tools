@@ -131,6 +131,12 @@ module Joplin
       exit 1
     end
 
+    desc "change-folder-icon FOLDER_ID NEW_ICON", "Change a folder's icon"
+    def change_folder_icon(folder_id, new_icon)
+      folder = client.change_folder_icon(folder_id, new_icon)
+      puts "Changed icon for folder #{folder.id} to #{folder.icon}"
+    end
+
     private
 
     def client
