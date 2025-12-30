@@ -100,6 +100,18 @@ module Joplin
       puts "Created: #{folder.title} (#{folder.id})"
     end
 
+    desc "create-note FOLDER_ID TITLE BODY", "Create a new note"
+    def create_note(folder_id, title, body)
+      note = client.create_note(folder_id, title, body)
+      puts "Created note #{note.id}: \"#{note.title}\""
+    end
+
+    desc "update-note NOTE_ID NEW_BODY", "Update a note's content"
+    def update_note(note_id, new_body)
+      note = client.update_note(note_id, new_body)
+      puts "Updated note #{note.id}: \"#{note.title}\""
+    end
+
     desc "rename-note NOTE_ID NEW_TITLE", "Rename a note"
     def rename_note(note_id, new_title)
       note = client.rename_note(note_id, new_title)

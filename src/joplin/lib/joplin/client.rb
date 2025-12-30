@@ -123,6 +123,16 @@ module Joplin
       build_folder(JSON.parse(response.body))
     end
 
+    def create_note(folder_id, title, body)
+      response = post("/notes", body: { parent_id: folder_id, title: title, body: body })
+      build_note(JSON.parse(response.body))
+    end
+
+    def update_note(note_id, new_body)
+      response = put("/notes/#{note_id}", body: { body: new_body })
+      build_note(JSON.parse(response.body))
+    end
+
     def rename_note(note_id, new_title)
       response = put("/notes/#{note_id}", body: { title: new_title })
       data = JSON.parse(response.body)

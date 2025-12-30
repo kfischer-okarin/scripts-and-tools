@@ -391,6 +391,46 @@ class ClientTest < Joplin::TestCase
     assert_equal "Folder not found", error.api_error
   end
 
+  def test_create_note_creates_note_and_returns_it
+    folder_id = "folder123"
+    title = "My New Note"
+    body = "# Hello\n\nThis is the content."
+
+    stub_api_post("/notes",
+      body: { parent_id: folder_id, title: title, body: body },
+      response_body: {
+        "id" => "note456",
+        "title" => title,
+        "parent_id" => folder_id,
+        "body" => body
+      })
+
+    note = @client.create_note(folder_id, title, body)
+
+    assert_equal "note456", note.id
+    assert_equal title, note.title
+    assert_equal folder_id, note.parent_id
+  end
+
+  def test_update_note_updates_note_body
+    note_id = "note123"
+    new_body = "# Updated\n\nNew content here."
+
+    stub_api_put("/notes/#{note_id}",
+      body: { body: new_body },
+      response_body: {
+        "id" => note_id,
+        "title" => "Existing Title",
+        "parent_id" => "folder456",
+        "body" => new_body
+      })
+
+    note = @client.update_note(note_id, new_body)
+
+    assert_equal note_id, note.id
+    assert_equal "Existing Title", note.title
+  end
+
   def test_note_raises_not_found_error_when_note_missing
     note_id = "nonexistent123"
 
