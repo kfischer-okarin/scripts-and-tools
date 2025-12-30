@@ -20,7 +20,9 @@ module Joplin
 
     desc "show-note NOTE_ID", "Show a note with front matter"
     def show_note(note_id)
-      puts NoteRenderer.new(client.note(note_id)).render
+      note = client.note(note_id)
+      resources = client.note_resources(note_id)
+      puts NoteRenderer.new(note, resources: resources).render
     end
 
     desc "search QUERY", "Search notes and show matching lines"

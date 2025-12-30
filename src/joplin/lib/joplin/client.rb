@@ -135,6 +135,12 @@ module Joplin
       build_folder(data)
     end
 
+    def note_resources(note_id)
+      paginate("/notes/#{note_id}/resources", fields: "id,file_extension,mime") do |item|
+        build_resource(item)
+      end
+    end
+
     private
 
     def paginate(path, query: {}, **options, &block)
@@ -167,6 +173,10 @@ module Joplin
         updated_time: data["updated_time"],
         source_url: data["source_url"]
       )
+    end
+
+    def build_resource(data)
+      Resource.new(id: data["id"], file_extension: data["file_extension"], mime: data["mime"])
     end
 
     def parse_icon(icon_json)

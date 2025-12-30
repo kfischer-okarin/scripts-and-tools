@@ -390,4 +390,23 @@ class ClientTest < Joplin::TestCase
     assert_equal folder_id, error.resource_id
     assert_equal "Folder not found", error.api_error
   end
+
+  def test_note_resources_returns_resources_for_note
+    note_id = "note123"
+
+    stub_api_get("/notes/#{note_id}/resources",
+      query: { page: 1, fields: "id,file_extension,mime" },
+      items: [
+        { "id" => "res1", "file_extension" => "", "mime" => "image/png" },
+        { "id" => "res2", "file_extension" => "pdf", "mime" => "application/pdf" }
+      ])
+
+    resources = @client.note_resources(note_id)
+
+    assert_equal 2, resources.size
+    assert_equal "res1", resources[0].id
+    assert resources[0].path.end_with?("resources/res1.png")  # from mime
+    assert_equal "res2", resources[1].id
+    assert resources[1].path.end_with?("resources/res2.pdf")  # from file_extension
+  end
 end

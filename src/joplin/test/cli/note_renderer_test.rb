@@ -55,4 +55,38 @@ class NoteRendererTest < Joplin::TestCase
 
     refute_includes output, "source:"
   end
+
+  def test_renders_note_with_attachments
+    note = Joplin::Note.new(
+      id: "abc123",
+      title: "Note With Attachments",
+      body: "Content here.",
+      created_time: 1703980800000,
+      updated_time: 1704067200000
+    )
+    resources = [
+      Joplin::Resource.new(id: "res1", file_extension: "", mime: "image/png"),
+      Joplin::Resource.new(id: "res2", file_extension: "pdf", mime: "application/pdf")
+    ]
+
+    output = Joplin::CLI::NoteRenderer.new(note, resources: resources).render
+
+    assert_includes output, "attachments:"
+    assert_includes output, "- #{File.expand_path("~/.config/joplin-desktop/resources/res1.png")}"
+    assert_includes output, "- #{File.expand_path("~/.config/joplin-desktop/resources/res2.pdf")}"
+  end
+
+  def test_renders_note_without_attachments_when_empty
+    note = Joplin::Note.new(
+      id: "abc123",
+      title: "Note Without Attachments",
+      body: "Content here.",
+      created_time: 1703980800000,
+      updated_time: 1704067200000
+    )
+
+    output = Joplin::CLI::NoteRenderer.new(note, resources: []).render
+
+    refute_includes output, "attachments:"
+  end
 end

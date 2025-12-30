@@ -5,8 +5,9 @@ require "time"
 module Joplin
   class CLI < Thor
     class NoteRenderer
-      def initialize(note)
+      def initialize(note, resources: nil)
         @note = note
+        @resources = resources || []
       end
 
       def render
@@ -21,9 +22,18 @@ module Joplin
         lines << "created: #{format_time(@note.created_time)}"
         lines << "updated: #{format_time(@note.updated_time)}"
         lines << "source: #{@note.source_url}" if source_url_present?
+        lines.concat(attachments_lines) if @resources.any?
         lines << "---"
         lines << ""
         lines.join("\n")
+      end
+
+      def attachments_lines
+        lines = ["attachments:"]
+        @resources.each do |resource|
+          lines << "- #{resource.path}"
+        end
+        lines
       end
 
       def format_time(timestamp_ms)
