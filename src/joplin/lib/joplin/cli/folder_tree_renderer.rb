@@ -7,15 +7,16 @@ module Joplin
     class FolderTreeRenderer
       DEFAULT_WIDTH = 90
 
-      def initialize(folders, width: DEFAULT_WIDTH)
+      def initialize(folders, width: DEFAULT_WIDTH, root_id: nil)
         @folders = folders
         @width = width
+        @root_id = root_id
         @children = build_children_map
       end
 
       def render
         lines = []
-        root_folders.each do |folder|
+        starting_folders.each do |folder|
           render_folder(folder, lines, prefix: "", is_last: true)
         end
         lines.join("\n")
@@ -27,8 +28,12 @@ module Joplin
         @folders.group_by(&:parent_id)
       end
 
-      def root_folders
-        @folders.select { |f| f.parent_id.nil? || f.parent_id.empty? }.sort_by(&:title)
+      def starting_folders
+        if @root_id
+          @folders.select { |f| f.id == @root_id }
+        else
+          @folders.select { |f| f.parent_id.nil? || f.parent_id.empty? }.sort_by(&:title)
+        end
       end
 
       def children_of(folder)

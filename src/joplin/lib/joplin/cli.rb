@@ -11,8 +11,9 @@ module Joplin
     class_option :debug, type: :boolean, default: false, desc: "Print raw HTTP requests and responses"
 
     desc "folders", "List all notebooks"
+    option :root, type: :string, desc: "Only show hierarchy below this folder ID"
     def folders
-      puts FolderTreeRenderer.new(client.folders).render
+      puts FolderTreeRenderer.new(client.folders, root_id: options[:root]).render
     end
 
     desc "list-notes FOLDER_ID", "List all notes in a folder"
