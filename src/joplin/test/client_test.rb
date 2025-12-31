@@ -586,4 +586,21 @@ class ClientTest < Joplin::TestCase
 
     @client.untag_note("note1", ["work", "urgent"])
   end
+
+  def test_note_tags_returns_tags_for_note
+    stub_api_get("/notes/note1/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [
+        { "id" => "tag1", "title" => "work" },
+        { "id" => "tag2", "title" => "urgent" }
+      ])
+
+    tags = @client.note_tags("note1")
+
+    assert_equal 2, tags.size
+    assert_equal "tag1", tags[0].id
+    assert_equal "work", tags[0].title
+    assert_equal "tag2", tags[1].id
+    assert_equal "urgent", tags[1].title
+  end
 end

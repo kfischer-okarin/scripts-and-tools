@@ -192,6 +192,12 @@ module Joplin
       end
     end
 
+    def note_tags(note_id)
+      paginate("/notes/#{note_id}/tags", fields: "id,title") do |item|
+        build_tag(item)
+      end
+    end
+
     private
 
     def remove_tag_from_note(tag_id, note_id)

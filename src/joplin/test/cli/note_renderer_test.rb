@@ -89,4 +89,36 @@ class NoteRendererTest < Joplin::TestCase
 
     refute_includes output, "attachments:"
   end
+
+  def test_renders_note_with_tags
+    note = Joplin::Note.new(
+      id: "abc123",
+      title: "Note With Tags",
+      body: "Content here.",
+      created_time: 1703980800000,
+      updated_time: 1704067200000
+    )
+    tags = [
+      Joplin::Tag.new(id: "tag1", title: "work"),
+      Joplin::Tag.new(id: "tag2", title: "urgent")
+    ]
+
+    output = Joplin::CLI::NoteRenderer.new(note, tags: tags).render
+
+    assert_includes output, "tags: [work, urgent]"
+  end
+
+  def test_renders_note_without_tags_when_empty
+    note = Joplin::Note.new(
+      id: "abc123",
+      title: "Note Without Tags",
+      body: "Content here.",
+      created_time: 1703980800000,
+      updated_time: 1704067200000
+    )
+
+    output = Joplin::CLI::NoteRenderer.new(note, tags: []).render
+
+    refute_includes output, "tags:"
+  end
 end

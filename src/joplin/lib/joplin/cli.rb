@@ -26,7 +26,8 @@ module Joplin
     def show_note(note_id)
       note = client.note(note_id)
       resources = client.note_resources(note_id)
-      puts NoteRenderer.new(note, resources: resources).render
+      tags = client.note_tags(note_id)
+      puts NoteRenderer.new(note, resources: resources, tags: tags).render
     rescue Client::NotFoundError => e
       warn "Error: #{e.message}"
       exit 1
