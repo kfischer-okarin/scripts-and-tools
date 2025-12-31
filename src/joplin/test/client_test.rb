@@ -505,4 +505,85 @@ class ClientTest < Joplin::TestCase
     assert_equal "res2", resources[1].id
     assert resources[1].path.end_with?("resources/res2.pdf")  # from file_extension
   end
+
+  def test_tag_note_adds_existing_tag_to_note
+    stub_api_get("/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [{ "id" => "tag1", "title" => "work" }])
+
+    stub_api_post("/tags/tag1/notes",
+      body: { id: "note1" },
+      response_body: {})
+
+    @client.tag_note("note1", ["work"])
+  end
+
+  def test_tag_note_creates_tag_when_not_found
+    stub_api_get("/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [])
+
+    stub_api_post("/tags",
+      body: { title: "work" },
+      response_body: { "id" => "tag1", "title" => "work" })
+
+    stub_api_post("/tags/tag1/notes",
+      body: { id: "note1" },
+      response_body: {})
+
+    @client.tag_note("note1", ["work"])
+  end
+
+  def test_tag_note_handles_multiple_tags
+    stub_api_get("/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [{ "id" => "tag1", "title" => "work" }])
+
+    stub_api_post("/tags",
+      body: { title: "urgent" },
+      response_body: { "id" => "tag2", "title" => "urgent" })
+
+    stub_api_post("/tags/tag1/notes",
+      body: { id: "note1" },
+      response_body: {})
+
+    stub_api_post("/tags/tag2/notes",
+      body: { id: "note1" },
+      response_body: {})
+
+    @client.tag_note("note1", ["work", "urgent"])
+  end
+
+  def test_untag_note_removes_tag_from_note
+    stub_api_get("/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [{ "id" => "tag1", "title" => "work" }])
+
+    stub_api_delete("/tags/tag1/notes/note1")
+
+    @client.untag_note("note1", ["work"])
+  end
+
+  def test_untag_note_ignores_nonexistent_tags
+    stub_api_get("/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [])
+
+    # No DELETE call should happen
+    @client.untag_note("note1", ["nonexistent"])
+  end
+
+  def test_untag_note_removes_multiple_tags
+    stub_api_get("/tags",
+      query: { page: 1, fields: "id,title" },
+      items: [
+        { "id" => "tag1", "title" => "work" },
+        { "id" => "tag2", "title" => "urgent" }
+      ])
+
+    stub_api_delete("/tags/tag1/notes/note1")
+    stub_api_delete("/tags/tag2/notes/note1")
+
+    @client.untag_note("note1", ["work", "urgent"])
+  end
 end

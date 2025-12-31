@@ -169,7 +169,47 @@ module Joplin
       end
     end
 
+    def tag_note(note_id, tag_titles)
+      all_tags = tags
+      tag_titles.each do |title|
+        tag = all_tags.find { |t| t.title.downcase == title.downcase }
+        tag ||= create_tag(title)
+        add_tag_to_note(tag.id, note_id)
+      end
+    end
+
+    def tags
+      paginate("/tags", fields: "id,title") do |item|
+        build_tag(item)
+      end
+    end
+
+    def untag_note(note_id, tag_titles)
+      all_tags = tags
+      tag_titles.each do |title|
+        tag = all_tags.find { |t| t.title.downcase == title.downcase }
+        remove_tag_from_note(tag.id, note_id) if tag
+      end
+    end
+
     private
+
+    def remove_tag_from_note(tag_id, note_id)
+      delete("/tags/#{tag_id}/notes/#{note_id}")
+    end
+
+    def create_tag(title)
+      response = post("/tags", body: { title: title })
+      build_tag(JSON.parse(response.body))
+    end
+
+    def add_tag_to_note(tag_id, note_id)
+      post("/tags/#{tag_id}/notes", body: { id: note_id })
+    end
+
+    def build_tag(data)
+      Tag.new(id: data["id"], title: data["title"])
+    end
 
     def paginate(path, query: {}, **options, &block)
       all_items = []

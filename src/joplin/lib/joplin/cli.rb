@@ -106,9 +106,25 @@ module Joplin
     end
 
     desc "create-note FOLDER_ID TITLE BODY", "Create a new note"
+    option :tags, type: :array, desc: "Tags to add to the note"
     def create_note(folder_id, title, body)
       note = client.create_note(folder_id, title, body)
+      client.tag_note(note.id, options[:tags]) if options[:tags]&.any?
       puts "Created note #{note.id}: \"#{note.title}\""
+    end
+
+    desc "add-note-tags NOTE_ID TAG...", "Add tags to a note"
+    def add_note_tags(note_id, *tags)
+      note = client.note(note_id)
+      client.tag_note(note_id, tags)
+      puts "Added #{tags.size} tag(s) to note #{note.id}: \"#{note.title}\""
+    end
+
+    desc "remove-note-tags NOTE_ID TAG...", "Remove tags from a note"
+    def remove_note_tags(note_id, *tags)
+      note = client.note(note_id)
+      client.untag_note(note_id, tags)
+      puts "Removed tag(s) from note #{note.id}: \"#{note.title}\""
     end
 
     desc "update-note NOTE_ID NEW_BODY", "Update a note's content"

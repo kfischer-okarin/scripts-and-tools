@@ -6,6 +6,7 @@ end
 require_relative "joplin/folder"
 require_relative "joplin/note"
 require_relative "joplin/resource"
+require_relative "joplin/tag"
 require_relative "joplin/client"
 require_relative "joplin/cli"
 require_relative "joplin/cli/folder_tree_renderer"
