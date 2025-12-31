@@ -4,6 +4,10 @@ require "thor"
 
 module Joplin
   class CLI < Thor
+    def self.exit_on_failure?
+      true
+    end
+
     class_option :debug, type: :boolean, default: false, desc: "Print raw HTTP requests and responses"
 
     desc "folders", "List all notebooks"
