@@ -118,14 +118,16 @@ module Joplin
     def add_note_tags(note_id, *tags)
       note = client.note(note_id)
       client.tag_note(note_id, tags)
-      puts "Added #{tags.size} tag(s) to note #{note.id}: \"#{note.title}\""
+      resulting_tags = client.note_tags(note_id)
+      puts TagChangeRenderer.new(note, resulting_tags, action: :added, count: tags.size).render
     end
 
     desc "remove-note-tags NOTE_ID TAG...", "Remove tags from a note"
     def remove_note_tags(note_id, *tags)
       note = client.note(note_id)
       client.untag_note(note_id, tags)
-      puts "Removed tag(s) from note #{note.id}: \"#{note.title}\""
+      resulting_tags = client.note_tags(note_id)
+      puts TagChangeRenderer.new(note, resulting_tags, action: :removed, count: tags.size).render
     end
 
     desc "update-note NOTE_ID NEW_BODY", "Update a note's content"
