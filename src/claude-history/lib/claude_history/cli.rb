@@ -4,6 +4,10 @@ require "thor"
 
 module ClaudeHistory
   class CLI < Thor
+    def self.exit_on_failure?
+      true
+    end
+
     PROJECTS_PATH = File.expand_path("~/.claude/projects")
 
     desc "projects", "List all projects with last updated timestamp"
