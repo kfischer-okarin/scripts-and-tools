@@ -25,11 +25,11 @@ module ClaudeHistory
       matches = all_ids.select { |id| id.include?(query) }
 
       if matches.empty?
-        raise ArgumentError, "No project found matching '#{query}'"
+        raise Error, "No project found matching '#{query}'"
       end
 
       if matches.size > 1
-        raise ArgumentError, "Ambiguous project '#{query}'. Matches:\n#{matches.map { |m| "  - #{m}" }.join("\n")}"
+        raise Error, "Ambiguous project '#{query}'. Matches:\n#{matches.map { |m| "  - #{m}" }.join("\n")}"
       end
 
       matches.first

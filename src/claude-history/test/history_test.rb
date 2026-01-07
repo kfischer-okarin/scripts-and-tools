@@ -58,7 +58,7 @@ class HistoryTest < ClaudeHistory::TestCase
 
     history = ClaudeHistory::History.new(@projects_path)
 
-    error = assert_raises(ArgumentError) do
+    error = assert_raises(ClaudeHistory::Error) do
       history.resolve_project_id("foo")
     end
 
@@ -70,7 +70,7 @@ class HistoryTest < ClaudeHistory::TestCase
   def test_resolve_project_id_raises_error_when_no_match
     history = ClaudeHistory::History.new(@projects_path)
 
-    error = assert_raises(ArgumentError) do
+    error = assert_raises(ClaudeHistory::Error) do
       history.resolve_project_id("nonexistent-xyz-123")
     end
 

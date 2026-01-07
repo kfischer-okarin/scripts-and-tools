@@ -8,6 +8,15 @@ module ClaudeHistory
       true
     end
 
+    # Convert domain errors to Thor::Error for clean CLI output (message only, no stack trace)
+    no_commands do
+      def invoke_command(command, *args)
+        super
+      rescue ClaudeHistory::Error => e
+        raise Thor::Error, e.message
+      end
+    end
+
     PROJECTS_PATH = File.expand_path("~/.claude/projects")
 
     desc "projects", "List all projects with last updated timestamp"

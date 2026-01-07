@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
+  class Error < StandardError; end
 end
 
 require_relative "claude_history/record"
