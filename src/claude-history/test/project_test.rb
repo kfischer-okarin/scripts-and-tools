@@ -376,6 +376,51 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal %w[user assistant], session.records.map(&:type)
   end
 
+  def test_session_excludes_context_command_and_preserves_tree
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"user","uuid":"context-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/context</command-name>\\n<command-message>context</command-message>\\n<command-args></command-args>"}}
+        {"type":"assistant","uuid":"2","parentUuid":"context-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    session = project.session("test")
+
+    # Context command skipped, assistant relinked to user
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+  end
+
+  def test_session_excludes_release_notes_command_and_preserves_tree
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"user","uuid":"rn-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/release-notes</command-name>\\n<command-message>release-notes</command-message>\\n<command-args></command-args>"}}
+        {"type":"assistant","uuid":"2","parentUuid":"rn-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    session = project.session("test")
+
+    # Release-notes command skipped, assistant relinked to user
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+  end
+
+  def test_session_excludes_usage_command_and_preserves_tree
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"user","uuid":"usage-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/usage</command-name>\\n<command-message>usage</command-message>\\n<command-args></command-args>"}}
+        {"type":"assistant","uuid":"2","parentUuid":"usage-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    session = project.session("test")
+
+    # Usage command skipped, assistant relinked to user
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+  end
+
   def test_user_defined_command_record_parses_reusable_prompt
     project = build_project(
       "test.jsonl" => <<~JSONL

@@ -32,7 +32,7 @@ module ClaudeHistory
       }.freeze
 
       SKIPPED_TYPES = %w[file-history-snapshot system].freeze
-      SKIPPED_COMMANDS = %w[/clear /resume].freeze
+      SKIPPED_COMMANDS = %w[/clear /resume /context /release-notes /usage].freeze
 
       attr_reader :sessions
 
