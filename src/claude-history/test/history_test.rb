@@ -78,6 +78,15 @@ class HistoryTest < ClaudeHistory::TestCase
     assert_includes error.message, "nonexistent-xyz-123"
   end
 
+  def test_resolve_project_id_returns_exact_match_when_prefix_of_another
+    build_project("foo-bar")
+    build_project("foo-bar-extended")
+
+    history = ClaudeHistory::History.new(@projects_path)
+
+    assert_equal "foo-bar", history.resolve_project_id("foo-bar")
+  end
+
   def test_resolve_session_id_returns_session_for_unique_prefix_match
     project = build_project("session-resolve-test", {
       "abc12345-session.jsonl" => build_session_jsonl("abc12345", "2025-01-01T10:00:00Z")

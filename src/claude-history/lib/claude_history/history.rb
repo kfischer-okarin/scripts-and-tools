@@ -22,6 +22,9 @@ module ClaudeHistory
 
     def resolve_project_id(query)
       all_ids = projects.map(&:id)
+
+      return query if all_ids.include?(query)
+
       matches = all_ids.select { |id| id.include?(query) }
 
       if matches.empty?
