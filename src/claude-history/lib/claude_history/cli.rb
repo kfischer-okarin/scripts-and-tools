@@ -149,7 +149,7 @@ module ClaudeHistory
 
     def self.message_display_text(record)
       return record.command_name if record.is_a?(UserDefinedCommandRecord)
-      record.content
+      record.content.gsub(/\s+/, " ")
     end
 
     def self.truncate_text(text, length)

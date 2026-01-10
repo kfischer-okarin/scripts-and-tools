@@ -134,4 +134,18 @@ class CLITest < ClaudeHistory::TestCase
 
     assert_equal "Latest thread summary", result
   end
+
+  def test_thread_summary_replaces_newlines_with_spaces
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Hi\\nThis is a multiline\\nmessage"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+
+    result = ClaudeHistory::CLI.thread_summary(thread, max_length: 50)
+
+    assert_equal "Hi This is a multiline message", result
+  end
 end
