@@ -35,6 +35,21 @@ module ClaudeHistory
       matches.first
     end
 
+    def resolve_session_id(query, project_id:)
+      all_sessions = sessions(project_id: project_id)
+      matches = all_sessions.select { |s| s.id.start_with?(query) }
+
+      if matches.empty?
+        raise Error, "No session found matching '#{query}'"
+      end
+
+      if matches.size > 1
+        raise Error, "Ambiguous session '#{query}'. Matches:\n#{matches.map { |m| "  - #{m.id}" }.join("\n")}"
+      end
+
+      matches.first
+    end
+
     private
 
     def project(project_id)

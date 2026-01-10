@@ -30,5 +30,10 @@ module ClaudeHistory
     def git_branch
       messages.last&.git_branch
     end
+
+    # Visitor pattern: iterate messages and dispatch to renderer
+    def render(renderer)
+      messages.each { |record| record.render(renderer) }
+    end
   end
 end

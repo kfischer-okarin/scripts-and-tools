@@ -14,5 +14,10 @@ module ClaudeHistory
     def content_blocks
       raw_data.dig(:message, :content)
     end
+
+    # Visitor pattern: dispatch to renderer
+    def render(renderer)
+      renderer.render_assistant_message(self)
+    end
   end
 end

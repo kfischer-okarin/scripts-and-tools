@@ -41,6 +41,29 @@ module ClaudeHistory
       print_sessions_table(sessions_list, project_id: project_id, total: all_sessions.size, show_threads: options[:all_threads], full_ids: options[:full_ids])
     end
 
+    desc "show-session SESSION_ID", "Display a session transcript"
+    method_option :project, type: :string, required: true, desc: "Project ID"
+    method_option :verbose, type: :boolean, default: false, desc: "Show thinking blocks and detailed output"
+    method_option :thread, type: :string, desc: "Thread ID (defaults to most recent)"
+    def show_session(session_id)
+      history = History.new(PROJECTS_PATH)
+      project_id = history.resolve_project_id(options[:project])
+      session = history.resolve_session_id(session_id, project_id: project_id)
+
+      thread = if options[:thread]
+                 session.threads.find { |t| t.id == options[:thread] || t.id.start_with?(options[:thread]) }
+               else
+                 session.threads.first
+               end
+
+      raise Error, "Thread not found: #{options[:thread]}" if options[:thread] && thread.nil?
+      raise Error, "Session has no threads" if thread.nil?
+
+      renderer = SessionRenderer.new(verbose: options[:verbose])
+      thread.render(renderer)
+      puts renderer.output
+    end
+
     private
 
     def print_projects_table(projects)

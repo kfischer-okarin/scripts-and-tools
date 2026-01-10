@@ -13,6 +13,11 @@ module ClaudeHistory
       parse_stdout(stdout_record_data) if stdout_record_data
     end
 
+    # Visitor pattern: dispatch to renderer
+    def render(renderer)
+      renderer.render_built_in_command(self)
+    end
+
     private
 
     def parse_command_parts

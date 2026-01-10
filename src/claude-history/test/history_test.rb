@@ -78,6 +78,49 @@ class HistoryTest < ClaudeHistory::TestCase
     assert_includes error.message, "nonexistent-xyz-123"
   end
 
+  def test_resolve_session_id_returns_session_for_unique_prefix_match
+    project = build_project("session-resolve-test", {
+      "abc12345-session.jsonl" => build_session_jsonl("abc12345", "2025-01-01T10:00:00Z")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    session = history.resolve_session_id("abc12", project_id: project.id)
+
+    assert_equal "abc12345-session", session.id
+  end
+
+  def test_resolve_session_id_raises_error_for_ambiguous_prefix
+    project = build_project("session-ambiguous-test", {
+      "abc12345-session.jsonl" => build_session_jsonl("abc12345", "2025-01-01T10:00:00Z"),
+      "abc12999-session.jsonl" => build_session_jsonl("abc12999", "2025-01-02T10:00:00Z")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+
+    error = assert_raises(ClaudeHistory::Error) do
+      history.resolve_session_id("abc12", project_id: project.id)
+    end
+
+    assert_includes error.message, "Ambiguous"
+    assert_includes error.message, "abc12345-session"
+    assert_includes error.message, "abc12999-session"
+  end
+
+  def test_resolve_session_id_raises_error_when_no_match
+    project = build_project("session-nomatch-test", {
+      "abc12345-session.jsonl" => build_session_jsonl("abc12345", "2025-01-01T10:00:00Z")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+
+    error = assert_raises(ClaudeHistory::Error) do
+      history.resolve_session_id("xyz99", project_id: project.id)
+    end
+
+    assert_includes error.message, "No session found"
+    assert_includes error.message, "xyz99"
+  end
+
   private
 
   def build_session_jsonl(session_id, timestamp)

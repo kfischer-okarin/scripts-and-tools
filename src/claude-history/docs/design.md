@@ -33,3 +33,29 @@ for its leaf, if any). Access all threads via `session.threads`.
 Development is behavior-driven from the History object - new CLI features start
 as History tests, which drive out the underlying Project/Session/Record
 functionality.
+
+## Rendering
+
+SessionRenderer uses the visitor pattern to render threads. Each Record type
+implements `render(renderer)` which calls the appropriate renderer method
+(e.g., `render_user_message`, `render_assistant_message`). This decouples
+record structure from output formatting.
+
+```text
+Thread#render(renderer)
+  └── iterates over records
+        └── record.render(renderer)
+              ├── UserMessage → renderer.render_user_message
+              ├── BuiltInCommandRecord → renderer.render_built_in_command
+              ├── UserDefinedCommandRecord → renderer.render_user_defined_command
+              └── AssistantMessage → renderer.render_assistant_message
+```
+
+Output format uses `<User>` and `<Assistant>` prefixes with timestamps:
+
+```
+[2025-01-07 19:30] <User> Hello world
+[2025-01-07 19:31] <Assistant> Hi there!
+[2025-01-07 19:31] <Assistant> Read(file.txt)
+  ⎿  Read 10 lines
+```

@@ -24,6 +24,11 @@ module ClaudeHistory
       raw_data.dig(:message, :content)
     end
 
+    # Visitor pattern: dispatch to renderer
+    def render(renderer)
+      renderer.render_user_message(self)
+    end
+
     private
 
     def determine_content_type

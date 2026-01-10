@@ -13,6 +13,11 @@ module ClaudeHistory
       parse_expanded_prompt(expanded_prompt_data) if expanded_prompt_data
     end
 
+    # Visitor pattern: dispatch to renderer
+    def render(renderer)
+      renderer.render_user_defined_command(self)
+    end
+
     private
 
     def parse_command_parts
