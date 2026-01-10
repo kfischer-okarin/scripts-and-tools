@@ -15,7 +15,7 @@ module ClaudeHistory
     # into AssistantMessage's tool_call_records instead
     def render_user_message(record)
       ts = format_timestamp(record)
-      @output << "#{ts}<User> #{record.content}\n\n"
+      @output << "#{ts}<User> #{record.content.to_s.rstrip}\n\n"
     end
 
     def format_tool_result(result)
@@ -105,17 +105,19 @@ module ClaudeHistory
 
     def render_assistant_message(record)
       ts = format_timestamp(record)
+      output_before = @output.length
       record.content_blocks&.each do |block|
         case block[:type]
         when "text"
-          @output << "#{ts}<Assistant> #{block[:text]}\n"
+          @output << "#{ts}<Assistant> #{block[:text].to_s.rstrip}\n"
         when "tool_use"
           render_tool_call(ts, block, record.tool_call_records)
         when "thinking"
           @output << "#{ts}💭 #{block[:thinking]}\n" if @verbose
         end
       end
-      @output << "\n"
+      # Only add trailing newline if we output something (e.g., skip for thinking-only in non-verbose)
+      @output << "\n" if @output.length > output_before
     end
 
     def render_tool_call(timestamp, block, tool_call_records)
