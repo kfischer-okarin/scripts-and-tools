@@ -27,6 +27,26 @@ module ClaudeHistory
         return format_edit_result(result[:structuredPatch])
       end
 
+      # Bash tool result (has stdout)
+      if result.key?(:stdout)
+        return format_string_result(result[:stdout]) unless result[:stdout].to_s.empty?
+
+        return "Done"
+      end
+
+      # Grep tool result (has numFiles)
+      if result.key?(:numFiles)
+        return "Found #{result[:numFiles]} files"
+      end
+
+      # Task tool result (has status)
+      if result.key?(:status)
+        task_result = result.dig(:content, 0, :text)
+        return format_string_result(task_result) if @verbose && task_result
+
+        return "Done"
+      end
+
       case result[:type]
       when "text"
         file = result[:file]
@@ -172,8 +192,13 @@ module ClaudeHistory
             "#{name}(#{first_line})"
           end
         end
+      when "Task"
+        subagent = input[:subagent_type] || "Agent"
+        content = @verbose ? input[:prompt] : input[:description]
+        "#{name}(#{subagent}: #{content})"
       else
-        "#{name}(...)"
+        args = input.map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
+        "#{name}(#{args})"
       end
     end
   end

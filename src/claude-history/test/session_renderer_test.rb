@@ -98,6 +98,78 @@ class SessionRendererTest < ClaudeHistory::TestCase
     assert_equal expected, renderer.output
   end
 
+  def test_renders_grep_with_file_matches
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Search for something"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Grep","input":{"pattern":"with_timezone","path":"/project"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"Found 3 files"}]},"toolUseResult":{"mode":"files_with_matches","filenames":["file1.rb","file2.rb","file3.rb"],"numFiles":3}}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+    renderer = ClaudeHistory::SessionRenderer.new
+
+    with_timezone("Asia/Tokyo") do
+      thread.render(renderer)
+    end
+
+    expected = <<~OUTPUT
+      [2025-01-07 19:30] <User> Search for something
+
+      [2025-01-07 19:31] <Assistant> Grep(pattern: "with_timezone", path: "/project")
+        ⎿  Found 3 files
+    OUTPUT
+    assert_equal expected, renderer.output
+  end
+
+  def test_renders_task_with_description_in_normal_mode
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Explore the codebase"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Task","input":{"prompt":"Explore how tool calls work in this codebase","subagent_type":"Explore","description":"Explore tool calls"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"Found the implementation in session_renderer.rb"}]},"toolUseResult":{"status":"completed","result":"Found the implementation in session_renderer.rb and project.rb. The tool calls are parsed from content_blocks."}}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+    renderer = ClaudeHistory::SessionRenderer.new
+
+    with_timezone("Asia/Tokyo") do
+      thread.render(renderer)
+    end
+
+    expected = <<~OUTPUT
+      [2025-01-07 19:30] <User> Explore the codebase
+
+      [2025-01-07 19:31] <Assistant> Task(Explore: Explore tool calls)
+        ⎿  Done
+    OUTPUT
+    assert_equal expected, renderer.output
+  end
+
+  def test_renders_task_with_full_prompt_in_verbose_mode
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Explore the codebase"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Task","input":{"prompt":"Explore how tool calls work in this codebase","subagent_type":"Explore","description":"Explore tool calls"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"Found the implementation"}]},"toolUseResult":{"status":"completed","content":[{"type":"text","text":"Found the implementation in session_renderer.rb and project.rb. The tool calls are parsed from content_blocks."}]}}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+    renderer = ClaudeHistory::SessionRenderer.new(verbose: true)
+
+    with_timezone("Asia/Tokyo") do
+      thread.render(renderer)
+    end
+
+    expected = <<~OUTPUT
+      [2025-01-07 19:30] <User> Explore the codebase
+
+      [2025-01-07 19:31] <Assistant> Task(Explore: Explore how tool calls work in this codebase)
+        ⎿  Found the implementation in session_renderer.rb and project.rb. The tool calls are parsed from content_blocks.
+    OUTPUT
+    assert_equal expected, renderer.output
+  end
+
   def test_renders_tool_result
     project = build_project(
       "test.jsonl" => <<~JSONL
@@ -266,7 +338,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"List files"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Bash","input":{"command":"ls -la"}}]}}
-        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"line1\\nline2\\nline3\\nline4\\nline5"}]},"toolUseResult":"line1\\nline2\\nline3\\nline4\\nline5"}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"line1\\nline2\\nline3\\nline4\\nline5"}]},"toolUseResult":{"stdout":"line1\\nline2\\nline3\\nline4\\nline5","stderr":"","interrupted":false,"isImage":false}}
       JSONL
     )
     thread = project.session("test").threads.first
