@@ -19,6 +19,7 @@ module ClaudeHistory
     end
 
     def format_tool_result(result)
+      return format_string_result(result) if result.is_a?(String)
       return "Done" unless result.is_a?(Hash)
 
       # Edit tool result (has structuredPatch)
@@ -36,6 +37,25 @@ module ClaudeHistory
         end
       else
         "Done"
+      end
+    end
+
+    def format_string_result(result)
+      lines = result.lines.map(&:chomp)
+      return "Done" if lines.empty?
+
+      if @verbose
+        output = lines.first
+        lines[1..].each { |line| output += "\n     #{line}" }
+        output
+      else
+        preview_lines = lines.first(3)
+        remaining = lines.size - 3
+
+        output = preview_lines.first
+        preview_lines[1..].each { |line| output += "\n     #{line}" }
+        output += "\n     … +#{remaining} lines" if remaining > 0
+        output
       end
     end
 
@@ -116,6 +136,18 @@ module ClaudeHistory
       when "Read", "Edit", "Write"
         file = File.basename(input[:file_path])
         "#{name}(#{file})"
+      when "Bash"
+        command = input[:command] || ""
+        if @verbose
+          "#{name}(#{command})"
+        else
+          first_line = command.lines.first&.chomp || ""
+          if command.lines.size > 1
+            "#{name}(#{first_line}…)"
+          else
+            "#{name}(#{first_line})"
+          end
+        end
       else
         "#{name}(...)"
       end

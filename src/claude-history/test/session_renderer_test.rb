@@ -208,12 +208,40 @@ class SessionRendererTest < ClaudeHistory::TestCase
     assert_equal expected, renderer.output
   end
 
-  def test_renders_string_tool_result
+  def test_verbose_shows_full_bash_command_and_output
     project = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Do something"}}
-        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Bash","input":{"command":"ls"}}]}}
-        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"file1.txt\\nfile2.txt"}]},"toolUseResult":"file1.txt\\nfile2.txt"}
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Run it"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Bash","input":{"command":"echo hello &&\\necho world"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"line1\\nline2\\nline3\\nline4\\nline5"}]},"toolUseResult":"line1\\nline2\\nline3\\nline4\\nline5"}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+    renderer = ClaudeHistory::SessionRenderer.new(verbose: true)
+
+    with_timezone("Asia/Tokyo") do
+      thread.render(renderer)
+    end
+
+    expected = <<~OUTPUT
+      [2025-01-07 19:30] <User> Run it
+
+      [2025-01-07 19:31] <Assistant> Bash(echo hello &&
+      echo world)
+        ⎿  line1
+           line2
+           line3
+           line4
+           line5
+    OUTPUT
+    assert_equal expected, renderer.output
+  end
+
+  def test_renders_multiline_bash_command_truncated
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Run script"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Bash","input":{"command":"echo hello && \\necho world"}}]}}
       JSONL
     )
     thread = project.session("test").threads.first
@@ -223,7 +251,34 @@ class SessionRendererTest < ClaudeHistory::TestCase
       thread.render(renderer)
     end
 
-    assert_includes renderer.output, "⎿  Done"
+    assert_includes renderer.output, "Bash(echo hello && …)"
+  end
+
+  def test_renders_bash_with_command_and_output_preview
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"List files"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Bash","input":{"command":"ls -la"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"line1\\nline2\\nline3\\nline4\\nline5"}]},"toolUseResult":"line1\\nline2\\nline3\\nline4\\nline5"}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+    renderer = ClaudeHistory::SessionRenderer.new
+
+    with_timezone("Asia/Tokyo") do
+      thread.render(renderer)
+    end
+
+    expected = <<~OUTPUT
+      [2025-01-07 19:30] <User> List files
+
+      [2025-01-07 19:31] <Assistant> Bash(ls -la)
+        ⎿  line1
+           line2
+           line3
+           … +2 lines
+    OUTPUT
+    assert_equal expected, renderer.output
   end
 
   private
