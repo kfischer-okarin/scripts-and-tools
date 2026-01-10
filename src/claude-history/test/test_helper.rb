@@ -6,6 +6,9 @@ require "securerandom"
 require "tmpdir"
 require_relative "../lib/claude_history"
 
+# Run all tests in JST (UTC+9) for consistent timezone behavior
+ENV["TZ"] = "Asia/Tokyo"
+
 module ClaudeHistory
   class TestCase < Minitest::Test
     def before_setup

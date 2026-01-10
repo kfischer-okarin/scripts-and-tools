@@ -12,9 +12,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     # 10:30 UTC = 19:30 JST
     assert_equal "[2025-01-07 19:30] <User> Hello world\n", renderer.output
@@ -30,9 +28,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     assert_equal "[2025-01-07 19:30] <User> /init\n", renderer.output
   end
@@ -47,9 +43,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     assert_equal "[2025-01-07 19:30] <User> /commit -m fix\n", renderer.output
   end
@@ -64,9 +58,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Hello
@@ -86,9 +78,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Read file.txt
@@ -109,9 +99,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Search for something
@@ -133,9 +121,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Explore the codebase
@@ -157,9 +143,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new(verbose: true)
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Explore the codebase
@@ -181,9 +165,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Read file.txt
@@ -205,9 +187,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Edit file.txt
@@ -236,9 +216,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new(verbose: true)
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     assert_includes renderer.output, "Let me think about this..."
   end
@@ -254,9 +232,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     refute_includes renderer.output, "Let me think about this..."
     assert_includes renderer.output, "Hi there!"
@@ -273,9 +249,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Hello
@@ -298,9 +272,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new(verbose: true)
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> Run it
@@ -326,9 +298,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     assert_includes renderer.output, "Bash(echo hello && …)"
   end
@@ -344,9 +314,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
     thread = project.session("test").threads.first
     renderer = ClaudeHistory::SessionRenderer.new
 
-    with_timezone("Asia/Tokyo") do
-      thread.render(renderer)
-    end
+    thread.render(renderer)
 
     expected = <<~OUTPUT
       [2025-01-07 19:30] <User> List files
@@ -360,13 +328,4 @@ class SessionRendererTest < ClaudeHistory::TestCase
     assert_equal expected, renderer.output
   end
 
-  private
-
-  def with_timezone(tz)
-    old_tz = ENV["TZ"]
-    ENV["TZ"] = tz
-    yield
-  ensure
-    ENV["TZ"] = old_tz
-  end
 end
