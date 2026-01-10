@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+# Get the directory where this script is located
+PROJECT_DIR="$(dirname $0)/../src/claude-history"
+
+eval $(mise env --cd $PROJECT_DIR)
+
+exec bundle exec --gemfile $PROJECT_DIR/Gemfile $PROJECT_DIR/exe/claude-history "$@"
