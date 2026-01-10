@@ -2,18 +2,20 @@
 
 module ClaudeHistory
   class SessionRenderer
-    attr_reader :output
-
     def initialize(verbose: false)
       @verbose = verbose
       @output = +""
+    end
+
+    def output
+      @output.rstrip + "\n"
     end
 
     # Note: tool_result messages are skipped during parsing and aggregated
     # into AssistantMessage's tool_call_records instead
     def render_user_message(record)
       ts = format_timestamp(record)
-      @output << "#{ts}<User> #{record.content}\n"
+      @output << "#{ts}<User> #{record.content}\n\n"
     end
 
     def format_tool_result(result)
@@ -68,16 +70,16 @@ module ClaudeHistory
 
     def render_built_in_command(record)
       ts = format_timestamp(record)
-      @output << "#{ts}<User> #{record.command_name}\n"
+      @output << "#{ts}<User> #{record.command_name}\n\n"
     end
 
     def render_user_defined_command(record)
       ts = format_timestamp(record)
       args = record.command_args&.strip
       if args && !args.empty?
-        @output << "#{ts}<User> #{record.command_name} #{args}\n"
+        @output << "#{ts}<User> #{record.command_name} #{args}\n\n"
       else
-        @output << "#{ts}<User> #{record.command_name}\n"
+        @output << "#{ts}<User> #{record.command_name}\n\n"
       end
     end
 
@@ -86,17 +88,18 @@ module ClaudeHistory
       record.content_blocks&.each do |block|
         case block[:type]
         when "text"
-          @output << "\n#{ts}<Assistant> #{block[:text]}\n"
+          @output << "#{ts}<Assistant> #{block[:text]}\n"
         when "tool_use"
           render_tool_call(ts, block, record.tool_call_records)
         when "thinking"
-          @output << "\n#{ts}💭 #{block[:thinking]}\n" if @verbose
+          @output << "#{ts}💭 #{block[:thinking]}\n" if @verbose
         end
       end
+      @output << "\n"
     end
 
     def render_tool_call(timestamp, block, tool_call_records)
-      @output << "\n#{timestamp}<Assistant> #{format_tool_use(block)}\n"
+      @output << "#{timestamp}<Assistant> #{format_tool_use(block)}\n"
 
       tool_call = tool_call_records.find { |tc| tc.tool_use_id == block[:id] }
       return unless tool_call&.tool_result_data

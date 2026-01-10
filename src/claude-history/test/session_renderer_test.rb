@@ -183,6 +183,31 @@ class SessionRendererTest < ClaudeHistory::TestCase
     assert_includes renderer.output, "Hi there!"
   end
 
+  def test_renders_blank_line_between_assistant_and_next_user
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Hello"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"text","text":"Hi there!"}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:32:00Z","message":{"role":"user","content":"Thanks"}}
+      JSONL
+    )
+    thread = project.session("test").threads.first
+    renderer = ClaudeHistory::SessionRenderer.new
+
+    with_timezone("Asia/Tokyo") do
+      thread.render(renderer)
+    end
+
+    expected = <<~OUTPUT
+      [2025-01-07 19:30] <User> Hello
+
+      [2025-01-07 19:31] <Assistant> Hi there!
+
+      [2025-01-07 19:32] <User> Thanks
+    OUTPUT
+    assert_equal expected, renderer.output
+  end
+
   def test_renders_string_tool_result
     project = build_project(
       "test.jsonl" => <<~JSONL
