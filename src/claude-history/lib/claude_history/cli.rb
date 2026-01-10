@@ -59,6 +59,11 @@ module ClaudeHistory
       raise Error, "Thread not found: #{options[:thread]}" if options[:thread] && thread.nil?
       raise Error, "Session has no threads" if thread.nil?
 
+      puts "Project: #{project_id}"
+      puts "Session: #{session.id}"
+      puts "Thread:  #{thread.id}"
+      puts
+
       renderer = SessionRenderer.new(verbose: options[:verbose])
       thread.render(renderer)
       puts renderer.output
