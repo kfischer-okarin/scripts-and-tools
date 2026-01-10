@@ -271,15 +271,76 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal :text, session.records.first.content_type
   end
 
-  def test_user_message_content_type_tool_result
+  def test_session_excludes_tool_result_records
     project = build_project(
       "test.jsonl" => <<~JSONL
-        {"type":"user","uuid":"123","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"file contents"}]}}
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read file.txt"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Read","input":{"file_path":"/path/file.txt"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"file contents"}]},"toolUseResult":{"type":"text","file":{"numLines":10}}}
       JSONL
     )
     session = project.session("test")
 
-    assert_equal :tool_result, session.records.first.content_type
+    # tool_result should be skipped (data aggregated into AssistantMessage)
+    assert_equal 2, session.records.size
+    assert_equal %w[user assistant], session.records.map(&:type)
+  end
+
+  def test_assistant_message_has_tool_call_records_for_tool_use_blocks
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read file.txt"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Read","input":{"file_path":"/path/file.txt"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"file contents"}]},"toolUseResult":{"type":"text","file":{"numLines":10}}}
+      JSONL
+    )
+    session = project.session("test")
+    assistant = session.records.find { |r| r.is_a?(ClaudeHistory::AssistantMessage) }
+
+    assert_equal 1, assistant.tool_call_records.size
+    tool_call = assistant.tool_call_records.first
+
+    assert_equal "toolu_123", tool_call.tool_use_id
+    assert_equal "Read", tool_call.tool_name
+    assert_equal({ file_path: "/path/file.txt" }, tool_call.tool_input)
+    assert_equal({ type: "text", file: { numLines: 10 } }, tool_call.tool_result_data)
+  end
+
+  def test_tool_call_records_match_results_by_tool_use_id_not_order
+    # Tool results may appear in different order than tool calls
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read two files"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_AAA","name":"Read","input":{"file_path":"/first.txt"}},{"type":"tool_use","id":"toolu_BBB","name":"Read","input":{"file_path":"/second.txt"}}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_BBB","content":"second"}]},"toolUseResult":{"type":"text","file":{"numLines":20}}}
+        {"type":"user","uuid":"4","parentUuid":"3","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_AAA","content":"first"}]},"toolUseResult":{"type":"text","file":{"numLines":10}}}
+      JSONL
+    )
+    session = project.session("test")
+    assistant = session.records.find { |r| r.is_a?(ClaudeHistory::AssistantMessage) }
+
+    assert_equal 2, assistant.tool_call_records.size
+
+    first_call = assistant.tool_call_records.find { |tc| tc.tool_use_id == "toolu_AAA" }
+    second_call = assistant.tool_call_records.find { |tc| tc.tool_use_id == "toolu_BBB" }
+
+    # Results matched by tool_use_id, not by order
+    assert_equal 10, first_call.tool_result_data[:file][:numLines]
+    assert_equal 20, second_call.tool_result_data[:file][:numLines]
+  end
+
+  def test_tool_call_record_has_nil_result_when_no_result_exists
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read file"}}
+        {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Read","input":{"file_path":"/file.txt"}}]}}
+      JSONL
+    )
+    session = project.session("test")
+    assistant = session.records.find { |r| r.is_a?(ClaudeHistory::AssistantMessage) }
+
+    assert_equal 1, assistant.tool_call_records.size
+    assert_nil assistant.tool_call_records.first.tool_result_data
   end
 
   def test_session_excludes_clear_command_and_preserves_tree

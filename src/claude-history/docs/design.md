@@ -12,6 +12,7 @@ CLI (Thor, humble object - just delegates to History)
                     │     │     ├── BuiltInCommandRecord (built-in commands with optional stdout)
                     │     │     └── UserDefinedCommandRecord (reusable prompts with expanded prompt)
                     │     ├── AssistantMessage
+                    │     │     └── ToolCallRecord (tool_use block + paired tool_result)
                     │     └── Summary
                     ├── Segment (contiguous records between branch points)
                     │     └── Segment... (children at branch points)
@@ -33,6 +34,22 @@ for its leaf, if any). Access all threads via `session.threads`.
 Development is behavior-driven from the History object - new CLI features start
 as History tests, which drive out the underlying Project/Session/Record
 functionality.
+
+## Record Aggregation
+
+Some JSONL records are paired with related records during parsing. The Parser
+indexes these relationships and passes paired data to constructors. Paired
+records are skipped from the main record list.
+
+| Record Type | Paired With | Indexed By |
+|-------------|-------------|------------|
+| BuiltInCommandRecord | stdout UserMessage | parent_uuid |
+| UserDefinedCommandRecord | expanded prompt (isMeta) | parent_uuid |
+| AssistantMessage.tool_call_records | tool_result UserMessage | tool_use_id |
+
+Key design constraint: One JSONL line maps to 0-1 Record objects. ToolCallRecord
+is not a Record subclass - it's a simple data class embedded in AssistantMessage
+because a single assistant JSONL record can contain multiple tool_use blocks.
 
 ## Rendering
 

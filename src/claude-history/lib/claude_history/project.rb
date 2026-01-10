@@ -121,6 +121,8 @@ module ClaudeHistory
         @stdout_by_parent = {}
         # Index expanded prompts by parent for user-defined command pairing
         @expanded_prompt_by_parent = {}
+        # Index tool results by tool_use_id for tool call pairing
+        @tool_result_by_use_id = {}
 
         @all_raw_entries.each do |entry|
           data = entry[:data]
@@ -132,6 +134,9 @@ module ClaudeHistory
 
           if stdout_message?(content)
             @stdout_by_parent[parent_uuid] = data
+          elsif tool_result_message?(content)
+            tool_use_id = content.first[:tool_use_id]
+            @tool_result_by_use_id[tool_use_id] = data[:toolUseResult]
           elsif data[:isMeta] == true && content.is_a?(Array)
             @expanded_prompt_by_parent[parent_uuid] = data
           end
@@ -155,9 +160,17 @@ module ClaudeHistory
 
         return true if type == "user" && stdout_message?(content)
         return true if type == "user" && skipped_command?(content)
+        return true if type == "user" && tool_result_message?(content)
         return true if SKIPPED_TYPES.include?(type)
 
         false
+      end
+
+      def tool_result_message?(content)
+        content.is_a?(Array) &&
+          content.size == 1 &&
+          content.first.is_a?(Hash) &&
+          content.first[:type] == "tool_result"
       end
 
       def skipped_command?(content)
@@ -189,6 +202,8 @@ module ClaudeHistory
           @all_summaries << Summary.new(data, line_number, filename)
         elsif command_message?(type, content)
           construct_command_record(data, line_number, filename)
+        elsif type == "assistant"
+          @all_records << AssistantMessage.new(data, line_number, filename, tool_results_index: @tool_result_by_use_id)
         elsif RECORD_TYPES.key?(type)
           @all_records << RECORD_TYPES[type].new(data, line_number, filename)
         else

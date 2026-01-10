@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
-  # User message record. Classifies content into types: :text, :tool_result,
-  # :command, :interrupt, or :unknown (with warning). Note: command messages
-  # are constructed as CommandRecord subclass by Project.
+  # User message record. Classifies content into types: :text, :command,
+  # :interrupt, or :unknown (with warning).
+  #
+  # Note: command messages are constructed as CommandRecord subclass by Project.
+  # Note: tool_result messages are skipped during parsing and aggregated into
+  # AssistantMessage's tool_call_records instead.
   class UserMessage < Record
     INTERRUPT_MARKER = "[Request interrupted by user]"
 
@@ -40,9 +43,8 @@ module ClaudeHistory
           :text
         end
       when Array
-        if content.size == 1 && content.first[:type] == "tool_result"
-          :tool_result
-        elsif content.size == 1 && content.first[:type] == "text" && content.first[:text] == INTERRUPT_MARKER
+        # Note: tool_result messages are skipped during parsing (see Project::Parser)
+        if content.size == 1 && content.first[:type] == "text" && content.first[:text] == INTERRUPT_MARKER
           :interrupt
         else
           add_warning(Warning.new(

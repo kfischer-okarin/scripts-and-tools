@@ -9,22 +9,11 @@ module ClaudeHistory
       @output = +""
     end
 
+    # Note: tool_result messages are skipped during parsing and aggregated
+    # into AssistantMessage's tool_call_records instead
     def render_user_message(record)
-      case record.content_type
-      when :tool_result
-        render_tool_result(record)
-      else
-        ts = format_timestamp(record)
-        @output << "#{ts}<User> #{record.content}\n"
-      end
-    end
-
-    def render_tool_result(record)
-      result = record.raw_data[:toolUseResult]
-      return unless result
-
-      summary = format_tool_result(result)
-      @output << "  ⎿  #{summary}\n"
+      ts = format_timestamp(record)
+      @output << "#{ts}<User> #{record.content}\n"
     end
 
     def format_tool_result(result)
@@ -99,11 +88,21 @@ module ClaudeHistory
         when "text"
           @output << "\n#{ts}<Assistant> #{block[:text]}\n"
         when "tool_use"
-          @output << "\n#{ts}<Assistant> #{format_tool_use(block)}\n"
+          render_tool_call(ts, block, record.tool_call_records)
         when "thinking"
           @output << "\n#{ts}💭 #{block[:thinking]}\n" if @verbose
         end
       end
+    end
+
+    def render_tool_call(timestamp, block, tool_call_records)
+      @output << "\n#{timestamp}<Assistant> #{format_tool_use(block)}\n"
+
+      tool_call = tool_call_records.find { |tc| tc.tool_use_id == block[:id] }
+      return unless tool_call&.tool_result_data
+
+      summary = format_tool_result(tool_call.tool_result_data)
+      @output << "  ⎿  #{summary}\n"
     end
 
     def format_tool_use(block)

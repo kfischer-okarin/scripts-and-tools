@@ -5,6 +5,7 @@ module ClaudeHistory
 end
 
 require_relative "claude_history/record"
+require_relative "claude_history/records/tool_call_record"
 require_relative "claude_history/records/assistant_message"
 require_relative "claude_history/records/summary"
 require_relative "claude_history/records/user_message"
