@@ -127,7 +127,7 @@ class SessionRendererTest < ClaudeHistory::TestCase
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-07T10:30:00Z","message":{"role":"user","content":"Edit file.txt"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-07T10:31:00Z","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Edit","input":{"file_path":"/path/to/file.txt","old_string":"old","new_string":"new"}}]}}
-        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"edited"}]},"toolUseResult":{"filePath":"/path/to/file.txt","structuredPatch":[{"oldStart":1,"oldLines":2,"newStart":1,"newLines":5,"lines":[" context","-removed1","-removed2","+added1","+added2","+added3"]}]}}
+        {"type":"user","uuid":"3","parentUuid":"2","timestamp":"2025-01-07T10:31:01Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_123","content":"edited"}]},"toolUseResult":{"filePath":"/path/to/file.txt","structuredPatch":[{"oldStart":1,"oldLines":2,"newStart":1,"newLines":6,"lines":[" context","-removed1","-removed2"," ","+added1","+added2","+added3"]}]}}
       JSONL
     )
     thread = project.session("test").threads.first
@@ -142,6 +142,13 @@ class SessionRendererTest < ClaudeHistory::TestCase
 
       [2025-01-07 19:31] <Assistant> Edit(file.txt)
         ⎿  Removed 2 lines, added 3 lines
+              1    context
+                -  removed1
+                -  removed2
+              2
+              3 +  added1
+              4 +  added2
+              5 +  added3
     OUTPUT
     assert_equal expected, renderer.output
   end

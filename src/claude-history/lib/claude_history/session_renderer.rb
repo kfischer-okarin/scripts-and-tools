@@ -75,7 +75,29 @@ module ClaudeHistory
       parts = []
       parts << "Removed #{removed} lines" if removed > 0
       parts << "added #{added} lines" if added > 0
-      parts.empty? ? "No changes" : parts.join(", ")
+      summary = parts.empty? ? "No changes" : parts.join(", ")
+
+      # Build diff output with line numbers
+      diff_lines = []
+      patches.each do |patch|
+        line_num = patch[:newStart]
+        patch[:lines]&.each do |line|
+          content = line[1..] || ""
+          if line.start_with?("+")
+            diff_lines << format("%4d +  %s", line_num, content).rstrip
+            line_num += 1
+          elsif line.start_with?("-")
+            diff_lines << format("     -  %s", content).rstrip
+          else
+            diff_lines << format("%4d    %s", line_num, content).rstrip
+            line_num += 1
+          end
+        end
+      end
+
+      output = summary
+      diff_lines.each { |line| output += "\n     #{line}" }
+      output
     end
 
     private
