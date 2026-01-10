@@ -121,6 +121,87 @@ class HistoryTest < ClaudeHistory::TestCase
     assert_includes error.message, "xyz99"
   end
 
+  def test_sessions_updated_on_returns_threads_with_activity_on_date
+    build_project("project-a", {
+      "session-a.jsonl" => build_session_jsonl("session-a", "2025-01-15T10:00:00+09:00")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    results = history.sessions_updated_on(Date.new(2025, 1, 15))
+
+    assert_equal 1, results.size
+    assert_equal "project-a", results[0][:project].id
+    assert_equal "session-a", results[0][:session].id
+  end
+
+  def test_sessions_updated_on_excludes_sessions_from_other_dates
+    build_project("project-a", {
+      "session-target.jsonl" => build_session_jsonl("target", "2025-01-15T10:00:00+09:00"),
+      "session-other.jsonl" => build_session_jsonl("other", "2025-01-14T10:00:00+09:00")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    results = history.sessions_updated_on(Date.new(2025, 1, 15))
+
+    assert_equal 1, results.size
+    assert_equal "session-target", results[0][:session].id
+  end
+
+  def test_sessions_updated_on_returns_user_message_count_for_target_date
+    build_project("project-a", {
+      "session-a.jsonl" => build_session_jsonl("session-a", "2025-01-15T10:00:00+09:00")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    results = history.sessions_updated_on(Date.new(2025, 1, 15))
+
+    # build_session_jsonl creates 1 user message and 1 assistant message
+    assert_equal 1, results[0][:message_count]
+  end
+
+  def test_sessions_updated_on_sorts_by_latest_timestamp_on_date_descending
+    # Timestamps in JST (UTC+9) - both on Jan 15 JST
+    build_project("project-a", {
+      "session-early.jsonl" => build_session_jsonl("early", "2025-01-15T08:00:00+09:00"),
+      "session-late.jsonl" => build_session_jsonl("late", "2025-01-15T20:00:00+09:00")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    results = history.sessions_updated_on(Date.new(2025, 1, 15))
+
+    assert_equal 2, results.size
+    assert_equal "session-late", results[0][:session].id
+    assert_equal "session-early", results[1][:session].id
+  end
+
+  def test_sessions_updated_on_spans_multiple_projects
+    build_project("project-a", {
+      "session-a.jsonl" => build_session_jsonl("session-a", "2025-01-15T10:00:00+09:00")
+    })
+    build_project("project-b", {
+      "session-b.jsonl" => build_session_jsonl("session-b", "2025-01-15T12:00:00+09:00")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    results = history.sessions_updated_on(Date.new(2025, 1, 15))
+
+    assert_equal 2, results.size
+    project_ids = results.map { |r| r[:project].id }
+    assert_includes project_ids, "project-a"
+    assert_includes project_ids, "project-b"
+  end
+
+  def test_sessions_updated_on_returns_empty_array_when_no_activity
+    build_project("project-a", {
+      "session-a.jsonl" => build_session_jsonl("session-a", "2025-01-14T10:00:00+09:00")
+    })
+
+    history = ClaudeHistory::History.new(@projects_path)
+    results = history.sessions_updated_on(Date.new(2025, 1, 15))
+
+    assert_empty results
+  end
+
   private
 
   def build_session_jsonl(session_id, timestamp)

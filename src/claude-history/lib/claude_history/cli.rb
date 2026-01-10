@@ -64,6 +64,15 @@ module ClaudeHistory
       puts renderer.output
     end
 
+    desc "sessions-updated-on DATE", "List sessions with activity on a specific date (YYYY-MM-DD)"
+    method_option :full_ids, type: :boolean, default: false, desc: "Show full session/thread IDs"
+    def sessions_updated_on(date)
+      target_date = Date.parse(date)
+      history = History.new(PROJECTS_PATH)
+      results = history.sessions_updated_on(target_date)
+      print_sessions_updated_on_table(results, target_date)
+    end
+
     private
 
     def print_projects_table(projects)
@@ -221,6 +230,14 @@ module ClaudeHistory
       }
     ])
 
+    SESSIONS_UPDATED_ON_TABLE_PRINTER = TablePrinter.new([
+      { name: "PROJECT", color: :cyan },
+      { name: "SESSION", color: :green },
+      { name: "THREAD", color: :green },
+      { name: "MSGS", color: :grey },
+      { name: "SUMMARY", width: SUMMARY_WIDTH }
+    ])
+
     def print_sessions_table(sessions, project_id:, total:, show_threads:, full_ids:)
       return puts "No sessions found." if sessions.empty?
 
@@ -251,6 +268,28 @@ module ClaudeHistory
       end
 
       SESSION_TABLE_PRINTER.print(rows)
+    end
+
+    def print_sessions_updated_on_table(results, target_date)
+      if results.empty?
+        puts "No sessions found with activity on #{target_date}"
+        return
+      end
+
+      puts "Sessions with activity on #{target_date}:"
+      puts
+
+      rows = results.map do |r|
+        [
+          r[:project].id,
+          options[:full_ids] ? r[:session].id : truncate_id(r[:session].id),
+          options[:full_ids] ? r[:thread].id : truncate_id(r[:thread].id),
+          r[:message_count].to_s,
+          CLI.thread_summary(r[:thread], max_length: SUMMARY_WIDTH)
+        ]
+      end
+
+      SESSIONS_UPDATED_ON_TABLE_PRINTER.print(rows)
     end
 
     def format_timestamp(timestamp)

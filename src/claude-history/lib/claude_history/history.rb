@@ -50,6 +50,37 @@ module ClaudeHistory
       matches.first
     end
 
+    def sessions_updated_on(date)
+      start_time = date.to_time
+      end_time = (date + 1).to_time
+      results = []
+
+      projects.each do |project|
+        sessions(project_id: project.id).each do |session|
+          session.threads.each do |thread|
+            messages_on_date = thread.messages.select do |record|
+              ts = record.timestamp
+              ts && ts >= start_time && ts < end_time
+            end
+
+            next if messages_on_date.empty?
+
+            user_messages_on_date = messages_on_date.count { |m| m.is_a?(UserMessage) }
+
+            results << {
+              project: project,
+              session: session,
+              thread: thread,
+              message_count: user_messages_on_date,
+              latest_timestamp: messages_on_date.map(&:timestamp).max
+            }
+          end
+        end
+      end
+
+      results.sort_by { |r| r[:latest_timestamp] }.reverse
+    end
+
     private
 
     def project(project_id)
