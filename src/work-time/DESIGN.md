@@ -79,11 +79,13 @@ Date             | Work     | Overtime
 2024-12-10 (Tue) |     8:00 |   +0:00
 2024-12-11 (Wed) |     7:00 |   -1:00
 2024-12-15 (Sun) |     2:00 |   +2:00  [0h expected]
+2024-12-16 (Mon) |     4:30 |   -3:30  [working]
 -----------------------------------------
-Total overtime: +1:00
+Total overtime: -0:30
 ```
 
-Days with non-standard expected hours (set via `set_hours`) show `[Xh expected]` suffix.
+- Days with non-standard expected hours (set via `set_hours`) show `[Xh expected]` suffix.
+- Active working days (currently working/on break/on lunch) show `[working]` suffix with work time calculated as of current moment.
 
 ## Architecture
 

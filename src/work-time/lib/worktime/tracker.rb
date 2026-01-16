@@ -171,7 +171,7 @@ module Worktime
         lines.join("\n")
       end
     end
-    DayStats = Data.define(:date, :work_minutes, :expected_minutes, :overtime_minutes)
+    DayStats = Data.define(:date, :work_minutes, :expected_minutes, :overtime_minutes, :active)
     MonthStats = Data.define(:days, :total_overtime_minutes)
 
     def initialize(data_dir:, now: Time.now)
@@ -270,11 +270,13 @@ module Worktime
         work_log = work_log_for_date(date)
         work_mins = work_minutes_for_log(work_log)
         expected_mins = expected_minutes_for_date(date)
+        is_active = !%i[unstarted stopped].include?(work_log.state)
         DayStats.new(
           date: date,
           work_minutes: work_mins,
           expected_minutes: expected_mins,
-          overtime_minutes: work_mins - expected_mins
+          overtime_minutes: work_mins - expected_mins,
+          active: is_active
         )
       end
       MonthStats.new(days: days, total_overtime_minutes: days.sum(&:overtime_minutes))
@@ -291,9 +293,10 @@ module Worktime
     end
 
     def work_minutes_for_log(work_log)
-      return 0 unless work_log.start_time && work_log.stop_time
+      return 0 unless work_log.start_time
 
-      total = ((work_log.stop_time - work_log.start_time) / 60).to_i
+      end_time = work_log.stop_time || @now
+      total = ((end_time - work_log.start_time) / 60).to_i
       total - break_minutes_for_log(work_log)
     end
 

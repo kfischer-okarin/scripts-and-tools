@@ -88,6 +88,7 @@ module Worktime
       stats.days.each do |day|
         row = "#{day.date} (#{day.date.strftime('%a')}) | #{format_duration(day.work_minutes).rjust(8)} | #{format_overtime(day.overtime_minutes).rjust(7)}"
         row += "  [#{day.expected_minutes / 60}h expected]" if day.expected_minutes != 480
+        row += "  [working]" if day.active
         puts row
       end
       puts "-" * 41

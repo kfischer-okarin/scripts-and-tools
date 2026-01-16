@@ -238,6 +238,66 @@ class TrackerTest < Minitest::Test
     assert_equal 60, result.total_overtime_minutes
   end
 
+  def test_month_statistics_shows_work_minutes_for_active_day
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_one = Time.new(2024, 12, 10, 13, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
+    result = tracker.month_statistics
+
+    assert_equal 4 * 60, result.days[0].work_minutes
+  end
+
+  def test_month_statistics_marks_active_day
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_one = Time.new(2024, 12, 10, 13, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
+    result = tracker.month_statistics
+
+    assert result.days[0].active
+  end
+
+  def test_month_statistics_marks_completed_day_as_not_active
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_five = Time.new(2024, 12, 10, 17, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_five)
+    tracker.stop
+
+    result = tracker.month_statistics
+
+    refute result.days[0].active
+  end
+
+  def test_month_statistics_active_day_deducts_breaks
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    at_noon = Time.new(2024, 12, 10, 12, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_noon)
+    tracker.toggle_lunch
+
+    at_twelve_thirty = Time.new(2024, 12, 10, 12, 30, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_twelve_thirty)
+    tracker.toggle_lunch
+
+    at_one = Time.new(2024, 12, 10, 13, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_one)
+    result = tracker.month_statistics
+
+    # 9:00-13:00 = 4h, minus 30 min lunch = 3.5h = 210 minutes
+    assert_equal 210, result.days[0].work_minutes
+    assert result.days[0].active
+  end
+
   def test_projected_end_time_after_lunch
     at_nine = Time.new(2024, 12, 10, 9, 0, 0)
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
