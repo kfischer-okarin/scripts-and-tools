@@ -1,19 +1,19 @@
 # frozen_string_literal: true
 
+require "fileutils"
 require "json"
-require "tempfile"
+require "tmpdir"
 
 module WithSecureEnv
   class EnvEditor
     def edit(current_envs)
-      Tempfile.create(["env", ".json"]) do |f|
-        f.write(JSON.pretty_generate(current_envs))
-        f.flush
+      Dir.mktmpdir("with-secure-env") do |dir|
+        path = File.join(dir, "env.json")
+        File.write(path, JSON.pretty_generate(current_envs))
 
-        system(editor, f.path)
+        system(editor, path)
 
-        f.rewind
-        JSON.parse(f.read)
+        JSON.parse(File.read(path))
       end
     end
 
