@@ -11,7 +11,6 @@ module WithSecureEnv
     end
 
     def launch_application(app_path, args, process_context:)
-      envs = @env_storage.get(app_path)
       env_keys = @env_storage.available_keys(app_path)
 
       allowed = @access_policy.check(
@@ -21,6 +20,7 @@ module WithSecureEnv
       )
       raise PermissionDeniedError unless allowed
 
+      envs = @env_storage.get(app_path)
       exec(envs, app_path, *args)
     end
 

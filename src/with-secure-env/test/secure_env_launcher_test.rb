@@ -41,7 +41,7 @@ class SecureEnvLauncherTest < Minitest::Test
     assert_equal ["arg1", "arg2"], captured[:args]
   end
 
-  def test_raises_permission_denied_when_access_denied
+  def test_raises_permission_denied_when_access_denied_without_accessing_secrets
     env_storage = StubEnvStorage.new({ "SECRET_KEY" => "secret_value" })
     access_policy = StubAccessPolicy.new.deny_all
 
@@ -54,6 +54,8 @@ class SecureEnvLauncherTest < Minitest::Test
     assert_raises(WithSecureEnv::PermissionDeniedError) do
       launcher.launch_application("/usr/bin/env", [], process_context: nil)
     end
+
+    refute env_storage.secrets_accessed?, "secrets should not be accessed when permission denied"
   end
 
   def test_edit_envs_saves_updated_envs
@@ -118,10 +120,16 @@ class SecureEnvLauncherTest < Minitest::Test
     def initialize(envs)
       @envs = envs
       @saved_envs = {}
+      @secrets_accessed = false
     end
 
     def get(_app_path)
+      @secrets_accessed = true
       @envs
+    end
+
+    def secrets_accessed?
+      @secrets_accessed
     end
 
     def set(app_path, envs)
