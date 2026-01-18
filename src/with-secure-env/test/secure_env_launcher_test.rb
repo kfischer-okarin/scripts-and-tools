@@ -108,7 +108,7 @@ class SecureEnvLauncherTest < Minitest::Test
     end
   end
 
-  def test_init_initializes_storage
+  def test_init_generates_and_returns_key
     env_storage = StubEnvStorage.new
 
     launcher = WithSecureEnv::SecureEnvLauncher.new(
@@ -117,9 +117,26 @@ class SecureEnvLauncherTest < Minitest::Test
       env_editor: StubEnvEditor.new
     )
 
-    launcher.init
+    key = launcher.init
 
     assert env_storage.initialized?
+    assert_equal env_storage.stored_key, key
+  end
+
+  def test_init_with_existing_key_uses_that_key
+    env_storage = StubEnvStorage.new
+    existing_key = "my-existing-secret-key-for-recovery"
+
+    launcher = WithSecureEnv::SecureEnvLauncher.new(
+      env_storage: env_storage,
+      access_policy: StubAccessPolicy.new,
+      env_editor: StubEnvEditor.new
+    )
+
+    key = launcher.init(key: existing_key)
+
+    assert_equal existing_key, env_storage.stored_key
+    assert_equal existing_key, key
   end
 
   def test_list_applications_returns_configured_apps
@@ -190,14 +207,19 @@ class SecureEnvLauncherTest < Minitest::Test
   end
 
   class StubEnvStorage
+    attr_reader :stored_key
+
     def initialize
       @envs_by_app = {}
       @secrets_accessed = false
       @initialized = false
+      @stored_key = nil
     end
 
-    def init
+    def init(key: nil)
       @initialized = true
+      @stored_key = key || "generated-key-#{rand(1000)}"
+      @stored_key
     end
 
     def initialized?

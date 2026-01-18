@@ -33,8 +33,8 @@ module WithSecureEnv
       @env_storage.set(app_path, updated_envs) if updated_envs
     end
 
-    def init
-      @env_storage.init
+    def init(key: nil)
+      @env_storage.init(key: key)
     end
 
     def list_applications
