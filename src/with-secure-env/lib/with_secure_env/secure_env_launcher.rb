@@ -2,6 +2,7 @@
 
 module WithSecureEnv
   class PermissionDeniedError < StandardError; end
+  class UnknownAppError < StandardError; end
 
   class SecureEnvLauncher
     def initialize(env_storage:, access_policy:, env_editor:)
@@ -11,6 +12,8 @@ module WithSecureEnv
     end
 
     def launch_application(app_path, args, process_context:)
+      raise UnknownAppError, app_path unless @env_storage.app_configured?(app_path)
+
       env_keys = @env_storage.available_keys(app_path)
 
       allowed = @access_policy.check(

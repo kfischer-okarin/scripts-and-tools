@@ -18,7 +18,7 @@ class SecureEnvLauncherTest < Minitest::Test
 
   def test_launches_app_with_envs_and_args_when_access_granted
     process_context = Object.new
-    env_storage = StubEnvStorage.new({ "API_KEY" => "key123", "SECRET" => "secret456" })
+    env_storage = StubEnvStorage.new
     access_policy = StubAccessPolicy.new
 
     launcher = WithSecureEnv::SecureEnvLauncher.new(
@@ -28,6 +28,7 @@ class SecureEnvLauncherTest < Minitest::Test
     )
 
     captured = with_test_app(capture_envs: ["API_KEY", "SECRET"]) do |test_app_path|
+      env_storage.set(test_app_path, { "API_KEY" => "key123", "SECRET" => "secret456" })
       access_policy.expect_check(
         app_path: test_app_path,
         env_keys: ["API_KEY", "SECRET"],
@@ -42,7 +43,8 @@ class SecureEnvLauncherTest < Minitest::Test
   end
 
   def test_raises_permission_denied_when_access_denied_without_accessing_secrets
-    env_storage = StubEnvStorage.new({ "SECRET_KEY" => "secret_value" })
+    env_storage = StubEnvStorage.new
+    env_storage.set("/usr/bin/env", { "SECRET_KEY" => "secret_value" })
     access_policy = StubAccessPolicy.new.deny_all
 
     launcher = WithSecureEnv::SecureEnvLauncher.new(
@@ -59,7 +61,8 @@ class SecureEnvLauncherTest < Minitest::Test
   end
 
   def test_edit_envs_saves_updated_envs
-    env_storage = StubEnvStorage.new({ "OLD_KEY" => "old_value" })
+    env_storage = StubEnvStorage.new
+    env_storage.set("/usr/bin/test", { "OLD_KEY" => "old_value" })
     env_editor = StubEnvEditor.new({ "NEW_KEY" => "new_value" })
 
     launcher = WithSecureEnv::SecureEnvLauncher.new(
@@ -71,11 +74,12 @@ class SecureEnvLauncherTest < Minitest::Test
     launcher.edit_envs("/usr/bin/test")
 
     assert_equal({ "OLD_KEY" => "old_value" }, env_editor.received_current_envs)
-    assert_equal({ "NEW_KEY" => "new_value" }, env_storage.saved_envs["/usr/bin/test"])
+    assert_equal({ "NEW_KEY" => "new_value" }, env_storage.get("/usr/bin/test"))
   end
 
   def test_edit_envs_does_not_save_when_cancelled
-    env_storage = StubEnvStorage.new({ "OLD_KEY" => "old_value" })
+    env_storage = StubEnvStorage.new
+    env_storage.set("/usr/bin/test", { "OLD_KEY" => "old_value" })
     env_editor = StubEnvEditor.new(nil)
 
     launcher = WithSecureEnv::SecureEnvLauncher.new(
@@ -86,7 +90,22 @@ class SecureEnvLauncherTest < Minitest::Test
 
     launcher.edit_envs("/usr/bin/test")
 
-    assert_empty env_storage.saved_envs
+    assert_equal({ "OLD_KEY" => "old_value" }, env_storage.get("/usr/bin/test"))
+  end
+
+  def test_raises_unknown_app_when_no_envs_configured
+    env_storage = StubEnvStorage.new
+    access_policy = StubAccessPolicy.new
+
+    launcher = WithSecureEnv::SecureEnvLauncher.new(
+      env_storage: env_storage,
+      access_policy: access_policy,
+      env_editor: StubEnvEditor.new
+    )
+
+    assert_raises(WithSecureEnv::UnknownAppError) do
+      launcher.launch_application("/unknown/app", [], process_context: nil)
+    end
   end
 
   private
@@ -115,29 +134,30 @@ class SecureEnvLauncherTest < Minitest::Test
   end
 
   class StubEnvStorage
-    attr_reader :saved_envs
-
-    def initialize(envs)
-      @envs = envs
-      @saved_envs = {}
+    def initialize
+      @envs_by_app = {}
       @secrets_accessed = false
     end
 
-    def get(_app_path)
+    def set(app_path, envs)
+      @envs_by_app[app_path] = envs
+    end
+
+    def get(app_path)
       @secrets_accessed = true
-      @envs
+      @envs_by_app[app_path] || {}
     end
 
     def secrets_accessed?
       @secrets_accessed
     end
 
-    def set(app_path, envs)
-      @saved_envs[app_path] = envs
+    def available_keys(app_path)
+      (@envs_by_app[app_path] || {}).keys
     end
 
-    def available_keys(_app_path)
-      @envs.keys
+    def app_configured?(app_path)
+      @envs_by_app.key?(app_path)
     end
   end
 
