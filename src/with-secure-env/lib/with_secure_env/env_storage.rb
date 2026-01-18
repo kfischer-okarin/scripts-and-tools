@@ -7,6 +7,8 @@ require "openssl"
 require "securerandom"
 
 module WithSecureEnv
+  class AlreadyInitializedError < StandardError; end
+
   class EnvStorage
     def initialize(secrets_path:, keychain:)
       @secrets_path = secrets_path
@@ -14,6 +16,10 @@ module WithSecureEnv
     end
 
     def init(key: nil)
+      if File.exist?(@secrets_path)
+        raise AlreadyInitializedError, @secrets_path
+      end
+
       encryption_key = key || generate_key
       @keychain.store_key(encryption_key)
       write_file({})

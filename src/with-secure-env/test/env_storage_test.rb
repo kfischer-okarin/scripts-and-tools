@@ -43,6 +43,19 @@ class EnvStorageTest < Minitest::Test
     assert_equal existing_key, key
   end
 
+  def test_init_raises_if_file_already_exists
+    storage = WithSecureEnv::EnvStorage.new(
+      secrets_path: @secrets_path,
+      keychain: @keychain
+    )
+    storage.init
+
+    error = assert_raises(WithSecureEnv::AlreadyInitializedError) do
+      storage.init
+    end
+    assert_includes error.message, @secrets_path
+  end
+
   def test_set_and_get_roundtrip
     storage = WithSecureEnv::EnvStorage.new(
       secrets_path: @secrets_path,
