@@ -32,5 +32,21 @@ module WithSecureEnv
       updated_envs = @env_editor.edit(current_envs)
       @env_storage.set(app_path, updated_envs) if updated_envs
     end
+
+    def init
+      @env_storage.init
+    end
+
+    def list_applications
+      @env_storage.list_applications
+    end
+
+    def list_env_keys(app_path)
+      @env_storage.available_keys(app_path)
+    end
+
+    def remove(app_path)
+      @env_storage.remove(app_path)
+    end
   end
 end

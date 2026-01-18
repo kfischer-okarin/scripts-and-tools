@@ -108,6 +108,62 @@ class SecureEnvLauncherTest < Minitest::Test
     end
   end
 
+  def test_init_initializes_storage
+    env_storage = StubEnvStorage.new
+
+    launcher = WithSecureEnv::SecureEnvLauncher.new(
+      env_storage: env_storage,
+      access_policy: StubAccessPolicy.new,
+      env_editor: StubEnvEditor.new
+    )
+
+    launcher.init
+
+    assert env_storage.initialized?
+  end
+
+  def test_list_applications_returns_configured_apps
+    env_storage = StubEnvStorage.new
+    env_storage.set("/usr/bin/app1", { "KEY" => "val" })
+    env_storage.set("/usr/bin/app2", { "KEY" => "val" })
+
+    launcher = WithSecureEnv::SecureEnvLauncher.new(
+      env_storage: env_storage,
+      access_policy: StubAccessPolicy.new,
+      env_editor: StubEnvEditor.new
+    )
+
+    assert_equal ["/usr/bin/app1", "/usr/bin/app2"], launcher.list_applications.sort
+  end
+
+  def test_list_env_keys_returns_keys_for_app
+    env_storage = StubEnvStorage.new
+    env_storage.set("/usr/bin/app", { "API_KEY" => "secret", "TOKEN" => "value" })
+
+    launcher = WithSecureEnv::SecureEnvLauncher.new(
+      env_storage: env_storage,
+      access_policy: StubAccessPolicy.new,
+      env_editor: StubEnvEditor.new
+    )
+
+    assert_equal ["API_KEY", "TOKEN"], launcher.list_env_keys("/usr/bin/app").sort
+  end
+
+  def test_remove_deletes_app_config
+    env_storage = StubEnvStorage.new
+    env_storage.set("/usr/bin/app", { "KEY" => "val" })
+
+    launcher = WithSecureEnv::SecureEnvLauncher.new(
+      env_storage: env_storage,
+      access_policy: StubAccessPolicy.new,
+      env_editor: StubEnvEditor.new
+    )
+
+    launcher.remove("/usr/bin/app")
+
+    refute env_storage.app_configured?("/usr/bin/app")
+  end
+
   private
 
   def with_test_app(capture_envs: [])
@@ -137,6 +193,15 @@ class SecureEnvLauncherTest < Minitest::Test
     def initialize
       @envs_by_app = {}
       @secrets_accessed = false
+      @initialized = false
+    end
+
+    def init
+      @initialized = true
+    end
+
+    def initialized?
+      @initialized
     end
 
     def set(app_path, envs)
@@ -158,6 +223,14 @@ class SecureEnvLauncherTest < Minitest::Test
 
     def app_configured?(app_path)
       @envs_by_app.key?(app_path)
+    end
+
+    def list_applications
+      @envs_by_app.keys
+    end
+
+    def remove(app_path)
+      @envs_by_app.delete(app_path)
     end
   end
 
