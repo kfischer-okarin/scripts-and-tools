@@ -1,6 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    base64 (0.3.0)
     minitest (6.0.1)
       prism (~> 1.5)
     prism (1.8.0)
@@ -12,9 +13,10 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  base64 (~> 0.3.0)
   minitest
   rake
   thor
 
 BUNDLED WITH
-   2.5.22
+   2.6.9
