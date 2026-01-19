@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(dirname $0)/../src/mic-cam-status"
+BINARY="$PROJECT_DIR/output/is-mic-on"
+
+if [[ ! -x "$BINARY" ]]; then
+    echo "Binary not found, building..." >&2
+    "$PROJECT_DIR/build.sh" >&2
+fi
+
+exec "$BINARY" "$@"

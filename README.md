@@ -23,6 +23,11 @@ formats (e.g., `1:30.5`, `90s`, `1h`).
 ./bin/extend-loop -i input.mp3 --loop-start 0:18.744 --loop-end 1:52.563 --min-length 1h --output extended.mp3
 ```
 
+## `is-mic-on` / `is-camera-on`
+
+Swift utilities to check if the microphone or camera is currently in use on macOS.
+Returns exit code 0 if in use, 1 if not. Use `-q` for quiet mode (exit code only).
+
 ## `hammerspoon-spoons/`
 
 Custom Hammerspoon Spoons for macOS automation.
