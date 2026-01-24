@@ -38,23 +38,22 @@ func (l *Launcher) EditEnvs(applicationPath string) {
 		encryptedEnvs[envName] = l.encrypt(key, value)
 	}
 
-	fileContent := map[string]map[string]string{
-		applicationPath: encryptedEnvs,
-	}
+	fileContent := l.loadFileContent()
+	fileContent[applicationPath] = encryptedEnvs
 
 	data, _ := json.Marshal(fileContent)
 	os.WriteFile(l.EncryptedEnvPath, data, 0600)
 }
 
-func (l *Launcher) loadEnvs(applicationPath string, key []byte) map[string]string {
-	data, err := os.ReadFile(l.EncryptedEnvPath)
-	if err != nil {
-		return map[string]string{}
-	}
-
-	var fileContent map[string]map[string]string
+func (l *Launcher) loadFileContent() map[string]map[string]string {
+	fileContent := map[string]map[string]string{}
+	data, _ := os.ReadFile(l.EncryptedEnvPath)
 	json.Unmarshal(data, &fileContent)
+	return fileContent
+}
 
+func (l *Launcher) loadEnvs(applicationPath string, key []byte) map[string]string {
+	fileContent := l.loadFileContent()
 	encryptedEnvs := fileContent[applicationPath]
 	if encryptedEnvs == nil {
 		return map[string]string{}

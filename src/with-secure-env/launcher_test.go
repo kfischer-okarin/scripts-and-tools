@@ -97,6 +97,53 @@ func TestEditEnvs_ShowsStoredValuesOnSecondEdit(t *testing.T) {
 	}
 }
 
+func TestEditEnvs_DoesNotUpdateWhenCanceled(t *testing.T) {
+	launcher, kc, dialog := newTestLauncher(t)
+	launcher.Init()
+
+	dialog.returnValues = map[string]string{"SECRET_KEY": "originalvalue"}
+	dialog.returnOk = true
+	launcher.EditEnvs("/path/to/app")
+
+	dialog.returnOk = false
+	launcher.EditEnvs("/path/to/app")
+
+	data, _ := os.ReadFile(launcher.EncryptedEnvPath)
+	var fileContent map[string]map[string]string
+	json.Unmarshal(data, &fileContent)
+
+	decryptedValue := decrypt(t, kc.storedKey, fileContent["/path/to/app"]["SECRET_KEY"])
+	if decryptedValue != "originalvalue" {
+		t.Errorf("expected 'originalvalue', got '%s'", decryptedValue)
+	}
+}
+
+func TestEditEnvs_StoresEnvsForMultipleApps(t *testing.T) {
+	launcher, kc, dialog := newTestLauncher(t)
+	launcher.Init()
+
+	dialog.returnValues = map[string]string{"API_KEY": "app1secret"}
+	dialog.returnOk = true
+	launcher.EditEnvs("/path/to/app1")
+
+	dialog.returnValues = map[string]string{"DB_PASS": "app2secret"}
+	launcher.EditEnvs("/path/to/app2")
+
+	data, _ := os.ReadFile(launcher.EncryptedEnvPath)
+	var fileContent map[string]map[string]string
+	json.Unmarshal(data, &fileContent)
+
+	decrypted1 := decrypt(t, kc.storedKey, fileContent["/path/to/app1"]["API_KEY"])
+	decrypted2 := decrypt(t, kc.storedKey, fileContent["/path/to/app2"]["DB_PASS"])
+
+	if decrypted1 != "app1secret" {
+		t.Errorf("expected 'app1secret', got '%s'", decrypted1)
+	}
+	if decrypted2 != "app2secret" {
+		t.Errorf("expected 'app2secret', got '%s'", decrypted2)
+	}
+}
+
 func newTestLauncher(t *testing.T) (*Launcher, *stubKeychain, *stubEditDialog) {
 	tmpFile, _ := os.CreateTemp("", "envs-*.json")
 	tmpFile.Close()
