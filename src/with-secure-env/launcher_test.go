@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -69,7 +70,7 @@ func TestEditEnvs_SavesEncryptedEnvsToFile(t *testing.T) {
 	dialog.returnOk = true
 	launcher.EditEnvs("/path/to/app")
 
-	data, _ := os.ReadFile(launcher.EncryptedEnvPath)
+	data, _ := os.ReadFile(filepath.Join(launcher.ConfigDirPath, "envs.json"))
 	var fileContent map[string]map[string]string
 	json.Unmarshal(data, &fileContent)
 
@@ -108,7 +109,7 @@ func TestEditEnvs_DoesNotUpdateWhenCanceled(t *testing.T) {
 	dialog.returnOk = false
 	launcher.EditEnvs("/path/to/app")
 
-	data, _ := os.ReadFile(launcher.EncryptedEnvPath)
+	data, _ := os.ReadFile(filepath.Join(launcher.ConfigDirPath, "envs.json"))
 	var fileContent map[string]map[string]string
 	json.Unmarshal(data, &fileContent)
 
@@ -129,7 +130,7 @@ func TestEditEnvs_StoresEnvsForMultipleApps(t *testing.T) {
 	dialog.returnValues = map[string]string{"DB_PASS": "app2secret"}
 	launcher.EditEnvs("/path/to/app2")
 
-	data, _ := os.ReadFile(launcher.EncryptedEnvPath)
+	data, _ := os.ReadFile(filepath.Join(launcher.ConfigDirPath, "envs.json"))
 	var fileContent map[string]map[string]string
 	json.Unmarshal(data, &fileContent)
 
@@ -145,16 +146,15 @@ func TestEditEnvs_StoresEnvsForMultipleApps(t *testing.T) {
 }
 
 func newTestLauncher(t *testing.T) (*Launcher, *stubKeychain, *stubEditDialog) {
-	tmpFile, _ := os.CreateTemp("", "envs-*.json")
-	tmpFile.Close()
-	t.Cleanup(func() { os.Remove(tmpFile.Name()) })
+	tmpDir, _ := os.MkdirTemp("", "config-*")
+	t.Cleanup(func() { os.RemoveAll(tmpDir) })
 
 	kc := &stubKeychain{}
 	dialog := &stubEditDialog{}
 	launcher := &Launcher{
-		Keychain:         kc,
-		EditDialog:       dialog,
-		EncryptedEnvPath: tmpFile.Name(),
+		Keychain:      kc,
+		EditDialog:    dialog,
+		ConfigDirPath: tmpDir,
 	}
 
 	return launcher, kc, dialog

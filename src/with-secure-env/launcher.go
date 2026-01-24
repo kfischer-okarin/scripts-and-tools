@@ -7,15 +7,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"os"
+	"path/filepath"
 
 	"github.com/kfischer-okarin/with-secure-env/editdialog"
 	"github.com/kfischer-okarin/with-secure-env/keychain"
 )
 
 type Launcher struct {
-	Keychain         keychain.Keychain
-	EditDialog       editdialog.EditDialog
-	EncryptedEnvPath string
+	Keychain      keychain.Keychain
+	EditDialog    editdialog.EditDialog
+	ConfigDirPath string
 }
 
 func (l *Launcher) Init() {
@@ -42,14 +43,7 @@ func (l *Launcher) EditEnvs(applicationPath string) {
 	fileContent[applicationPath] = encryptedEnvs
 
 	data, _ := json.Marshal(fileContent)
-	os.WriteFile(l.EncryptedEnvPath, data, 0600)
-}
-
-func (l *Launcher) loadFileContent() map[string]map[string]string {
-	fileContent := map[string]map[string]string{}
-	data, _ := os.ReadFile(l.EncryptedEnvPath)
-	json.Unmarshal(data, &fileContent)
-	return fileContent
+	os.WriteFile(l.encryptedEnvsPath(), data, 0600)
 }
 
 func (l *Launcher) loadEnvs(applicationPath string, key []byte) map[string]string {
@@ -66,14 +60,15 @@ func (l *Launcher) loadEnvs(applicationPath string, key []byte) map[string]strin
 	return decryptedEnvs
 }
 
-func (l *Launcher) decrypt(key []byte, encryptedBase64 string) string {
-	data, _ := base64.StdEncoding.DecodeString(encryptedBase64)
-	block, _ := aes.NewCipher(key)
-	gcm, _ := cipher.NewGCM(block)
-	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, _ := gcm.Open(nil, nonce, ciphertext, nil)
-	return string(plaintext)
+func (l *Launcher) loadFileContent() map[string]map[string]string {
+	fileContent := map[string]map[string]string{}
+	data, _ := os.ReadFile(l.encryptedEnvsPath())
+	json.Unmarshal(data, &fileContent)
+	return fileContent
+}
+
+func (l *Launcher) encryptedEnvsPath() string {
+	return filepath.Join(l.ConfigDirPath, "envs.json")
 }
 
 func (l *Launcher) encrypt(key []byte, plaintext string) string {
@@ -85,4 +80,14 @@ func (l *Launcher) encrypt(key []byte, plaintext string) string {
 
 	ciphertext := gcm.Seal(nonce, nonce, []byte(plaintext), nil)
 	return base64.StdEncoding.EncodeToString(ciphertext)
+}
+
+func (l *Launcher) decrypt(key []byte, encryptedBase64 string) string {
+	data, _ := base64.StdEncoding.DecodeString(encryptedBase64)
+	block, _ := aes.NewCipher(key)
+	gcm, _ := cipher.NewGCM(block)
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, _ := gcm.Open(nil, nonce, ciphertext, nil)
+	return string(plaintext)
 }
