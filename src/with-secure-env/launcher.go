@@ -46,6 +46,37 @@ func (l *Launcher) EditEnvs(applicationPath string) {
 	os.WriteFile(l.EncryptedEnvPath, data, 0600)
 }
 
+func (l *Launcher) loadEnvs(applicationPath string, key []byte) map[string]string {
+	data, err := os.ReadFile(l.EncryptedEnvPath)
+	if err != nil {
+		return map[string]string{}
+	}
+
+	var fileContent map[string]map[string]string
+	json.Unmarshal(data, &fileContent)
+
+	encryptedEnvs := fileContent[applicationPath]
+	if encryptedEnvs == nil {
+		return map[string]string{}
+	}
+
+	decryptedEnvs := make(map[string]string)
+	for envName, encryptedValue := range encryptedEnvs {
+		decryptedEnvs[envName] = l.decrypt(key, encryptedValue)
+	}
+	return decryptedEnvs
+}
+
+func (l *Launcher) decrypt(key []byte, encryptedBase64 string) string {
+	data, _ := base64.StdEncoding.DecodeString(encryptedBase64)
+	block, _ := aes.NewCipher(key)
+	gcm, _ := cipher.NewGCM(block)
+	nonceSize := gcm.NonceSize()
+	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
+	plaintext, _ := gcm.Open(nil, nonce, ciphertext, nil)
+	return string(plaintext)
+}
+
 func (l *Launcher) encrypt(key []byte, plaintext string) string {
 	block, _ := aes.NewCipher(key)
 	gcm, _ := cipher.NewGCM(block)

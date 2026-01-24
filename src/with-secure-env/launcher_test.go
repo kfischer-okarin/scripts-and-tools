@@ -48,9 +48,11 @@ func TestLauncherInit_GeneratesDifferentKeysEachTime(t *testing.T) {
 }
 
 func TestEditEnvs_AppsHaveEmptyEnvAtFirst(t *testing.T) {
+	kc := &stubKeychain{}
 	dialog := &stubEditDialog{returnOk: false}
-	launcher := Launcher{EditDialog: dialog}
+	launcher := Launcher{Keychain: kc, EditDialog: dialog}
 
+	launcher.Init()
 	launcher.EditEnvs("/path/to/app")
 
 	if dialog.receivedAppPath != "/path/to/app" {
@@ -91,6 +93,32 @@ func TestEditEnvs_SavesEncryptedEnvsToFile(t *testing.T) {
 
 	if decryptedValue != "mysecretvalue" {
 		t.Errorf("expected 'mysecretvalue', got '%s'", decryptedValue)
+	}
+}
+
+func TestEditEnvs_ShowsStoredValuesOnSecondEdit(t *testing.T) {
+	tmpFile, _ := os.CreateTemp("", "envs-*.json")
+	tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+
+	kc := &stubKeychain{}
+	dialog := &stubEditDialog{}
+	launcher := Launcher{
+		Keychain:         kc,
+		EditDialog:       dialog,
+		EncryptedEnvPath: tmpFile.Name(),
+	}
+	launcher.Init()
+
+	dialog.returnValues = map[string]string{"SECRET_KEY": "mysecretvalue"}
+	dialog.returnOk = true
+	launcher.EditEnvs("/path/to/app")
+
+	dialog.returnValues = map[string]string{"SECRET_KEY": "updatedvalue"}
+	launcher.EditEnvs("/path/to/app")
+
+	if dialog.receivedCurrentValues["SECRET_KEY"] != "mysecretvalue" {
+		t.Errorf("expected 'mysecretvalue', got '%s'", dialog.receivedCurrentValues["SECRET_KEY"])
 	}
 }
 
