@@ -51,3 +51,14 @@ Envs stored in `{ConfigDir}/envs.json`:
 ```
 
 Each value is independently encrypted (AES-256-GCM) with its own random nonce.
+
+## Planned Features
+
+- Implement permission dialog (WebView UI for launch approval)
+- Implement CLI (wire up commands to Launcher)
+- Remember authorized callers (by process name + PID) so only first injection
+  requires approval
+- `init` errors when encryption key already exists (prevent accidental overwrite)
+- `remove` subcommand to delete envs for an application
+- `list` subcommand showing configured binaries and env names (with optional
+  argument to filter by specific binary)
