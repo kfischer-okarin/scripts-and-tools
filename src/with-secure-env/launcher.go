@@ -11,18 +11,45 @@ import (
 
 	"github.com/kfischer-okarin/with-secure-env/editdialog"
 	"github.com/kfischer-okarin/with-secure-env/keychain"
+	"github.com/kfischer-okarin/with-secure-env/permissiondialog"
 )
 
 type Launcher struct {
-	Keychain      keychain.Keychain
-	EditDialog    editdialog.EditDialog
-	ConfigDirPath string
+	Keychain         keychain.Keychain
+	EditDialog       editdialog.EditDialog
+	PermissionDialog permissiondialog.PermissionDialog
+	ConfigDirPath    string
+	Exec             func(path string, args []string, env []string) error
 }
 
 func (l *Launcher) Init() {
 	key := make([]byte, 32)
 	rand.Read(key)
 	l.Keychain.StoreEncryptionKey(key)
+}
+
+func (l *Launcher) Launch(applicationPath string, args []string, caller permissiondialog.CallerInfo) {
+	fileContent := l.loadFileContent()
+	encryptedEnvs := fileContent[applicationPath]
+
+	envNames := make([]string, 0, len(encryptedEnvs))
+	for name := range encryptedEnvs {
+		envNames = append(envNames, name)
+	}
+
+	granted := l.PermissionDialog.AskPermission(applicationPath, args, envNames, caller)
+	if !granted {
+		return
+	}
+
+	key, _ := l.Keychain.RetrieveEncryptionKey()
+
+	env := make([]string, 0, len(encryptedEnvs))
+	for name, encrypted := range encryptedEnvs {
+		env = append(env, name+"="+l.decrypt(key, encrypted))
+	}
+
+	l.Exec(applicationPath, args, env)
 }
 
 func (l *Launcher) EditEnvs(applicationPath string) {

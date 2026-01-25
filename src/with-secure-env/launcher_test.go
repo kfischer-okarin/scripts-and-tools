@@ -8,10 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/kfischer-okarin/with-secure-env/permissiondialog"
 )
 
 func TestLauncherInit_StoresValidAESKey(t *testing.T) {
-	launcher, kc, _ := newTestLauncher(t)
+	launcher, kc, _, _ := newTestLauncher(t)
 
 	launcher.Init()
 
@@ -32,11 +34,11 @@ func TestLauncherInit_StoresValidAESKey(t *testing.T) {
 }
 
 func TestLauncherInit_GeneratesDifferentKeysEachTime(t *testing.T) {
-	launcher1, kc1, _ := newTestLauncher(t)
+	launcher1, kc1, _, _ := newTestLauncher(t)
 	launcher1.Init()
 	key1, _ := kc1.RetrieveEncryptionKey()
 
-	launcher2, kc2, _ := newTestLauncher(t)
+	launcher2, kc2, _, _ := newTestLauncher(t)
 	launcher2.Init()
 	key2, _ := kc2.RetrieveEncryptionKey()
 
@@ -46,7 +48,7 @@ func TestLauncherInit_GeneratesDifferentKeysEachTime(t *testing.T) {
 }
 
 func TestEditEnvs_AppsHaveEmptyEnvAtFirst(t *testing.T) {
-	launcher, _, dialog := newTestLauncher(t)
+	launcher, _, dialog, _ := newTestLauncher(t)
 	launcher.Init()
 
 	launcher.EditEnvs("/path/to/app")
@@ -63,7 +65,7 @@ func TestEditEnvs_AppsHaveEmptyEnvAtFirst(t *testing.T) {
 }
 
 func TestEditEnvs_SavesEncryptedEnvsToFile(t *testing.T) {
-	launcher, kc, dialog := newTestLauncher(t)
+	launcher, kc, dialog, _ := newTestLauncher(t)
 	launcher.Init()
 
 	dialog.returnValues = map[string]string{"SECRET_KEY": "mysecretvalue"}
@@ -83,7 +85,7 @@ func TestEditEnvs_SavesEncryptedEnvsToFile(t *testing.T) {
 }
 
 func TestEditEnvs_ShowsStoredValuesOnSecondEdit(t *testing.T) {
-	launcher, _, dialog := newTestLauncher(t)
+	launcher, _, dialog, _ := newTestLauncher(t)
 	launcher.Init()
 
 	dialog.returnValues = map[string]string{"SECRET_KEY": "mysecretvalue"}
@@ -99,7 +101,7 @@ func TestEditEnvs_ShowsStoredValuesOnSecondEdit(t *testing.T) {
 }
 
 func TestEditEnvs_DoesNotUpdateWhenCanceled(t *testing.T) {
-	launcher, kc, dialog := newTestLauncher(t)
+	launcher, kc, dialog, _ := newTestLauncher(t)
 	launcher.Init()
 
 	dialog.returnValues = map[string]string{"SECRET_KEY": "originalvalue"}
@@ -120,7 +122,7 @@ func TestEditEnvs_DoesNotUpdateWhenCanceled(t *testing.T) {
 }
 
 func TestEditEnvs_StoresEnvsForMultipleApps(t *testing.T) {
-	launcher, kc, dialog := newTestLauncher(t)
+	launcher, kc, dialog, _ := newTestLauncher(t)
 	launcher.Init()
 
 	dialog.returnValues = map[string]string{"API_KEY": "app1secret"}
@@ -145,19 +147,104 @@ func TestEditEnvs_StoresEnvsForMultipleApps(t *testing.T) {
 	}
 }
 
-func newTestLauncher(t *testing.T) (*Launcher, *stubKeychain, *stubEditDialog) {
+func TestLaunch_AsksPermissionWithContext(t *testing.T) {
+	launcher, _, editDialog, permDialog := newTestLauncher(t)
+	launcher.Init()
+
+	editDialog.returnValues = map[string]string{"API_KEY": "secret", "DB_PASS": "pass"}
+	editDialog.returnOk = true
+	launcher.EditEnvs("/path/to/app")
+
+	caller := permissiondialog.CallerInfo{Name: "claude", PID: 1234}
+	launcher.Launch("/path/to/app", []string{"--flag", "value"}, caller)
+
+	if permDialog.receivedAppPath != "/path/to/app" {
+		t.Errorf("expected app path '/path/to/app', got '%s'", permDialog.receivedAppPath)
+	}
+	if len(permDialog.receivedEnvNames) != 2 {
+		t.Errorf("expected 2 env names, got %d", len(permDialog.receivedEnvNames))
+	}
+	if len(permDialog.receivedArgs) != 2 || permDialog.receivedArgs[0] != "--flag" {
+		t.Errorf("expected args ['--flag', 'value'], got %v", permDialog.receivedArgs)
+	}
+	if permDialog.receivedCaller.Name != "claude" || permDialog.receivedCaller.PID != 1234 {
+		t.Errorf("expected caller {claude, 1234}, got %v", permDialog.receivedCaller)
+	}
+}
+
+func TestLaunch_DoesNotAccessKeychainIfPermissionDenied(t *testing.T) {
+	launcher, kc, editDialog, permDialog := newTestLauncher(t)
+	launcher.Init()
+
+	editDialog.returnValues = map[string]string{"API_KEY": "secret"}
+	editDialog.returnOk = true
+	launcher.EditEnvs("/path/to/app")
+
+	kc.retrieveCount = 0
+	permDialog.returnGranted = false
+	launcher.Launch("/path/to/app", nil, permissiondialog.CallerInfo{})
+
+	if kc.retrieveCount != 0 {
+		t.Errorf("expected no keychain access, got %d", kc.retrieveCount)
+	}
+}
+
+func TestLaunch_ExecutesAppWithEnvsAndArgs(t *testing.T) {
+	launcher, _, editDialog, permDialog := newTestLauncher(t)
+	launcher.Init()
+
+	editDialog.returnValues = map[string]string{"API_KEY": "secretkey", "DB_PASS": "secretpass"}
+	editDialog.returnOk = true
+	launcher.EditEnvs("/path/to/app")
+
+	var executedPath string
+	var executedArgs []string
+	var executedEnv []string
+	launcher.Exec = func(path string, args []string, env []string) error {
+		executedPath = path
+		executedArgs = args
+		executedEnv = env
+		return nil
+	}
+
+	permDialog.returnGranted = true
+	launcher.Launch("/path/to/app", []string{"--flag", "value"}, permissiondialog.CallerInfo{})
+
+	if executedPath != "/path/to/app" {
+		t.Errorf("expected path '/path/to/app', got '%s'", executedPath)
+	}
+	if len(executedArgs) != 2 || executedArgs[0] != "--flag" {
+		t.Errorf("expected args ['--flag', 'value'], got %v", executedArgs)
+	}
+	if !containsEnv(executedEnv, "API_KEY=secretkey") || !containsEnv(executedEnv, "DB_PASS=secretpass") {
+		t.Errorf("expected envs to contain API_KEY and DB_PASS, got %v", executedEnv)
+	}
+}
+
+func containsEnv(env []string, needle string) bool {
+	for _, e := range env {
+		if e == needle {
+			return true
+		}
+	}
+	return false
+}
+
+func newTestLauncher(t *testing.T) (*Launcher, *stubKeychain, *stubEditDialog, *stubPermissionDialog) {
 	tmpDir, _ := os.MkdirTemp("", "config-*")
 	t.Cleanup(func() { os.RemoveAll(tmpDir) })
 
 	kc := &stubKeychain{}
-	dialog := &stubEditDialog{}
+	editDialog := &stubEditDialog{}
+	permDialog := &stubPermissionDialog{}
 	launcher := &Launcher{
-		Keychain:      kc,
-		EditDialog:    dialog,
-		ConfigDirPath: tmpDir,
+		Keychain:         kc,
+		EditDialog:       editDialog,
+		PermissionDialog: permDialog,
+		ConfigDirPath:    tmpDir,
 	}
 
-	return launcher, kc, dialog
+	return launcher, kc, editDialog, permDialog
 }
 
 func decrypt(t *testing.T, key []byte, encryptedBase64 string) string {
@@ -188,7 +275,8 @@ func decrypt(t *testing.T, key []byte, encryptedBase64 string) string {
 }
 
 type stubKeychain struct {
-	storedKey []byte
+	storedKey     []byte
+	retrieveCount int
 }
 
 func (s *stubKeychain) StoreEncryptionKey(key []byte) error {
@@ -197,6 +285,7 @@ func (s *stubKeychain) StoreEncryptionKey(key []byte) error {
 }
 
 func (s *stubKeychain) RetrieveEncryptionKey() ([]byte, error) {
+	s.retrieveCount++
 	return s.storedKey, nil
 }
 
@@ -211,4 +300,20 @@ func (s *stubEditDialog) EditEnvs(applicationPath string, currentValues map[stri
 	s.receivedAppPath = applicationPath
 	s.receivedCurrentValues = currentValues
 	return s.returnValues, s.returnOk
+}
+
+type stubPermissionDialog struct {
+	receivedAppPath  string
+	receivedArgs     []string
+	receivedEnvNames []string
+	receivedCaller   permissiondialog.CallerInfo
+	returnGranted    bool
+}
+
+func (s *stubPermissionDialog) AskPermission(applicationPath string, args []string, envNames []string, caller permissiondialog.CallerInfo) bool {
+	s.receivedAppPath = applicationPath
+	s.receivedArgs = args
+	s.receivedEnvNames = envNames
+	s.receivedCaller = caller
+	return s.returnGranted
 }
