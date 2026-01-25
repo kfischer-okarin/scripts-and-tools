@@ -1,4 +1,4 @@
-package main
+package launcher
 
 import (
 	"crypto/aes"
@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/kfischer-okarin/with-secure-env/permissiondialog"
+	"github.com/kfischer-okarin/with-secure-env/internal/permissiondialog"
 )
 
 func TestLauncherInit_StoresValidAESKey(t *testing.T) {

@@ -1,4 +1,4 @@
-package main
+package launcher
 
 import (
 	"crypto/aes"
@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/kfischer-okarin/with-secure-env/editdialog"
-	"github.com/kfischer-okarin/with-secure-env/keychain"
-	"github.com/kfischer-okarin/with-secure-env/permissiondialog"
+	"github.com/kfischer-okarin/with-secure-env/internal/editdialog"
+	"github.com/kfischer-okarin/with-secure-env/internal/keychain"
+	"github.com/kfischer-okarin/with-secure-env/internal/permissiondialog"
 )
 
 type Launcher struct {
