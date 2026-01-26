@@ -54,7 +54,6 @@ Each value is independently encrypted (AES-256-GCM) with its own random nonce.
 
 ## Planned Features
 
-- Implement permission dialog (WebView UI for launch approval)
 - Implement CLI (wire up commands to Launcher)
 - Remember authorized callers (by process name + PID) so only first injection
   requires approval
