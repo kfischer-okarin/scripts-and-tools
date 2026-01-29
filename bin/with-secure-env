@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "$(dirname "$0")/../src/with-secure-env/bin/with-secure-env" "$@"
