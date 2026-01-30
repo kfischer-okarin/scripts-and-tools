@@ -1,7 +1,7 @@
 # Claude Code Conversation History Format Specification
 
-**Version**: 1.0 (Based on Claude Code v2.0.74)
-**Last Updated**: 2025-12-20
+**Version**: 1.1 (Based on Claude Code v2.1.22)
+**Last Updated**: 2026-01-30
 **Author**: Research analysis of actual Claude Code session files
 
 ---
@@ -382,7 +382,52 @@ All share the same `message.id` and `requestId`, but have different `uuid` value
 
 ---
 
-### 4. File History Snapshot Record
+### 4. Progress Record
+
+```json
+{
+  "type": "progress",
+  "uuid": "string (UUID v4)",
+  "parentUuid": "string",
+  "timestamp": "string (ISO 8601)",
+  "sessionId": "string (UUID v4)",
+  "data": {
+    "type": "agent_progress",
+    "agentId": "string (7-char)",
+    "prompt": "string (original task prompt)",
+    "message": {
+      "type": "user|assistant",
+      "timestamp": "string (ISO 8601)",
+      "message": { ... },
+      "uuid": "string (UUID v4)"
+    },
+    "normalizedMessages": []
+  },
+  "toolUseID": "string",
+  "parentToolUseID": "string",
+  "cwd": "string",
+  "version": "string",
+  "gitBranch": "string|undefined",
+  "slug": "string|undefined",
+  "isSidechain": "boolean",
+  "userType": "external"
+}
+```
+
+**Purpose**: Track real-time progress of subagent execution. These records are
+interspersed in the main conversation's parentUuid chain during Task tool
+execution.
+
+**Key characteristics**:
+- `data.type` is `"agent_progress"`
+- `data.agentId` identifies which subagent is running
+- `data.message` contains the nested subagent message (user or assistant)
+- `toolUseID` links to the Task tool_use block that spawned the agent
+- Records chain via parentUuid like regular messages
+
+---
+
+### 5. File History Snapshot Record
 
 ```json
 {
@@ -788,6 +833,19 @@ Only count records where:
 - `isMeta` is not `true`
 - Content is not interrupt marker or command
 
+### Handling Progress Records
+
+Progress records participate in the parentUuid chain but are not meaningful
+conversation records. When building the message tree, parsers should either:
+
+1. **Skip and remap**: Skip progress records but remap their children's
+   parentUuid to point to the progress record's parent
+2. **Include as type**: Include progress as a valid record type in the tree
+
+Option 1 is recommended. Failing to handle progress records properly breaks the
+parentUuid chain and orphans all subsequent messages in sessions with subagent
+activity.
+
 ### Session Classification
 
 ```python
@@ -929,4 +987,5 @@ Common tool names observed:
 
 ## Changelog
 
+- **1.1** (2026-01-30): Added `progress` record type documentation (subagent execution updates)
 - **1.0** (2025-12-20): Initial specification based on analysis of Claude Code v2.0.74 session files

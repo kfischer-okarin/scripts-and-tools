@@ -51,6 +51,18 @@ Key design constraint: One JSONL line maps to 0-1 Record objects. ToolCallRecord
 is not a Record subclass - it's a simple data class embedded in AssistantMessage
 because a single assistant JSONL record can contain multiple tool_use blocks.
 
+## Skipped Record Types
+
+Some record types are skipped during parsing but must be handled carefully to
+preserve the parentUuid chain. When a record is skipped, its children are
+remapped to point to the skipped record's parent instead.
+
+| Skipped Type | Reason |
+|--------------|--------|
+| file-history-snapshot | Checkpoint metadata, not conversation content |
+| system | System events (e.g., /add-dir commands) |
+| progress | Subagent execution updates |
+
 ## Rendering
 
 SessionRenderer uses the visitor pattern to render threads. Each Record type
