@@ -658,6 +658,39 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal 2, session.records.reject { |r| r.is_a?(ClaudeHistory::Summary) }.size
   end
 
+  def test_warns_on_missing_uuid_in_user_message
+    # User record without uuid should trigger warning and be skipped
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"valid"}}
+        {"type":"user","parentUuid":"root","message":{"role":"user","content":"missing uuid"}}
+      JSONL
+    )
+    session = project.session("test")
+
+    # The invalid record should be skipped
+    assert_equal 1, session.records.reject { |r| r.is_a?(ClaudeHistory::Summary) }.size
+
+    warning = session.warnings.find { |w| w.type == :missing_required_field }
+    refute_nil warning, "Expected :missing_required_field warning"
+    assert_includes warning.message, "uuid"
+  end
+
+  def test_warns_on_missing_uuid_in_assistant_message
+    # Assistant record without uuid should trigger warning
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","parentUuid":"root","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    session = project.session("test")
+
+    warning = session.warnings.find { |w| w.type == :missing_required_field }
+    refute_nil warning, "Expected :missing_required_field warning"
+    assert_includes warning.message, "uuid"
+  end
+
   # Session identity tests
 
   def test_session_id_returns_filename_without_extension

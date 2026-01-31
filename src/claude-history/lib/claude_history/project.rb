@@ -201,6 +201,15 @@ module ClaudeHistory
 
         if type == "summary"
           @all_summaries << Summary.new(data, line_number, filename)
+        elsif missing_required_uuid?(data, type)
+          @file_warnings[filename] ||= []
+          @file_warnings[filename] << Warning.new(
+            type: :missing_required_field,
+            message: "Record type '#{type}' missing required field: uuid",
+            line_number: line_number,
+            filename: filename,
+            raw_data: data
+          )
         elsif command_message?(type, content)
           construct_command_record(data, line_number, filename)
         elsif type == "assistant"
@@ -225,6 +234,13 @@ module ClaudeHistory
 
       def command_message?(type, content)
         type == "user" && content.is_a?(String) && content.include?("<command-name>")
+      end
+
+      def missing_required_uuid?(data, type)
+        # Only check uuid for known record types that require it
+        return false unless %w[user assistant].include?(type)
+
+        data[:uuid].nil?
       end
 
       def construct_command_record(data, line_number, filename)
