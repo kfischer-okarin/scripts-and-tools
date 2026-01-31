@@ -258,7 +258,22 @@ module ClaudeHistory
       # Phase 4: Deduplicate
 
       def deduplicate_records
-        @all_records = @all_records.uniq(&:uuid)
+        seen = {}
+        @all_records.each do |record|
+          uuid = record.uuid
+          if seen[uuid]
+            add_file_warning(record.filename, Warning.new(
+              type: :duplicate_uuid,
+              message: "Duplicate uuid: #{uuid} (first seen in #{seen[uuid].filename}:#{seen[uuid].line_number})",
+              line_number: record.line_number,
+              filename: record.filename,
+              raw_data: record.raw_data
+            ))
+          else
+            seen[uuid] = record
+          end
+        end
+        @all_records = seen.values
       end
 
       # Phase 4b: Check for orphaned records

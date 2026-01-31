@@ -92,6 +92,7 @@ aggregated into sessions via `collect_session_warnings`.
 | `:multiple_roots` | Parser | Single file has >1 root record |
 | `:orphaned_record` | Parser | parentUuid references non-existent uuid |
 | `:missing_required_field` | Parser | user/assistant record missing uuid (skipped) |
+| `:duplicate_uuid` | Parser | Multiple records share same uuid (later ones dropped) |
 
 Access warnings via `session.warnings`. The Warning class stores `type`, `message`,
 `line_number`, `filename`, and `raw_data` for debugging.

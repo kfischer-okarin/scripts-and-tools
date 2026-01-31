@@ -691,6 +691,21 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_includes warning.message, "uuid"
   end
 
+  def test_warns_on_duplicate_uuid
+    # Two records with same uuid should trigger warning
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"same-uuid","parentUuid":null,"message":{"role":"user","content":"first"}}
+        {"type":"user","uuid":"same-uuid","parentUuid":null,"message":{"role":"user","content":"second"}}
+      JSONL
+    )
+    session = project.session("test")
+
+    warning = session.warnings.find { |w| w.type == :duplicate_uuid }
+    refute_nil warning, "Expected :duplicate_uuid warning"
+    assert_includes warning.message, "same-uuid"
+  end
+
   # Session identity tests
 
   def test_session_id_returns_filename_without_extension
