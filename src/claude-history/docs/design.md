@@ -16,7 +16,8 @@ CLI (Thor, humble object - just delegates to History)
                     │     └── Summary
                     ├── Segment (contiguous records between branch points)
                     │     └── Segment... (children at branch points)
-                    └── Thread (a single path from root to leaf)
+                    ├── Thread (a single path from root to leaf)
+                    └── Warning (parsing anomaly: type, message, line_number, filename, raw_data)
 ```
 
 Note: A Session aggregates all records connected via `parentUuid` chain, which
@@ -62,6 +63,37 @@ remapped to point to the skipped record's parent instead.
 | file-history-snapshot | Checkpoint metadata, not conversation content |
 | system | System events (e.g., /add-dir commands) |
 | progress | Subagent execution updates |
+
+## Warning System
+
+Warnings detect format drift and parsing anomalies without failing. They flow
+through the system at two levels:
+
+```text
+Parser
+  ├── Record construction → Record#warnings (attribute validation)
+  └── File-level issues → @file_warnings[filename]
+        ↓
+Session#warnings (aggregates both sources)
+```
+
+**Record-level warnings** are created during construction via `validate_attributes`,
+which compares raw data keys against `EXPECTED_ATTRIBUTES`. Each Record subclass
+defines its expected fields.
+
+**Parser-level warnings** are collected in `@file_warnings` by filename and
+aggregated into sessions via `collect_session_warnings`.
+
+| Warning Type | Source | Trigger |
+|--------------|--------|---------|
+| `:unexpected_attributes` | Record | Top-level field not in EXPECTED_ATTRIBUTES |
+| `:unexpected_content_shape` | UserMessage | Content array has unexpected structure |
+| `:unknown_record_type` | Parser | Type not in RECORD_TYPES or SKIPPED_TYPES |
+| `:multiple_roots` | Parser | Single file has >1 root record |
+| `:orphaned_record` | Parser | parentUuid references non-existent uuid |
+
+Access warnings via `session.warnings`. The Warning class stores `type`, `message`,
+`line_number`, `filename`, and `raw_data` for debugging.
 
 ## Rendering
 

@@ -50,6 +50,7 @@ module ClaudeHistory
         remap_skipped_parents
         construct_all_records
         deduplicate_records
+        check_orphaned_records
         build_sessions
         self
       end
@@ -244,6 +245,27 @@ module ClaudeHistory
 
       def deduplicate_records
         @all_records = @all_records.uniq(&:uuid)
+      end
+
+      # Phase 4b: Check for orphaned records
+
+      def check_orphaned_records
+        known_uuids = Set.new(@all_records.map(&:uuid))
+
+        @all_records.each do |record|
+          parent = record.parent_uuid
+          next if parent.nil?
+          next if known_uuids.include?(parent)
+
+          @file_warnings[record.filename] ||= []
+          @file_warnings[record.filename] << Warning.new(
+            type: :orphaned_record,
+            message: "Record references non-existent parent: #{parent}",
+            line_number: record.line_number,
+            filename: record.filename,
+            raw_data: record.raw_data
+          )
+        end
       end
 
       # Phase 5: Build sessions

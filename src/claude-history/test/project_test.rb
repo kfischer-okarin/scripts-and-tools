@@ -623,6 +623,41 @@ class ProjectTest < ClaudeHistory::TestCase
     assert_equal "the summary text", summary.text
   end
 
+  def test_warns_on_orphaned_record
+    # Record with parentUuid pointing to non-existent uuid should trigger warning
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"assistant","uuid":"orphan","parentUuid":"non-existent-parent","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    session = project.session("test")
+
+    warning = session.warnings.find { |w| w.type == :orphaned_record }
+    refute_nil warning, "Expected :orphaned_record warning"
+    assert_includes warning.message, "non-existent-parent"
+    assert_equal "test.jsonl", warning.filename
+  end
+
+  def test_no_orphan_warning_when_parent_is_skipped_but_remapped
+    # Record whose parent is a skipped type (progress) should NOT warn
+    # because the parent remapping fixes the chain
+    project = build_project(
+      "test.jsonl" => <<~JSONL
+        {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
+        {"type":"progress","uuid":"progress-1","parentUuid":"root","data":{}}
+        {"type":"assistant","uuid":"reply","parentUuid":"progress-1","message":{"role":"assistant","content":[]}}
+      JSONL
+    )
+    session = project.session("test")
+
+    orphan_warnings = session.warnings.select { |w| w.type == :orphaned_record }
+    assert_empty orphan_warnings, "Should not warn when skipped parent is properly remapped"
+
+    # The reply should be remapped to root and included in the session
+    assert_equal 2, session.records.reject { |r| r.is_a?(ClaudeHistory::Summary) }.size
+  end
+
   # Session identity tests
 
   def test_session_id_returns_filename_without_extension
