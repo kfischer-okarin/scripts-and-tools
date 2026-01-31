@@ -33,7 +33,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_file_history_snapshot_records
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"file-history-snapshot","messageId":"123","snapshot":{},"isSnapshotUpdate":false}
@@ -48,7 +48,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_system_records
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"system","subtype":"local_command","uuid":"sys-1","content":"<command-name>/add-dir</command-name>\\n<command-message>add-dir</command-message>\\n<command-args></command-args>"}
@@ -63,7 +63,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_is_meta_records
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"meta","parentUuid":null,"isMeta":true,"message":{"role":"user","content":"Caveat: The messages below..."}}
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
@@ -81,7 +81,7 @@ class ProjectTest < ClaudeHistory::TestCase
   def test_session_preserves_tree_when_meta_record_in_middle_of_chain
     # Meta record is a child of the first user message, and assistant is child of meta
     # The tree should still be connected: user -> assistant (skipping meta)
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"meta","parentUuid":"1","isMeta":true,"message":{"role":"user","content":"Caveat..."}}
@@ -97,7 +97,7 @@ class ProjectTest < ClaudeHistory::TestCase
 
   def test_session_preserves_tree_when_stdout_record_in_middle_of_chain
     # Command -> stdout -> assistant: stdout is skipped but assistant should still be in tree
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>done</local-command-stdout>"}}
@@ -113,7 +113,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_records_excludes_summaries
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"summary","summary":"test summary","leafUuid":"2"}
@@ -127,7 +127,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_summary_only_files_do_not_create_sessions
-    project = build_project(
+    project = build_and_validate_project!(
       "main-session.jsonl" => <<~JSONL,
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
       JSONL
@@ -140,7 +140,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_merges_records_from_continuation_files
-    project = build_project(
+    project = build_and_validate_project!(
       "main.jsonl" => <<~JSONL,
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"assistant","uuid":"a1","parentUuid":"root","message":{"role":"assistant","content":[]}}
@@ -218,7 +218,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_record_exposes_timestamp_as_time_object
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:30:00.000Z","message":{"role":"user","content":"hi"}}
       JSONL
@@ -230,7 +230,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_record_exposes_line_number_and_filename
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -249,7 +249,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_with_simple_text_content
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","parentUuid":null,"message":{"role":"user","content":"Hello world"}}
       JSONL
@@ -261,7 +261,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_content_type_text
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":"Hello world"}}
       JSONL
@@ -272,7 +272,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_tool_result_records
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read file.txt"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Read","input":{"file_path":"/path/file.txt"}}]}}
@@ -287,7 +287,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_assistant_message_has_tool_call_records_for_tool_use_blocks
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read file.txt"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Read","input":{"file_path":"/path/file.txt"}}]}}
@@ -308,7 +308,7 @@ class ProjectTest < ClaudeHistory::TestCase
 
   def test_tool_call_records_match_results_by_tool_use_id_not_order
     # Tool results may appear in different order than tool calls
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read two files"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_AAA","name":"Read","input":{"file_path":"/first.txt"}},{"type":"tool_use","id":"toolu_BBB","name":"Read","input":{"file_path":"/second.txt"}}]}}
@@ -330,7 +330,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_tool_call_record_has_nil_result_when_no_result_exists
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"Read file"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_123","name":"Read","input":{"file_path":"/file.txt"}}]}}
@@ -344,7 +344,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_clear_command_and_preserves_tree
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -362,7 +362,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_resume_command_and_preserves_tree
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"resume-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/resume</command-name>\\n<command-message>resume</command-message>\\n<command-args></command-args>"}}
@@ -377,7 +377,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_context_command_and_preserves_tree
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"context-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/context</command-name>\\n<command-message>context</command-message>\\n<command-args></command-args>"}}
@@ -392,7 +392,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_release_notes_command_and_preserves_tree
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"rn-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/release-notes</command-name>\\n<command-message>release-notes</command-message>\\n<command-args></command-args>"}}
@@ -407,7 +407,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_excludes_usage_command_and_preserves_tree
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"user","uuid":"usage-1","parentUuid":"1","message":{"role":"user","content":"<command-name>/usage</command-name>\\n<command-message>usage</command-message>\\n<command-args></command-args>"}}
@@ -422,7 +422,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_defined_command_record_parses_reusable_prompt
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/commit</command-name>\\n<command-message>commit</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"# Commit Instructions\\n\\nYou are an expert..."}]}}
@@ -441,7 +441,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_defined_command_record_with_assistant_response
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/review-branch</command-name>\\n<command-message>review-branch</command-message>\\n<command-args>main</command-args>"}}
         {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the branch..."}]}}
@@ -459,7 +459,7 @@ class ProjectTest < ClaudeHistory::TestCase
 
   def test_user_defined_command_record_with_reversed_tag_order
     # Claude Code changed tag order: command-message before command-name
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-message>review-branch</command-message>\\n<command-name>/review-branch</command-name>"}}
         {"type":"user","uuid":"prompt-1","parentUuid":"cmd-1","isMeta":true,"message":{"role":"user","content":[{"type":"text","text":"Review the branch..."}]}}
@@ -476,7 +476,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_parses_command_parts
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
       JSONL
@@ -492,7 +492,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_parses_command_with_args
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/add-dir</command-name>\\n<command-message>add-dir</command-message>\\n<command-args>src/lib</command-args>"}}
       JSONL
@@ -507,7 +507,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_includes_paired_stdout
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout>Initialized</local-command-stdout>"}}
@@ -524,7 +524,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_command_record_with_empty_stdout
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"cmd-1","parentUuid":null,"message":{"role":"user","content":"<command-name>/init</command-name>\\n<command-message>init</command-message>\\n<command-args></command-args>"}}
         {"type":"user","uuid":"stdout-1","parentUuid":"cmd-1","message":{"role":"user","content":"<local-command-stdout></local-command-stdout>"}}
@@ -538,7 +538,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_user_message_content_type_interrupt
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"123","message":{"role":"user","content":[{"type":"text","text":"[Request interrupted by user]"}]}}
       JSONL
@@ -611,7 +611,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_summary_text_returns_summary_content
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"summary","summary":"the summary text","leafUuid":"root"}
@@ -642,7 +642,7 @@ class ProjectTest < ClaudeHistory::TestCase
   def test_no_orphan_warning_when_parent_is_skipped_but_remapped
     # Record whose parent is a skipped type (progress) should NOT warn
     # because the parent remapping fixes the chain
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"progress","uuid":"progress-1","parentUuid":"root","data":{}}
@@ -694,7 +694,7 @@ class ProjectTest < ClaudeHistory::TestCase
   # Session identity tests
 
   def test_session_id_returns_filename_without_extension
-    project = build_project(
+    project = build_and_validate_project!(
       "my-session.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
       JSONL
@@ -705,7 +705,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_root_returns_record_with_null_parent_uuid
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"root-id","parentUuid":null,"message":{"role":"user","content":"first"}}
         {"type":"assistant","uuid":"2","parentUuid":"root-id","message":{"role":"assistant","content":[]}}
@@ -721,7 +721,7 @@ class ProjectTest < ClaudeHistory::TestCase
   # Segment tests
 
   def test_segment_includes_summaries_from_other_files
-    project = build_project(
+    project = build_and_validate_project!(
       "main-session.jsonl" => <<~JSONL,
         {"type":"user","uuid":"root","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"leaf","parentUuid":"root","message":{"role":"assistant","content":[]}}
@@ -737,7 +737,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_root_segment_contains_all_records_for_linear_session
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -753,7 +753,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_root_segment_has_children_at_branch_point
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -770,7 +770,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_root_segment_handles_nested_branches
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"start"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -796,7 +796,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_segment_exposes_leaf_uuid
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -809,7 +809,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_segment_contains_summaries_for_its_leaf
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -825,7 +825,7 @@ class ProjectTest < ClaudeHistory::TestCase
   # Thread tests
 
   def test_linear_session_has_one_thread
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -838,7 +838,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_messages_contains_records_in_order
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -852,7 +852,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_branched_session_has_multiple_threads
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -866,7 +866,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_each_thread_contains_full_path_from_root
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -882,7 +882,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_summary_is_nil_when_no_summary_exists
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -895,7 +895,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_summary_returns_summary_content_for_its_leaf
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -909,7 +909,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_summary_returns_latest_available_summary_not_just_leaf
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -925,7 +925,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_each_branch_can_have_its_own_summary
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -943,7 +943,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_nested_branches_produce_correct_number_of_threads
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"start"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}
@@ -961,7 +961,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_thread_last_updated_at_returns_last_message_timestamp
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
@@ -975,7 +975,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_session_last_updated_at_returns_max_of_threads
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
@@ -989,7 +989,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_threads_are_sorted_descending_by_last_updated_at
-    project = build_project(
+    project = build_and_validate_project!(
       "test.jsonl" => <<~JSONL
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","timestamp":"2025-01-15T10:01:00.000Z","message":{"role":"assistant","content":[]}}
@@ -1006,7 +1006,7 @@ class ProjectTest < ClaudeHistory::TestCase
   end
 
   def test_project_last_updated_at_returns_max_of_sessions
-    project = build_project(
+    project = build_and_validate_project!(
       "session-a.jsonl" => <<~JSONL,
         {"type":"user","uuid":"1","parentUuid":null,"timestamp":"2025-01-15T10:00:00.000Z","message":{"role":"user","content":"hi"}}
       JSONL
@@ -1020,7 +1020,7 @@ class ProjectTest < ClaudeHistory::TestCase
   # Duplicate record handling
 
   def test_session_deduplicates_records_with_same_uuid
-    project = build_project(
+    project = build_and_validate_project!(
       "session.jsonl" => <<~JSONL,
         {"type":"user","uuid":"1","parentUuid":null,"message":{"role":"user","content":"hi"}}
         {"type":"assistant","uuid":"2","parentUuid":"1","message":{"role":"assistant","content":[]}}

@@ -59,5 +59,24 @@ module ClaudeHistory
 
       Project.new(project_path)
     end
+
+    def build_and_validate_project!(name_or_files = nil, files = {})
+      project = build_project(name_or_files, files)
+
+      all_warnings = []
+      project.sessions.each do |session|
+        session.warnings.each do |warning|
+          all_warnings << { session_id: session.id, warning: warning }
+        end
+      end
+
+      assert_empty all_warnings, -> {
+        "Expected no warnings but got:\n" + all_warnings.map { |w|
+          "  [#{w[:session_id]}] #{w[:warning].type}: #{w[:warning].message}"
+        }.join("\n")
+      }
+
+      project
+    end
   end
 end
