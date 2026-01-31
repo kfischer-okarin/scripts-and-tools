@@ -202,14 +202,13 @@ module ClaudeHistory
         if type == "summary"
           @all_summaries << Summary.new(data, line_number, filename)
         elsif missing_required_uuid?(data, type)
-          @file_warnings[filename] ||= []
-          @file_warnings[filename] << Warning.new(
+          add_file_warning(filename, Warning.new(
             type: :missing_required_field,
             message: "Record type '#{type}' missing required field: uuid",
             line_number: line_number,
             filename: filename,
             raw_data: data
-          )
+          ))
         elsif command_message?(type, content)
           construct_command_record(data, line_number, filename)
         elsif type == "assistant"
@@ -217,14 +216,13 @@ module ClaudeHistory
         elsif RECORD_TYPES.key?(type)
           @all_records << RECORD_TYPES[type].new(data, line_number, filename)
         else
-          @file_warnings[filename] ||= []
-          @file_warnings[filename] << Warning.new(
+          add_file_warning(filename, Warning.new(
             type: :unknown_record_type,
             message: "Unknown record type: #{type}",
             line_number: line_number,
             filename: filename,
             raw_data: data
-          )
+          ))
         end
       end
 
@@ -273,15 +271,19 @@ module ClaudeHistory
           next if parent.nil?
           next if known_uuids.include?(parent)
 
-          @file_warnings[record.filename] ||= []
-          @file_warnings[record.filename] << Warning.new(
+          add_file_warning(record.filename, Warning.new(
             type: :orphaned_record,
             message: "Record references non-existent parent: #{parent}",
             line_number: record.line_number,
             filename: record.filename,
             raw_data: record.raw_data
-          )
+          ))
         end
+      end
+
+      def add_file_warning(filename, warning)
+        @file_warnings[filename] ||= []
+        @file_warnings[filename] << warning
       end
 
       # Phase 5: Build sessions
