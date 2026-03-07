@@ -159,6 +159,23 @@ struct AgentHubTests {
         #expect(hub.sessions[0].status == .awaitingPermission)
     }
 
+    @Test func doesNotDetectPermissionWhenDoYouWantAppearsInOutput() async throws {
+        let shell = MockShellExecutor()
+        shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
+        shell.givenKittyWindowOutput(1, content: """
+            Do you want to know how this works? Let me explain.
+            Here is the answer.
+            ────────────────────
+            ❯
+            """)
+
+        let hub = makeHub(shell: shell)
+        await hub.refresh()
+
+        #expect(hub.sessions.count == 1)
+        #expect(hub.sessions[0].status == .awaitingUserInput)
+    }
+
     @Test func showsErrorWhenAllSocketsHaveRemoteControlDisabled() async throws {
         let shell = MockShellExecutor()
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-111")
