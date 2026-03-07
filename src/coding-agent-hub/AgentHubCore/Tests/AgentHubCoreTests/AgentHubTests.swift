@@ -31,6 +31,28 @@ struct AgentHubTests {
         #expect(hub.sessions[0].cwd == "~/projects/my-app")
     }
 
+    @Test func parsesContextFromTerminalOutput() async throws {
+        shell.givenKittySessions([
+            Window(foregroundCmdline: ["claude"], output: """
+                Read the file
+                Edited src/main.swift
+                All tests passed
+
+                ────────────────────
+                ❯
+                ────────────────────
+                """),
+        ])
+
+        await hub.refresh()
+
+        #expect(hub.sessions[0].context == [
+            "Read the file",
+            "Edited src/main.swift",
+            "All tests passed",
+        ])
+    }
+
     @Test func discoversActiveSessionWithTitleAndStatus() async throws {
         shell.givenKittySessions([
             Window(foregroundCmdline: ["claude"], title: "✳ Doing Important Work", output: """

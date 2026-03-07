@@ -21,6 +21,18 @@ struct ContentView: View {
                             Text(session.cwd)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                            if !session.context.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    Text(session.context.joined(separator: "\n"))
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize()
+                                }
+                                .padding(6)
+                                .frame(width: 480, alignment: .leading)
+                                .background(.quaternary)
+                                .cornerRadius(4)
+                            }
                         }
                         Spacer()
                         Text(label(for: session.status))

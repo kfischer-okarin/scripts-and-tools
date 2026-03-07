@@ -9,6 +9,7 @@ public final class AgentHub {
     private let source: SessionSource
     private let homeDirectory: String
     private let statusParser = StatusParser()
+    private let contextParser = ContextParser()
 
     public init(shell: ShellExecutor, kittyPassword: String, kittySocketPrefix: String) {
         self.source = KittySessionSource(shell: shell, password: kittyPassword, socketPrefix: kittySocketPrefix)
@@ -30,10 +31,11 @@ public final class AgentHub {
         for session in discovered {
             let output = await source.captureOutput(session: session.id)
             let status = statusParser.parse(output)
+            let context = contextParser.parse(output)
             let cwd = session.cwd.hasPrefix(homeDirectory)
                 ? "~" + session.cwd.dropFirst(homeDirectory.count)
                 : session.cwd
-            updated.append(AgentSession(id: session.id, title: session.title, cwd: String(cwd), status: status))
+            updated.append(AgentSession(id: session.id, title: session.title, cwd: String(cwd), context: context, status: status))
         }
         sessions = updated
     }
