@@ -1,16 +1,15 @@
 import Testing
 @testable import AgentHubCore
 
-private func makeHub(shell: MockShellExecutor) -> AgentHub {
-    AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix)
-}
-
 struct AgentHubTests {
+    let shell = MockShellExecutor()
+    let hub: AgentHub
 
-    // MARK: - First slice: discover + parse
+    init() {
+        hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix)
+    }
 
     @Test func discoversActiveSessionWithParsedStatus() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittySessions([
             (id: 1, foregroundCmdline: ["claude"]),
             (id: 2, foregroundCmdline: ["vim", "foo.swift"]),
@@ -22,7 +21,6 @@ struct AgentHubTests {
             ❯
             """)
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
@@ -30,33 +28,26 @@ struct AgentHubTests {
         #expect(hub.sessions[0].status == .working)
     }
 
-    // MARK: - Backlog (BDD-style cases to implement next via TDD)
-
     @Test func showsNoSessionsWhenNoClaude() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittySessions([
             (id: 1, foregroundCmdline: ["vim"]),
             (id: 2, foregroundCmdline: ["zsh"]),
         ])
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.isEmpty)
     }
 
     @Test func showsNoSessionsWhenNoSocketsFound() async throws {
-        let shell = MockShellExecutor()
         shell.givenNoKittySockets()
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.isEmpty)
     }
 
     @Test func aggregatesSessionsAcrossMultipleKittyInstances() async throws {
-        let shell = MockShellExecutor()
         let socket1 = "/tmp/test-socket-111"
         let socket2 = "/tmp/test-socket-222"
         shell.givenKittySessions(socket: socket1, [(id: 1, foregroundCmdline: ["claude"])])
@@ -72,7 +63,6 @@ struct AgentHubTests {
             ❯
             """)
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 2)
@@ -83,27 +73,23 @@ struct AgentHubTests {
     }
 
     @Test func ignoresProcessesThatContainClaudeButAreNotClaude() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittySessions([
             (id: 1, foregroundCmdline: ["claude-hierarchical-agent"]),
             (id: 2, foregroundCmdline: ["/usr/local/bin/claude-helper"]),
         ])
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.isEmpty)
     }
 
     @Test func ignoresNonInteractiveClaudeWithPrintFlag() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittySessions([
             (id: 1, foregroundCmdline: ["claude", "-p", "summarize this"]),
             (id: 2, foregroundCmdline: ["claude", "--print", "do something"]),
             (id: 3, foregroundCmdline: ["claude", "some", "args", "-p"]),
         ])
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.isEmpty)
@@ -113,12 +99,11 @@ struct AgentHubTests {
     // - shows no sessions when no claude windows exist ✅
     // - shows no sessions when no sockets found ✅
     // - aggregates sessions across multiple kitty instances ✅
-    // - shows error message when remote control is disabled
+    // - shows error message when remote control is disabled ✅
     // - removes sessions that disappear between refreshes
     // - preserves session identity across refreshes (no flicker)
 
     @Test func sessionAwaitingUserInputWhenPromptVisible() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyWindowOutput(1, content: """
             Some output here
@@ -126,33 +111,24 @@ struct AgentHubTests {
             ❯
             """)
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
         #expect(hub.sessions[0].status == .awaitingUserInput)
     }
 
-    @Test func sessionAwaitingPermissionWhenYesNoOptionsVisible() async throws {
-        let shell = MockShellExecutor()
+    @Test func sessionAwaitingPermissionWhenOptionsVisible() async throws {
         shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyWindowOutput(1, content: """
             ───────────────────────────────────────────────
-             Edit file
-             src/AgentHubCore/Sources/SessionStatus.swift
-            ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
-             1  public enum SessionStatus: Equatable {
-             2      case thinking
-             3 +    case awaitingUserInput
-             4  }
-            ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
-             Do you want to make this edit to SessionStatus.swift?
+             Bash command
+               echo "Hello" | rev
+             Do you want to proceed?
              ❯ 1. Yes
-               2. Yes, allow all edits during this session (shift+tab)
+               2. Yes, and don't ask again for: rev
                3. No
             """)
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
@@ -160,7 +136,6 @@ struct AgentHubTests {
     }
 
     @Test func doesNotDetectPermissionWhenDoYouWantAppearsInOutput() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyWindowOutput(1, content: """
             Do you want to know how this works? Let me explain.
@@ -169,7 +144,6 @@ struct AgentHubTests {
             ❯
             """)
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
@@ -177,11 +151,9 @@ struct AgentHubTests {
     }
 
     @Test func showsErrorWhenAllSocketsHaveRemoteControlDisabled() async throws {
-        let shell = MockShellExecutor()
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-111")
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-222")
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.isEmpty)
@@ -189,7 +161,6 @@ struct AgentHubTests {
     }
 
     @Test func skipsSocketWithRemoteControlDisabledWhenOthersWork() async throws {
-        let shell = MockShellExecutor()
         let goodSocket = "/tmp/test-socket-111"
         let badSocket = "/tmp/test-socket-222"
         shell.givenKittySessions(socket: goodSocket, [(id: 1, foregroundCmdline: ["claude"])])
@@ -200,7 +171,6 @@ struct AgentHubTests {
             ❯
             """)
 
-        let hub = makeHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
