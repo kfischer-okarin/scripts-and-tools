@@ -9,9 +9,12 @@ if [ -z "${KITTY_PASSWORD:-}" ]; then
     exit 1
 fi
 
+SHELL_LOGS="${SHELL_LOGS:-false}"
+
 cat > "$APP_DIR/GeneratedConfig.swift" <<EOF
 enum GeneratedConfig {
     static let kittyPassword = "$KITTY_PASSWORD"
+    static let shellLogs = $SHELL_LOGS
 }
 EOF
 

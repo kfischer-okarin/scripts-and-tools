@@ -4,7 +4,7 @@ import AgentHubCore
 @main
 struct CodingAgentHubApp: App {
     @State private var hub = AgentHub(
-        shell: ProcessShellExecutor(),
+        shell: ProcessShellExecutor(loggingEnabled: GeneratedConfig.shellLogs),
         kittyPassword: GeneratedConfig.kittyPassword
     )
 
