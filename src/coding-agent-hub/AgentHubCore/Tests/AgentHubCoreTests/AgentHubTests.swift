@@ -7,10 +7,9 @@ struct AgentHubTests {
 
     @Test func discoversActiveSessionWithParsedStatus() async throws {
         let shell = MockShellExecutor()
-        shell.stub("tmux", arguments: ["list-sessions", "-F", "#{session_name}"],
-                   output: "agent-abc123\nmy-other-session\n")
-        shell.stub("tmux", arguments: ["capture-pane", "-p", "-t", "agent-abc123", "-S", "-30"],
-                   output: "Some previous output\n✻ Thinking… (27s, 200 tokens)\n")
+        shell.givenTmuxSessions(["agent-abc123", "my-other-session"])
+        shell.givenTmuxSessionOutput("agent-abc123",
+                                     content: "Some previous output\n✻ Thinking… (27s, 200 tokens)\n")
 
         let hub = AgentHub(shell: shell)
         await hub.refresh()
@@ -24,8 +23,7 @@ struct AgentHubTests {
 
     @Test func showsNoSessionsWhenNoAgentPrefixedSessionsExist() async throws {
         let shell = MockShellExecutor()
-        shell.stub("tmux", arguments: ["list-sessions", "-F", "#{session_name}"],
-                   output: "my-dev-session\nother-stuff\n")
+        shell.givenTmuxSessions(["my-dev-session", "other-stuff"])
 
         let hub = AgentHub(shell: shell)
         await hub.refresh()
@@ -42,10 +40,9 @@ struct AgentHubTests {
 
     @Test func sessionAwaitingUserInputWhenPromptVisible() async throws {
         let shell = MockShellExecutor()
-        shell.stub("tmux", arguments: ["list-sessions", "-F", "#{session_name}"],
-                   output: "agent-xyz\n")
-        shell.stub("tmux", arguments: ["capture-pane", "-p", "-t", "agent-xyz", "-S", "-30"],
-                   output: "Some output here\n────────────────────\n❯ \n")
+        shell.givenTmuxSessions(["agent-xyz"])
+        shell.givenTmuxSessionOutput("agent-xyz",
+                                     content: "Some output here\n────────────────────\n❯ \n")
 
         let hub = AgentHub(shell: shell)
         await hub.refresh()
@@ -56,24 +53,22 @@ struct AgentHubTests {
 
     @Test func sessionAwaitingPermissionWhenYesNoOptionsVisible() async throws {
         let shell = MockShellExecutor()
-        shell.stub("tmux", arguments: ["list-sessions", "-F", "#{session_name}"],
-                   output: "agent-perm\n")
-        shell.stub("tmux", arguments: ["capture-pane", "-p", "-t", "agent-perm", "-S", "-30"],
-                   output: """
-                   ───────────────────────────────────────────────
-                    Edit file
-                    src/AgentHubCore/Sources/SessionStatus.swift
-                   ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
-                    1  public enum SessionStatus: Equatable {
-                    2      case thinking
-                    3 +    case awaitingUserInput
-                    4  }
-                   ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
-                    Do you want to make this edit to SessionStatus.swift?
-                    ❯ 1. Yes
-                      2. Yes, allow all edits during this session (shift+tab)
-                      3. No
-                   """)
+        shell.givenTmuxSessions(["agent-perm"])
+        shell.givenTmuxSessionOutput("agent-perm", content: """
+            ───────────────────────────────────────────────
+             Edit file
+             src/AgentHubCore/Sources/SessionStatus.swift
+            ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+             1  public enum SessionStatus: Equatable {
+             2      case thinking
+             3 +    case awaitingUserInput
+             4  }
+            ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+             Do you want to make this edit to SessionStatus.swift?
+             ❯ 1. Yes
+               2. Yes, allow all edits during this session (shift+tab)
+               3. No
+            """)
 
         let hub = AgentHub(shell: shell)
         await hub.refresh()
