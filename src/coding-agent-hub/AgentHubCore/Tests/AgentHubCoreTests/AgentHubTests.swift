@@ -13,15 +13,14 @@ struct AgentHubTests {
 
     @Test func discoversActiveSessionWithTitleAndStatus() async throws {
         shell.givenKittySessions([
-            Window(id: 1, foregroundCmdline: ["claude"], title: "✳ Doing Important Work"),
-            Window(id: 2, foregroundCmdline: ["vim", "foo.swift"], title: "vim"),
+            Window(foregroundCmdline: ["claude"], title: "✳ Doing Important Work", output: """
+                Some previous output
+                ✻ Thinking… (27s, 200 tokens)
+                ────────────────────
+                ❯
+                """),
+            Window(foregroundCmdline: ["vim", "foo.swift"], title: "vim"),
         ])
-        shell.givenKittyWindowOutput(1, content: """
-            Some previous output
-            ✻ Thinking… (27s, 200 tokens)
-            ────────────────────
-            ❯
-            """)
 
         await hub.refresh()
 
@@ -32,8 +31,8 @@ struct AgentHubTests {
 
     @Test func showsNoSessionsWhenNoClaude() async throws {
         shell.givenKittySessions([
-            Window(id: 1, foregroundCmdline: ["vim"]),
-            Window(id: 2, foregroundCmdline: ["zsh"]),
+            Window(foregroundCmdline: ["vim"]),
+            Window(foregroundCmdline: ["zsh"]),
         ])
 
         await hub.refresh()
@@ -52,18 +51,12 @@ struct AgentHubTests {
     @Test func aggregatesSessionsAcrossMultipleKittyInstances() async throws {
         let socket1 = "/tmp/test-socket-111"
         let socket2 = "/tmp/test-socket-222"
-        shell.givenKittySessions(socket: socket1, [Window(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittySessions(socket: socket2, [Window(id: 5, foregroundCmdline: ["claude"])])
-        shell.givenKittyWindowOutput(socket: socket1, 1, content: """
+        shell.givenKittySessions(socket: socket1, [Window(id: 1, foregroundCmdline: ["claude"], output: """
             ✻ Thinking… (5s)
             ────────────────────
             ❯
-            """)
-        shell.givenKittyWindowOutput(socket: socket2, 5, content: """
-            Some output here
-            ────────────────────
-            ❯
-            """)
+            """)])
+        shell.givenKittySessions(socket: socket2, [Window(id: 5, foregroundCmdline: ["claude"])])
 
         await hub.refresh()
 
@@ -76,8 +69,8 @@ struct AgentHubTests {
 
     @Test func ignoresProcessesThatContainClaudeButAreNotClaude() async throws {
         shell.givenKittySessions([
-            Window(id: 1, foregroundCmdline: ["claude-hierarchical-agent"]),
-            Window(id: 2, foregroundCmdline: ["/usr/local/bin/claude-helper"]),
+            Window(foregroundCmdline: ["claude-hierarchical-agent"]),
+            Window(foregroundCmdline: ["/usr/local/bin/claude-helper"]),
         ])
 
         await hub.refresh()
@@ -87,9 +80,9 @@ struct AgentHubTests {
 
     @Test func ignoresNonInteractiveClaudeWithPrintFlag() async throws {
         shell.givenKittySessions([
-            Window(id: 1, foregroundCmdline: ["claude", "-p", "summarize this"]),
-            Window(id: 2, foregroundCmdline: ["claude", "--print", "do something"]),
-            Window(id: 3, foregroundCmdline: ["claude", "some", "args", "-p"]),
+            Window(foregroundCmdline: ["claude", "-p", "summarize this"]),
+            Window(foregroundCmdline: ["claude", "--print", "do something"]),
+            Window(foregroundCmdline: ["claude", "some", "args", "-p"]),
         ])
 
         await hub.refresh()
@@ -110,13 +103,12 @@ struct AgentHubTests {
     @Test func skipsSocketWithRemoteControlDisabledWhenOthersWork() async throws {
         let goodSocket = "/tmp/test-socket-111"
         let badSocket = "/tmp/test-socket-222"
-        shell.givenKittySessions(socket: goodSocket, [Window(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittyRemoteControlDisabled(socket: badSocket)
-        shell.givenKittyWindowOutput(socket: goodSocket, 1, content: """
+        shell.givenKittySessions(socket: goodSocket, [Window(id: 1, foregroundCmdline: ["claude"], output: """
             ✻ Thinking… (5s)
             ────────────────────
             ❯
-            """)
+            """)])
+        shell.givenKittyRemoteControlDisabled(socket: badSocket)
 
         await hub.refresh()
 

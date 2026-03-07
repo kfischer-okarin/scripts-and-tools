@@ -24,10 +24,26 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
              output: "")
     }
 
+    static let idlePrompt = """
+        ────────────────────
+        ❯
+        """
+
     struct KittyWindowStub {
         var id: Int
         var foregroundCmdline: [String]
         var title: String = "~/some-project"
+        var output: String = MockShellExecutor.idlePrompt
+
+        nonisolated(unsafe) private static var nextId = 1
+
+        init(id: Int? = nil, foregroundCmdline: [String], title: String = "~/some-project", output: String = MockShellExecutor.idlePrompt) {
+            self.id = id ?? Self.nextId
+            Self.nextId += 1
+            self.foregroundCmdline = foregroundCmdline
+            self.title = title
+            self.output = output
+        }
     }
 
     func givenKittySessions(socket: String = testSocket, _ windows: [KittyWindowStub]) {
@@ -48,11 +64,11 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
         [{"id": 1, "tabs": [{"id": 1, "title": "", "windows": [\(windowsJson)]}]}]
         """
         stub("kitten", arguments: kittenPrefix(socket) + ["ls"], output: json)
-    }
 
-    func givenKittyWindowOutput(socket: String = testSocket, _ windowId: Int, content: String) {
-        stub("kitten", arguments: kittenPrefix(socket) + ["get-text", "--extent", "all", "--match", "id:\(windowId)"],
-             output: content)
+        for w in windows {
+            stub("kitten", arguments: kittenPrefix(socket) + ["get-text", "--extent", "all", "--match", "id:\(w.id)"],
+                 output: w.output)
+        }
     }
 
     func givenKittyRemoteControlDisabled(socket: String = testSocket) {
