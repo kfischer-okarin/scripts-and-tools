@@ -6,19 +6,8 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXContainerItemProxy section */
-		0A94D8C62F5BC50400C31ABD /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 0A94D8A82F5BC47400C31ABD /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 0A94D8AF2F5BC47400C31ABD;
-			remoteInfo = CodingAgentHub;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		0A94D8B02F5BC47400C31ABD /* CodingAgentHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodingAgentHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0A94D8C22F5BC50400C31ABD /* CodingAgentHubTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodingAgentHubTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -27,22 +16,10 @@
 			path = CodingAgentHub;
 			sourceTree = "<group>";
 		};
-		0A94D8C32F5BC50400C31ABD /* CodingAgentHubTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = CodingAgentHubTests;
-			sourceTree = "<group>";
-		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		0A94D8AD2F5BC47400C31ABD /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		0A94D8BF2F5BC50400C31ABD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -56,7 +33,6 @@
 			isa = PBXGroup;
 			children = (
 				0A94D8B22F5BC47400C31ABD /* CodingAgentHub */,
-				0A94D8C32F5BC50400C31ABD /* CodingAgentHubTests */,
 				0A94D8B12F5BC47400C31ABD /* Products */,
 			);
 			sourceTree = "<group>";
@@ -65,7 +41,6 @@
 			isa = PBXGroup;
 			children = (
 				0A94D8B02F5BC47400C31ABD /* CodingAgentHub.app */,
-				0A94D8C22F5BC50400C31ABD /* CodingAgentHubTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,29 +70,6 @@
 			productReference = 0A94D8B02F5BC47400C31ABD /* CodingAgentHub.app */;
 			productType = "com.apple.product-type.application";
 		};
-		0A94D8C12F5BC50400C31ABD /* CodingAgentHubTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 0A94D8C82F5BC50400C31ABD /* Build configuration list for PBXNativeTarget "CodingAgentHubTests" */;
-			buildPhases = (
-				0A94D8BE2F5BC50400C31ABD /* Sources */,
-				0A94D8BF2F5BC50400C31ABD /* Frameworks */,
-				0A94D8C02F5BC50400C31ABD /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				0A94D8C72F5BC50400C31ABD /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				0A94D8C32F5BC50400C31ABD /* CodingAgentHubTests */,
-			);
-			name = CodingAgentHubTests;
-			packageProductDependencies = (
-			);
-			productName = CodingAgentHubTests;
-			productReference = 0A94D8C22F5BC50400C31ABD /* CodingAgentHubTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -130,10 +82,6 @@
 				TargetAttributes = {
 					0A94D8AF2F5BC47400C31ABD = {
 						CreatedOnToolsVersion = 26.3;
-					};
-					0A94D8C12F5BC50400C31ABD = {
-						CreatedOnToolsVersion = 26.3;
-						TestTargetID = 0A94D8AF2F5BC47400C31ABD;
 					};
 				};
 			};
@@ -152,20 +100,12 @@
 			projectRoot = "";
 			targets = (
 				0A94D8AF2F5BC47400C31ABD /* CodingAgentHub */,
-				0A94D8C12F5BC50400C31ABD /* CodingAgentHubTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		0A94D8AE2F5BC47400C31ABD /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		0A94D8C02F5BC50400C31ABD /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -182,22 +122,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		0A94D8BE2F5BC50400C31ABD /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		0A94D8C72F5BC50400C31ABD /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 0A94D8AF2F5BC47400C31ABD /* CodingAgentHub */;
-			targetProxy = 0A94D8C62F5BC50400C31ABD /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0A94D8B92F5BC47500C31ABD /* Debug */ = {
@@ -376,44 +301,6 @@
 			};
 			name = Release;
 		};
-		0A94D8C92F5BC50400C31ABD /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "dev.kf-labo.CodingAgentHubTests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CodingAgentHub.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CodingAgentHub";
-			};
-			name = Debug;
-		};
-		0A94D8CA2F5BC50400C31ABD /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "dev.kf-labo.CodingAgentHubTests";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CodingAgentHub.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/CodingAgentHub";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -431,15 +318,6 @@
 			buildConfigurations = (
 				0A94D8BC2F5BC47500C31ABD /* Debug */,
 				0A94D8BD2F5BC47500C31ABD /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		0A94D8C82F5BC50400C31ABD /* Build configuration list for PBXNativeTarget "CodingAgentHubTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				0A94D8C92F5BC50400C31ABD /* Debug */,
-				0A94D8CA2F5BC50400C31ABD /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
