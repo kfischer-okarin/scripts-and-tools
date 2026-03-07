@@ -9,6 +9,8 @@ struct TmuxSessionSource: SessionSource {
             .map { DiscoveredSession(id: $0, title: $0, cwd: "") }
     }
 
+    func focusSession(_ sessionId: String) async {}
+
     func captureOutput(session: String) async -> String {
         (try? await shell.run("tmux", arguments: ["capture-pane", "-p", "-t", session, "-S", "-30"])) ?? ""
     }

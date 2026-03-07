@@ -164,4 +164,16 @@ struct AgentHubTests {
         #expect(hub.sessions[0].id == "\(goodSocket):1")
         #expect(hub.errorMessage == nil)
     }
+
+    @Test func focusSessionSendsFocusWindowCommand() async throws {
+        shell.givenKittySessions([
+            Window(id: 42, foregroundCmdline: ["claude"]),
+        ])
+        await hub.refresh()
+
+        await hub.focusSession(hub.sessions[0])
+
+        let focusCommand = shell.ranCommands.first { $0.contains("focus-window") }
+        #expect(focusCommand == "kitten @ --password test-pass --to unix:/tmp/test-socket-12345 focus-window --match id:42")
+    }
 }

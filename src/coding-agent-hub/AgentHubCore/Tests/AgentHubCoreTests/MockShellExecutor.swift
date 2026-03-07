@@ -5,6 +5,7 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
     private var stubs: [String: String] = [:]
     private var errors: [String: ShellError] = [:]
     private var sockets: [String] = []
+    private(set) var ranCommands: [String] = []
 
     func stub(_ command: String, arguments: [String], output: String) {
         let key = ([command] + arguments).joined(separator: " ")
@@ -87,6 +88,7 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
 
     func run(_ command: String, arguments: [String]) async throws -> String {
         let key = ([command] + arguments).joined(separator: " ")
+        ranCommands.append(key)
         if let error = errors[key] {
             throw error
         }

@@ -40,6 +40,14 @@ struct ContentView: View {
                         Circle()
                             .fill(color(for: session.status))
                             .frame(width: 10, height: 10)
+                        Button {
+                            Task { await hub.focusSession(session) }
+                        } label: {
+                            Image(systemName: "arrow.up.forward.square")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Focus this session")
                     }
                     .padding(.vertical, 4)
                 }

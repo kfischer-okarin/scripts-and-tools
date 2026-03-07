@@ -7,4 +7,5 @@ struct DiscoveredSession {
 protocol SessionSource {
     func discoverSessions() async throws -> [DiscoveredSession]
     func captureOutput(session: String) async -> String
+    func focusSession(_ sessionId: String) async
 }

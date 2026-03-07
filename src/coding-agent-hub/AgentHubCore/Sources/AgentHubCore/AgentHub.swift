@@ -16,6 +16,10 @@ public final class AgentHub {
         self.homeDirectory = shell.homeDirectory
     }
 
+    public func focusSession(_ session: AgentSession) async {
+        await source.focusSession(session.id)
+    }
+
     public func refresh() async {
         let discovered: [DiscoveredSession]
         do {

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 struct KittyWindow {
@@ -42,11 +43,30 @@ struct KittySessionSource: SessionSource {
     }
 
     func captureOutput(session: String) async -> String {
-        let parts = session.split(separator: ":", maxSplits: 1)
-        guard parts.count == 2 else { return "" }
-        let socket = String(parts[0])
-        let windowId = String(parts[1])
+        let (socket, windowId) = parseSessionId(session)
+        guard let socket, let windowId else { return "" }
         return (try? await shell.run("kitten", arguments: kittenArgs(socket, ["get-text", "--extent", "all", "--match", "id:\(windowId)"]))) ?? ""
+    }
+
+    func focusSession(_ sessionId: String) async {
+        let (socket, windowId) = parseSessionId(sessionId)
+        guard let socket, let windowId else { return }
+        _ = try? await shell.run("kitten", arguments: kittenArgs(socket, ["focus-window", "--match", "id:\(windowId)"]))
+        activateKittyProcess(socket: socket)
+    }
+
+    private func parseSessionId(_ session: String) -> (socket: String?, windowId: String?) {
+        let parts = session.split(separator: ":", maxSplits: 1)
+        guard parts.count == 2 else { return (nil, nil) }
+        return (String(parts[0]), String(parts[1]))
+    }
+
+    private func activateKittyProcess(socket: String) {
+        let filename = (socket as NSString).lastPathComponent
+        guard let dashRange = filename.range(of: "-", options: .backwards),
+              let pid = Int32(filename[dashRange.upperBound...])
+        else { return }
+        NSRunningApplication(processIdentifier: pid)?.activate()
     }
 
     private func findSockets() async throws -> [String] {
