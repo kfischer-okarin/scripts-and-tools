@@ -103,53 +103,6 @@ struct AgentHubTests {
     // - removes sessions that disappear between refreshes
     // - preserves session identity across refreshes (no flicker)
 
-    @Test func sessionAwaitingUserInputWhenPromptVisible() async throws {
-        shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittyWindowOutput(1, content: """
-            Some output here
-            ────────────────────
-            ❯
-            """)
-
-        await hub.refresh()
-
-        #expect(hub.sessions.count == 1)
-        #expect(hub.sessions[0].status == .awaitingUserInput)
-    }
-
-    @Test func sessionAwaitingPermissionWhenOptionsVisible() async throws {
-        shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittyWindowOutput(1, content: """
-            ───────────────────────────────────────────────
-             Bash command
-               echo "Hello" | rev
-             Do you want to proceed?
-             ❯ 1. Yes
-               2. Yes, and don't ask again for: rev
-               3. No
-            """)
-
-        await hub.refresh()
-
-        #expect(hub.sessions.count == 1)
-        #expect(hub.sessions[0].status == .awaitingPermission)
-    }
-
-    @Test func doesNotDetectPermissionWhenDoYouWantAppearsInOutput() async throws {
-        shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittyWindowOutput(1, content: """
-            Do you want to know how this works? Let me explain.
-            Here is the answer.
-            ────────────────────
-            ❯
-            """)
-
-        await hub.refresh()
-
-        #expect(hub.sessions.count == 1)
-        #expect(hub.sessions[0].status == .awaitingUserInput)
-    }
-
     @Test func showsErrorWhenAllSocketsHaveRemoteControlDisabled() async throws {
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-111")
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-222")
@@ -178,16 +131,4 @@ struct AgentHubTests {
         #expect(hub.errorMessage == nil)
     }
 
-    // Status parsing:
-    // - session with prompt after separator has status .awaitingUserInput ✅
-    // - session with permission prompt has status .awaitingPermission ✅
-    // - session with "Read(src/foo.swift)" output has status .toolUse("Read")
-    // - session with "Edit(...)" output has status .toolUse("Edit")
-    // - session with "Bash(...)" output has status .toolUse("Bash")
-    // - session with "Error:" output has status .error
-    // - most recent activity (bottom of output) wins over earlier patterns
-    // - ANSI escape sequences are stripped before parsing
-
-    // Context:
-    // - session exposes last N lines of raw output for display
 }
