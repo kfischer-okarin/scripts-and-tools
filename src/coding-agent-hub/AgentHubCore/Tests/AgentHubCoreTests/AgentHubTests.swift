@@ -97,14 +97,6 @@ struct AgentHubTests {
         #expect(hub.sessions.isEmpty)
     }
 
-    // Discovery:
-    // - shows no sessions when no claude windows exist ✅
-    // - shows no sessions when no sockets found ✅
-    // - aggregates sessions across multiple kitty instances ✅
-    // - shows error message when remote control is disabled ✅
-    // - removes sessions that disappear between refreshes
-    // - preserves session identity across refreshes (no flicker)
-
     @Test func showsErrorWhenAllSocketsHaveRemoteControlDisabled() async throws {
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-111")
         shell.givenKittyRemoteControlDisabled(socket: "/tmp/test-socket-222")
