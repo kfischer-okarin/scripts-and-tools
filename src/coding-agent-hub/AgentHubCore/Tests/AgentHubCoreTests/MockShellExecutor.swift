@@ -45,7 +45,7 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
     }
 
     func givenKittyWindowOutput(socket: String = testSocket, _ windowId: Int, content: String) {
-        stub("kitten", arguments: kittenPrefix(socket) + ["get-text", "--match", "id:\(windowId)"],
+        stub("kitten", arguments: kittenPrefix(socket) + ["get-text", "--extent", "all", "--match", "id:\(windowId)"],
              output: content)
     }
 

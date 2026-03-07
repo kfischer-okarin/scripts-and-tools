@@ -42,7 +42,7 @@ struct KittySessionSource: SessionSource {
         guard parts.count == 2 else { return "" }
         let socket = String(parts[0])
         let windowId = String(parts[1])
-        return (try? await shell.run("kitten", arguments: kittenArgs(socket, ["get-text", "--match", "id:\(windowId)"]))) ?? ""
+        return (try? await shell.run("kitten", arguments: kittenArgs(socket, ["get-text", "--extent", "all", "--match", "id:\(windowId)"]))) ?? ""
     }
 
     private func findSockets() async throws -> [String] {
