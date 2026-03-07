@@ -2,7 +2,7 @@ import Foundation
 
 struct KittyWindow {
     let id: Int
-    let cmdline: [String]
+    let foregroundCmdlines: [[String]]
 }
 
 struct KittySessionSource: SessionSource {
@@ -13,7 +13,11 @@ struct KittySessionSource: SessionSource {
         let json = try await shell.run("kitten", arguments: kittenArgs(["ls"]))
         let windows = parseWindows(from: json)
         return windows
-            .filter { $0.cmdline.contains(where: { $0.contains("claude") }) }
+            .filter { window in
+                window.foregroundCmdlines.contains { cmdline in
+                    cmdline.contains { $0.contains("claude") }
+                }
+            }
             .map { String($0.id) }
     }
 
@@ -39,10 +43,10 @@ struct KittySessionSource: SessionSource {
             for tab in tabs {
                 guard let windows = tab["windows"] as? [[String: Any]] else { continue }
                 for window in windows {
-                    guard let id = window["id"] as? Int,
-                          let cmdline = window["cmdline"] as? [String]
-                    else { continue }
-                    result.append(KittyWindow(id: id, cmdline: cmdline))
+                    guard let id = window["id"] as? Int else { continue }
+                    let fgProcesses = window["foreground_processes"] as? [[String: Any]] ?? []
+                    let cmdlines = fgProcesses.compactMap { $0["cmdline"] as? [String] }
+                    result.append(KittyWindow(id: id, foregroundCmdlines: cmdlines))
                 }
             }
         }

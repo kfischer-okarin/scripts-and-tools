@@ -14,11 +14,13 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
         errors[key] = error
     }
 
-    func givenKittySessions(_ windows: [(id: Int, cmdline: [String])]) {
+    func givenKittySessions(_ windows: [(id: Int, foregroundCmdline: [String])]) {
         let windowsJson = windows.map { window in
-            """
+            let cmdlineJson = window.foregroundCmdline.map { "\"\($0)\"" }.joined(separator: ", ")
+            return """
             {"id": \(window.id), "title": "", "cwd": "/tmp", "pid": 1000, \
-            "cmdline": [\(window.cmdline.map { "\"\($0)\"" }.joined(separator: ", "))]}
+            "cmdline": ["/bin/zsh"], \
+            "foreground_processes": [{"cmdline": [\(cmdlineJson)], "cwd": "/tmp", "pid": 2000}]}
             """
         }.joined(separator: ", ")
         let json = """

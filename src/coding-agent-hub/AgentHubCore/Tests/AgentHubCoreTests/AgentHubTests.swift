@@ -8,8 +8,8 @@ struct AgentHubTests {
     @Test func discoversActiveSessionWithParsedStatus() async throws {
         let shell = MockShellExecutor()
         shell.givenKittySessions([
-            (id: 1, cmdline: ["claude"]),
-            (id: 2, cmdline: ["vim", "foo.swift"]),
+            (id: 1, foregroundCmdline: ["claude"]),
+            (id: 2, foregroundCmdline: ["vim", "foo.swift"]),
         ])
         shell.givenKittyWindowOutput(1,
                                      content: "Some previous output\n✻ Thinking… (27s, 200 tokens)\n")
@@ -27,8 +27,8 @@ struct AgentHubTests {
     @Test func showsNoSessionsWhenNoClaude() async throws {
         let shell = MockShellExecutor()
         shell.givenKittySessions([
-            (id: 1, cmdline: ["vim"]),
-            (id: 2, cmdline: ["zsh"]),
+            (id: 1, foregroundCmdline: ["vim"]),
+            (id: 2, foregroundCmdline: ["zsh"]),
         ])
 
         let hub = AgentHub(shell: shell)
@@ -46,7 +46,7 @@ struct AgentHubTests {
 
     @Test func sessionAwaitingUserInputWhenPromptVisible() async throws {
         let shell = MockShellExecutor()
-        shell.givenKittySessions([(id: 1, cmdline: ["claude"])])
+        shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyWindowOutput(1,
                                      content: "Some output here\n────────────────────\n❯ \n")
 
@@ -59,7 +59,7 @@ struct AgentHubTests {
 
     @Test func sessionAwaitingPermissionWhenYesNoOptionsVisible() async throws {
         let shell = MockShellExecutor()
-        shell.givenKittySessions([(id: 1, cmdline: ["claude"])])
+        shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyWindowOutput(1, content: """
             ───────────────────────────────────────────────
              Edit file
