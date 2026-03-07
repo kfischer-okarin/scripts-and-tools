@@ -5,26 +5,21 @@ import Observation
 public final class AgentHub {
     public private(set) var sessions: [AgentSession] = []
 
-    private let shell: ShellExecutor
+    private let source: SessionSource
 
     public init(shell: ShellExecutor) {
-        self.shell = shell
+        self.source = TmuxSessionSource(shell: shell)
     }
 
     public func refresh() async {
-        let sessionNames = await discoverAgentSessions()
+        let sessionNames = await source.discoverSessions()
         var updated: [AgentSession] = []
         for name in sessionNames {
-            let output = (try? await shell.run("tmux", arguments: ["capture-pane", "-p", "-t", name, "-S", "-30"])) ?? ""
+            let output = await source.captureOutput(session: name)
             let status = parseStatus(from: output)
             updated.append(AgentSession(id: name, status: status))
         }
         sessions = updated
-    }
-
-    private func discoverAgentSessions() async -> [String] {
-        let output = (try? await shell.run("tmux", arguments: ["list-sessions", "-F", "#{session_name}"])) ?? ""
-        return output.split(separator: "\n").map(String.init).filter { $0.hasPrefix("agent-") }
     }
 
     private func parseStatus(from output: String) -> SessionStatus {

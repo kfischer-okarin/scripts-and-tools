@@ -1,0 +1,12 @@
+struct TmuxSessionSource: SessionSource {
+    let shell: ShellExecutor
+
+    func discoverSessions() async -> [String] {
+        let output = (try? await shell.run("tmux", arguments: ["list-sessions", "-F", "#{session_name}"])) ?? ""
+        return output.split(separator: "\n").map(String.init).filter { $0.hasPrefix("agent-") }
+    }
+
+    func captureOutput(session: String) async -> String {
+        (try? await shell.run("tmux", arguments: ["capture-pane", "-p", "-t", session, "-S", "-30"])) ?? ""
+    }
+}
