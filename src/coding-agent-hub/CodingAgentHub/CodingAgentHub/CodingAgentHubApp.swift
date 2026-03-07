@@ -1,17 +1,13 @@
-//
-//  CodingAgentHubApp.swift
-//  CodingAgentHub
-//
-//  Created by Kevin Fischer on 2026/03/07.
-//
-
 import SwiftUI
+import AgentHubCore
 
 @main
 struct CodingAgentHubApp: App {
+    @State private var hub = AgentHub(shell: ProcessShellExecutor())
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(hub: hub)
         }
     }
 }

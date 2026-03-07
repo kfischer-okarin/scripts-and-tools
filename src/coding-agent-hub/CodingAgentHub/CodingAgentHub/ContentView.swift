@@ -1,24 +1,57 @@
-//
-//  ContentView.swift
-//  CodingAgentHub
-//
-//  Created by Kevin Fischer on 2026/03/07.
-//
-
 import SwiftUI
+import AgentHubCore
 
 struct ContentView: View {
-    var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
-    }
-}
+    let hub: AgentHub
 
-#Preview {
-    ContentView()
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if hub.sessions.isEmpty {
+                ContentUnavailableView(
+                    "No Agent Sessions",
+                    systemImage: "terminal",
+                    description: Text("Start a session with the claude wrapper script")
+                )
+            } else {
+                List(hub.sessions) { session in
+                    HStack {
+                        Circle()
+                            .fill(color(for: session.status))
+                            .frame(width: 10, height: 10)
+                        Text(session.id)
+                            .font(.system(.body, design: .monospaced))
+                        Spacer()
+                        Text(label(for: session.status))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .frame(minWidth: 400, minHeight: 300)
+        .task {
+            while !Task.isCancelled {
+                await hub.refresh()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }
+
+    private func color(for status: SessionStatus) -> Color {
+        switch status {
+        case .working: .blue
+        case .awaitingUserInput: .green
+        case .awaitingPermission: .orange
+        case .unknown: .gray
+        }
+    }
+
+    private func label(for status: SessionStatus) -> String {
+        switch status {
+        case .working: "Working"
+        case .awaitingUserInput: "Awaiting Input"
+        case .awaitingPermission: "Needs Permission"
+        case .unknown: "Unknown"
+        }
+    }
 }
