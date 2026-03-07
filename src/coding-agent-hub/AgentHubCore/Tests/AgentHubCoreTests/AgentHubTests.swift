@@ -36,8 +36,10 @@ struct AgentHubTests {
             Window(foregroundCmdline: ["claude"], title: "✳ Doing Important Work", output: """
                 Some previous output
                 ✻ Thinking… (27s, 200 tokens)
+
                 ────────────────────
                 ❯
+                ────────────────────
                 """),
             Window(foregroundCmdline: ["vim", "foo.swift"], title: "vim"),
         ])
@@ -73,8 +75,10 @@ struct AgentHubTests {
         let socket2 = "/tmp/test-socket-222"
         shell.givenKittySessions(socket: socket1, [Window(id: 1, foregroundCmdline: ["claude"], output: """
             ✻ Thinking… (5s)
+
             ────────────────────
             ❯
+            ────────────────────
             """)])
         shell.givenKittySessions(socket: socket2, [Window(id: 5, foregroundCmdline: ["claude"])])
 
@@ -125,8 +129,10 @@ struct AgentHubTests {
         let badSocket = "/tmp/test-socket-222"
         shell.givenKittySessions(socket: goodSocket, [Window(id: 1, foregroundCmdline: ["claude"], output: """
             ✻ Thinking… (5s)
+
             ────────────────────
             ❯
+            ────────────────────
             """)])
         shell.givenKittyRemoteControlDisabled(socket: badSocket)
 

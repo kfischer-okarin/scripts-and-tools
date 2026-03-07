@@ -28,6 +28,7 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
     static let idlePrompt = """
         ────────────────────
         ❯
+        ────────────────────
         """
 
     struct KittyWindowStub {
