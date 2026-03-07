@@ -1,3 +1,5 @@
+// NOTE: Currently unused — kept in case we need to revive tmux-based session discovery.
+// The wrapper script at bin/claude-wrapper.sh pairs with this source.
 struct TmuxSessionSource: SessionSource {
     let shell: ShellExecutor
 

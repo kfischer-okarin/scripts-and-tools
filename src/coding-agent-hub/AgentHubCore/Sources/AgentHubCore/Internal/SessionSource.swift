@@ -1,4 +1,4 @@
 protocol SessionSource {
-    func discoverSessions() async -> [String]
+    func discoverSessions() async throws -> [String]
     func captureOutput(session: String) async -> String
 }

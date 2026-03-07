@@ -7,23 +7,29 @@ struct AgentHubTests {
 
     @Test func discoversActiveSessionWithParsedStatus() async throws {
         let shell = MockShellExecutor()
-        shell.givenTmuxSessions(["agent-abc123", "my-other-session"])
-        shell.givenTmuxSessionOutput("agent-abc123",
+        shell.givenKittySessions([
+            (id: 1, cmdline: ["claude"]),
+            (id: 2, cmdline: ["vim", "foo.swift"]),
+        ])
+        shell.givenKittyWindowOutput(1,
                                      content: "Some previous output\n✻ Thinking… (27s, 200 tokens)\n")
 
         let hub = AgentHub(shell: shell)
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
-        #expect(hub.sessions[0].id == "agent-abc123")
+        #expect(hub.sessions[0].id == "1")
         #expect(hub.sessions[0].status == .working)
     }
 
     // MARK: - Backlog (BDD-style cases to implement next via TDD)
 
-    @Test func showsNoSessionsWhenNoAgentPrefixedSessionsExist() async throws {
+    @Test func showsNoSessionsWhenNoClaude() async throws {
         let shell = MockShellExecutor()
-        shell.givenTmuxSessions(["my-dev-session", "other-stuff"])
+        shell.givenKittySessions([
+            (id: 1, cmdline: ["vim"]),
+            (id: 2, cmdline: ["zsh"]),
+        ])
 
         let hub = AgentHub(shell: shell)
         await hub.refresh()
@@ -32,16 +38,16 @@ struct AgentHubTests {
     }
 
     // Discovery:
-    // - shows no sessions when tmux has no agent-prefixed sessions ✅
-    // - shows no sessions when tmux server is not running (error output)
-    // - discovers multiple agent sessions simultaneously
+    // - shows no sessions when no claude windows exist ✅
+    // - shows error message when remote control is disabled
+    // - discovers multiple claude sessions simultaneously
     // - removes sessions that disappear between refreshes
     // - preserves session identity across refreshes (no flicker)
 
     @Test func sessionAwaitingUserInputWhenPromptVisible() async throws {
         let shell = MockShellExecutor()
-        shell.givenTmuxSessions(["agent-xyz"])
-        shell.givenTmuxSessionOutput("agent-xyz",
+        shell.givenKittySessions([(id: 1, cmdline: ["claude"])])
+        shell.givenKittyWindowOutput(1,
                                      content: "Some output here\n────────────────────\n❯ \n")
 
         let hub = AgentHub(shell: shell)
@@ -53,8 +59,8 @@ struct AgentHubTests {
 
     @Test func sessionAwaitingPermissionWhenYesNoOptionsVisible() async throws {
         let shell = MockShellExecutor()
-        shell.givenTmuxSessions(["agent-perm"])
-        shell.givenTmuxSessionOutput("agent-perm", content: """
+        shell.givenKittySessions([(id: 1, cmdline: ["claude"])])
+        shell.givenKittyWindowOutput(1, content: """
             ───────────────────────────────────────────────
              Edit file
              src/AgentHubCore/Sources/SessionStatus.swift
@@ -75,6 +81,17 @@ struct AgentHubTests {
 
         #expect(hub.sessions.count == 1)
         #expect(hub.sessions[0].status == .awaitingPermission)
+    }
+
+    @Test func showsErrorWhenRemoteControlDisabled() async throws {
+        let shell = MockShellExecutor()
+        shell.givenKittyRemoteControlDisabled()
+
+        let hub = AgentHub(shell: shell)
+        await hub.refresh()
+
+        #expect(hub.sessions.isEmpty)
+        #expect(hub.errorMessage == "Remote control is disabled")
     }
 
     // Status parsing:

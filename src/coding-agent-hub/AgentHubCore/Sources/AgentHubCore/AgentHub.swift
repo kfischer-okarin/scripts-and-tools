@@ -4,20 +4,30 @@ import Observation
 @Observable
 public final class AgentHub {
     public private(set) var sessions: [AgentSession] = []
+    public private(set) var errorMessage: String?
 
     private let source: SessionSource
 
     public init(shell: ShellExecutor) {
-        self.source = TmuxSessionSource(shell: shell)
+        self.source = KittySessionSource(shell: shell)
     }
 
     public func refresh() async {
-        let sessionNames = await source.discoverSessions()
+        let sessionIds: [String]
+        do {
+            sessionIds = try await source.discoverSessions()
+            errorMessage = nil
+        } catch {
+            sessions = []
+            errorMessage = error.localizedDescription
+            return
+        }
+
         var updated: [AgentSession] = []
-        for name in sessionNames {
-            let output = await source.captureOutput(session: name)
+        for id in sessionIds {
+            let output = await source.captureOutput(session: id)
             let status = parseStatus(from: output)
-            updated.append(AgentSession(id: name, status: status))
+            updated.append(AgentSession(id: id, status: status))
         }
         sessions = updated
     }
