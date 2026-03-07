@@ -5,7 +5,8 @@ import AgentHubCore
 struct CodingAgentHubApp: App {
     @State private var hub = AgentHub(
         shell: ProcessShellExecutor(loggingEnabled: GeneratedConfig.shellLogs),
-        kittyPassword: GeneratedConfig.kittyPassword
+        kittyPassword: GeneratedConfig.kittyPassword,
+        kittySocketPrefix: GeneratedConfig.kittySocketPrefix
     )
 
     var body: some Scene {

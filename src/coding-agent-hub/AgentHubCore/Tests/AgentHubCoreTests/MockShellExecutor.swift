@@ -3,6 +3,7 @@
 final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
     private var stubs: [String: String] = [:]
     private var errors: [String: ShellError] = [:]
+    private var sockets: [String] = []
 
     func stub(_ command: String, arguments: [String], output: String) {
         let key = ([command] + arguments).joined(separator: " ")
@@ -14,7 +15,21 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
         errors[key] = error
     }
 
-    func givenKittySessions(_ windows: [(id: Int, foregroundCmdline: [String])]) {
+    static let testSocketPrefix = "/tmp/test-socket"
+    static let testSocket = "/tmp/test-socket-12345"
+    static let testPassword = "test-pass"
+
+    func givenNoKittySockets() {
+        stub("fd", arguments: ["--glob", "test-socket-*", "--type", "socket", "--max-depth", "1", "/tmp"],
+             output: "")
+    }
+
+    func givenKittySessions(socket: String = testSocket, _ windows: [(id: Int, foregroundCmdline: [String])]) {
+        if !sockets.contains(socket) {
+            sockets.append(socket)
+            stub("fd", arguments: ["--glob", "test-socket-*", "--type", "socket", "--max-depth", "1", "/tmp"],
+                 output: sockets.joined(separator: "\n"))
+        }
         let windowsJson = windows.map { window in
             let cmdlineJson = window.foregroundCmdline.map { "\"\($0)\"" }.joined(separator: ", ")
             return """
@@ -26,16 +41,21 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
         let json = """
         [{"id": 1, "tabs": [{"id": 1, "title": "", "windows": [\(windowsJson)]}]}]
         """
-        stub("kitten", arguments: ["@", "ls"], output: json)
+        stub("kitten", arguments: kittenPrefix(socket) + ["ls"], output: json)
     }
 
-    func givenKittyWindowOutput(_ windowId: Int, content: String) {
-        stub("kitten", arguments: ["@", "get-text", "--match", "id:\(windowId)"],
+    func givenKittyWindowOutput(socket: String = testSocket, _ windowId: Int, content: String) {
+        stub("kitten", arguments: kittenPrefix(socket) + ["get-text", "--match", "id:\(windowId)"],
              output: content)
     }
 
-    func givenKittyRemoteControlDisabled() {
-        stubError("kitten", arguments: ["@", "ls"],
+    func givenKittyRemoteControlDisabled(socket: String = testSocket) {
+        if !sockets.contains(socket) {
+            sockets.append(socket)
+            stub("fd", arguments: ["--glob", "test-socket-*", "--type", "socket", "--max-depth", "1", "/tmp"],
+                 output: sockets.joined(separator: "\n"))
+        }
+        stubError("kitten", arguments: kittenPrefix(socket) + ["ls"],
                   error: ShellError(message: "Remote control is disabled"))
     }
 
@@ -45,5 +65,9 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
             throw error
         }
         return stubs[key] ?? ""
+    }
+
+    private func kittenPrefix(_ socket: String) -> [String] {
+        ["@", "--password", Self.testPassword, "--to", "unix:\(socket)"]
     }
 }
