@@ -29,7 +29,7 @@ struct ContentView: View {
                                         .fixedSize()
                                 }
                                 .padding(6)
-                                .frame(width: 480, alignment: .leading)
+                                .frame(width: 720, alignment: .leading)
                                 .background(.quaternary)
                                 .cornerRadius(4)
                             }
