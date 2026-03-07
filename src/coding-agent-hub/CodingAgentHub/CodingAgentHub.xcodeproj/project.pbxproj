@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0AAFE1002F5BEA6B00AE0A07 /* AgentHubCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0AAFE0FF2F5BEA6B00AE0A07 /* AgentHubCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		0A94D8B02F5BC47400C31ABD /* CodingAgentHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CodingAgentHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0AAFE1002F5BEA6B00AE0A07 /* AgentHubCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = CodingAgentHub;
 			packageProductDependencies = (
+				0AAFE0FF2F5BEA6B00AE0A07 /* AgentHubCore */,
 			);
 			productName = CodingAgentHub;
 			productReference = 0A94D8B02F5BC47400C31ABD /* CodingAgentHub.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 0A94D8A72F5BC47400C31ABD;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				0AAFE0FE2F5BEA6B00AE0A07 /* XCLocalSwiftPackageReference "../AgentHubCore" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 0A94D8B12F5BC47400C31ABD /* Products */;
 			projectDirPath = "";
@@ -323,6 +332,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		0AAFE0FE2F5BEA6B00AE0A07 /* XCLocalSwiftPackageReference "../AgentHubCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../AgentHubCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0AAFE0FF2F5BEA6B00AE0A07 /* AgentHubCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AgentHubCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0A94D8A82F5BC47400C31ABD /* Project object */;
 }
