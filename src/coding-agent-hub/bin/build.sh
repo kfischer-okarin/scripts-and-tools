@@ -17,3 +17,7 @@ EOF
 
 cd "$SCRIPT_DIR/../CodingAgentHub"
 xcodebuild -scheme CodingAgentHub -configuration Debug build
+
+APP_PATH=$(xcodebuild -scheme CodingAgentHub -configuration Debug -showBuildSettings 2>/dev/null | grep -m1 'BUILT_PRODUCTS_DIR' | sed 's/.*= //')
+echo ""
+echo "Run: open \"$APP_PATH/CodingAgentHub.app\""
