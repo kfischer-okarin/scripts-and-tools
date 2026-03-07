@@ -1,6 +1,8 @@
 import Testing
 @testable import AgentHubCore
 
+private typealias Window = MockShellExecutor.KittyWindowStub
+
 struct AgentHubTests {
     let shell = MockShellExecutor()
     let hub: AgentHub
@@ -9,10 +11,10 @@ struct AgentHubTests {
         hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix)
     }
 
-    @Test func discoversActiveSessionWithParsedStatus() async throws {
+    @Test func discoversActiveSessionWithTitleAndStatus() async throws {
         shell.givenKittySessions([
-            (id: 1, foregroundCmdline: ["claude"]),
-            (id: 2, foregroundCmdline: ["vim", "foo.swift"]),
+            Window(id: 1, foregroundCmdline: ["claude"], title: "✳ Doing Important Work"),
+            Window(id: 2, foregroundCmdline: ["vim", "foo.swift"], title: "vim"),
         ])
         shell.givenKittyWindowOutput(1, content: """
             Some previous output
@@ -24,14 +26,14 @@ struct AgentHubTests {
         await hub.refresh()
 
         #expect(hub.sessions.count == 1)
-        #expect(hub.sessions[0].id == "\(MockShellExecutor.testSocket):1")
+        #expect(hub.sessions[0].title == "✳ Doing Important Work")
         #expect(hub.sessions[0].status == .working)
     }
 
     @Test func showsNoSessionsWhenNoClaude() async throws {
         shell.givenKittySessions([
-            (id: 1, foregroundCmdline: ["vim"]),
-            (id: 2, foregroundCmdline: ["zsh"]),
+            Window(id: 1, foregroundCmdline: ["vim"]),
+            Window(id: 2, foregroundCmdline: ["zsh"]),
         ])
 
         await hub.refresh()
@@ -50,8 +52,8 @@ struct AgentHubTests {
     @Test func aggregatesSessionsAcrossMultipleKittyInstances() async throws {
         let socket1 = "/tmp/test-socket-111"
         let socket2 = "/tmp/test-socket-222"
-        shell.givenKittySessions(socket: socket1, [(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittySessions(socket: socket2, [(id: 5, foregroundCmdline: ["claude"])])
+        shell.givenKittySessions(socket: socket1, [Window(id: 1, foregroundCmdline: ["claude"])])
+        shell.givenKittySessions(socket: socket2, [Window(id: 5, foregroundCmdline: ["claude"])])
         shell.givenKittyWindowOutput(socket: socket1, 1, content: """
             ✻ Thinking… (5s)
             ────────────────────
@@ -74,8 +76,8 @@ struct AgentHubTests {
 
     @Test func ignoresProcessesThatContainClaudeButAreNotClaude() async throws {
         shell.givenKittySessions([
-            (id: 1, foregroundCmdline: ["claude-hierarchical-agent"]),
-            (id: 2, foregroundCmdline: ["/usr/local/bin/claude-helper"]),
+            Window(id: 1, foregroundCmdline: ["claude-hierarchical-agent"]),
+            Window(id: 2, foregroundCmdline: ["/usr/local/bin/claude-helper"]),
         ])
 
         await hub.refresh()
@@ -85,9 +87,9 @@ struct AgentHubTests {
 
     @Test func ignoresNonInteractiveClaudeWithPrintFlag() async throws {
         shell.givenKittySessions([
-            (id: 1, foregroundCmdline: ["claude", "-p", "summarize this"]),
-            (id: 2, foregroundCmdline: ["claude", "--print", "do something"]),
-            (id: 3, foregroundCmdline: ["claude", "some", "args", "-p"]),
+            Window(id: 1, foregroundCmdline: ["claude", "-p", "summarize this"]),
+            Window(id: 2, foregroundCmdline: ["claude", "--print", "do something"]),
+            Window(id: 3, foregroundCmdline: ["claude", "some", "args", "-p"]),
         ])
 
         await hub.refresh()
@@ -116,7 +118,7 @@ struct AgentHubTests {
     @Test func skipsSocketWithRemoteControlDisabledWhenOthersWork() async throws {
         let goodSocket = "/tmp/test-socket-111"
         let badSocket = "/tmp/test-socket-222"
-        shell.givenKittySessions(socket: goodSocket, [(id: 1, foregroundCmdline: ["claude"])])
+        shell.givenKittySessions(socket: goodSocket, [Window(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyRemoteControlDisabled(socket: badSocket)
         shell.givenKittyWindowOutput(socket: goodSocket, 1, content: """
             ✻ Thinking… (5s)
@@ -130,5 +132,4 @@ struct AgentHubTests {
         #expect(hub.sessions[0].id == "\(goodSocket):1")
         #expect(hub.errorMessage == nil)
     }
-
 }

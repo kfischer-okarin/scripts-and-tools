@@ -14,9 +14,9 @@ public final class AgentHub {
     }
 
     public func refresh() async {
-        let sessionIds: [String]
+        let discovered: [DiscoveredSession]
         do {
-            sessionIds = try await source.discoverSessions()
+            discovered = try await source.discoverSessions()
             errorMessage = nil
         } catch {
             sessions = []
@@ -25,10 +25,10 @@ public final class AgentHub {
         }
 
         var updated: [AgentSession] = []
-        for id in sessionIds {
-            let output = await source.captureOutput(session: id)
+        for session in discovered {
+            let output = await source.captureOutput(session: session.id)
             let status = statusParser.parse(output)
-            updated.append(AgentSession(id: id, status: status))
+            updated.append(AgentSession(id: session.id, title: session.title, status: status))
         }
         sessions = updated
     }

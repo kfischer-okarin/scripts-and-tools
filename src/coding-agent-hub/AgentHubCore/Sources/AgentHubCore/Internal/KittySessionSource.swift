@@ -2,6 +2,7 @@ import Foundation
 
 struct KittyWindow {
     let id: Int
+    let title: String
     let foregroundCmdlines: [[String]]
 }
 
@@ -10,16 +11,16 @@ struct KittySessionSource: SessionSource {
     let password: String
     let socketPrefix: String
 
-    func discoverSessions() async throws -> [String] {
+    func discoverSessions() async throws -> [DiscoveredSession] {
         let sockets = try await findSockets()
         guard !sockets.isEmpty else { return [] }
 
-        var sessions: [String] = []
+        var sessions: [DiscoveredSession] = []
         var errors: [Error] = []
         for socket in sockets {
             do {
                 let json = try await shell.run("kitten", arguments: kittenArgs(socket, ["ls"]))
-                let claudeWindowIds = parseWindows(from: json)
+                let discovered = parseWindows(from: json)
                     .filter { window in
                         window.foregroundCmdlines.contains { cmdline in
                             cmdline.first == "claude"
@@ -27,8 +28,8 @@ struct KittySessionSource: SessionSource {
                             && !cmdline.contains("--print")
                         }
                     }
-                    .map { "\(socket):\($0.id)" }
-                sessions.append(contentsOf: claudeWindowIds)
+                    .map { DiscoveredSession(id: "\(socket):\($0.id)", title: $0.title) }
+                sessions.append(contentsOf: discovered)
             } catch {
                 errors.append(error)
             }
@@ -73,9 +74,10 @@ struct KittySessionSource: SessionSource {
                 guard let windows = tab["windows"] as? [[String: Any]] else { continue }
                 for window in windows {
                     guard let id = window["id"] as? Int else { continue }
+                    let title = window["title"] as? String ?? ""
                     let fgProcesses = window["foreground_processes"] as? [[String: Any]] ?? []
                     let cmdlines = fgProcesses.compactMap { $0["cmdline"] as? [String] }
-                    result.append(KittyWindow(id: id, foregroundCmdlines: cmdlines))
+                    result.append(KittyWindow(id: id, title: title, foregroundCmdlines: cmdlines))
                 }
             }
         }

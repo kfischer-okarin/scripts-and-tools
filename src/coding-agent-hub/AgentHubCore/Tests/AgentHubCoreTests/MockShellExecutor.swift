@@ -24,16 +24,22 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
              output: "")
     }
 
-    func givenKittySessions(socket: String = testSocket, _ windows: [(id: Int, foregroundCmdline: [String])]) {
+    struct KittyWindowStub {
+        var id: Int
+        var foregroundCmdline: [String]
+        var title: String = "~/some-project"
+    }
+
+    func givenKittySessions(socket: String = testSocket, _ windows: [KittyWindowStub]) {
         if !sockets.contains(socket) {
             sockets.append(socket)
             stub("fd", arguments: ["--glob", "test-socket-*", "--type", "socket", "--max-depth", "1", "/tmp"],
                  output: sockets.joined(separator: "\n"))
         }
-        let windowsJson = windows.map { window in
-            let cmdlineJson = window.foregroundCmdline.map { "\"\($0)\"" }.joined(separator: ", ")
+        let windowsJson = windows.map { w in
+            let cmdlineJson = w.foregroundCmdline.map { "\"\($0)\"" }.joined(separator: ", ")
             return """
-            {"id": \(window.id), "title": "", "cwd": "/tmp", "pid": 1000, \
+            {"id": \(w.id), "title": "\(w.title)", "cwd": "/tmp", "pid": 1000, \
             "cmdline": ["/bin/zsh"], \
             "foreground_processes": [{"cmdline": [\(cmdlineJson)], "cwd": "/tmp", "pid": 2000}]}
             """
