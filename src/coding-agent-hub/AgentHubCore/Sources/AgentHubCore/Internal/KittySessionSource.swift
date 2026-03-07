@@ -22,7 +22,7 @@ struct KittySessionSource: SessionSource {
                 let claudeWindowIds = parseWindows(from: json)
                     .filter { window in
                         window.foregroundCmdlines.contains { cmdline in
-                            cmdline.contains { $0.contains("claude") }
+                            cmdline.first == "claude"
                         }
                     }
                     .map { "\(socket):\($0.id)" }

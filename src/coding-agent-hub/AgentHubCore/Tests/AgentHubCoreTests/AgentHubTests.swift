@@ -70,6 +70,19 @@ struct AgentHubTests {
         #expect(hub.sessions[1].status == .awaitingUserInput)
     }
 
+    @Test func ignoresProcessesThatContainClaudeButAreNotClaude() async throws {
+        let shell = MockShellExecutor()
+        shell.givenKittySessions([
+            (id: 1, foregroundCmdline: ["claude-hierarchical-agent"]),
+            (id: 2, foregroundCmdline: ["/usr/local/bin/claude-helper"]),
+        ])
+
+        let hub = makeHub(shell: shell)
+        await hub.refresh()
+
+        #expect(hub.sessions.isEmpty)
+    }
+
     // Discovery:
     // - shows no sessions when no claude windows exist ✅
     // - shows no sessions when no sockets found ✅
