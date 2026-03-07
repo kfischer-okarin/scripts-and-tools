@@ -34,18 +34,19 @@ public final class AgentHub {
 
     private func parseStatus(from output: String) -> SessionStatus {
         let lines = output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        var hasInputPrompt = false
         for (index, line) in lines.enumerated().reversed() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.contains("Do you want to") {
                 return .awaitingPermission
             }
             if trimmed.hasPrefix("❯") && index > 0 && lines[index - 1].contains("─") {
-                return .awaitingUserInput
+                hasInputPrompt = true
             }
             if let first = trimmed.first, "·✢✳✶✻✽".contains(first) && trimmed.contains("…") {
                 return .working
             }
         }
-        return .unknown
+        return hasInputPrompt ? .awaitingUserInput : .unknown
     }
 }

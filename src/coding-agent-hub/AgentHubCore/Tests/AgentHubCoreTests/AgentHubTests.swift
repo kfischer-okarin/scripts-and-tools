@@ -15,8 +15,12 @@ struct AgentHubTests {
             (id: 1, foregroundCmdline: ["claude"]),
             (id: 2, foregroundCmdline: ["vim", "foo.swift"]),
         ])
-        shell.givenKittyWindowOutput(1,
-                                     content: "Some previous output\n✻ Thinking… (27s, 200 tokens)\n")
+        shell.givenKittyWindowOutput(1, content: """
+            Some previous output
+            ✻ Thinking… (27s, 200 tokens)
+            ────────────────────
+            ❯
+            """)
 
         let hub = makeHub(shell: shell)
         await hub.refresh()
@@ -57,8 +61,16 @@ struct AgentHubTests {
         let socket2 = "/tmp/test-socket-222"
         shell.givenKittySessions(socket: socket1, [(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittySessions(socket: socket2, [(id: 5, foregroundCmdline: ["claude"])])
-        shell.givenKittyWindowOutput(socket: socket1, 1, content: "✻ Thinking… (5s)\n")
-        shell.givenKittyWindowOutput(socket: socket2, 5, content: "Some output here\n────────────────────\n❯ \n")
+        shell.givenKittyWindowOutput(socket: socket1, 1, content: """
+            ✻ Thinking… (5s)
+            ────────────────────
+            ❯
+            """)
+        shell.givenKittyWindowOutput(socket: socket2, 5, content: """
+            Some output here
+            ────────────────────
+            ❯
+            """)
 
         let hub = makeHub(shell: shell)
         await hub.refresh()
@@ -94,8 +106,11 @@ struct AgentHubTests {
     @Test func sessionAwaitingUserInputWhenPromptVisible() async throws {
         let shell = MockShellExecutor()
         shell.givenKittySessions([(id: 1, foregroundCmdline: ["claude"])])
-        shell.givenKittyWindowOutput(1,
-                                     content: "Some output here\n────────────────────\n❯ \n")
+        shell.givenKittyWindowOutput(1, content: """
+            Some output here
+            ────────────────────
+            ❯
+            """)
 
         let hub = makeHub(shell: shell)
         await hub.refresh()
@@ -148,7 +163,11 @@ struct AgentHubTests {
         let badSocket = "/tmp/test-socket-222"
         shell.givenKittySessions(socket: goodSocket, [(id: 1, foregroundCmdline: ["claude"])])
         shell.givenKittyRemoteControlDisabled(socket: badSocket)
-        shell.givenKittyWindowOutput(socket: goodSocket, 1, content: "✻ Thinking… (5s)\n")
+        shell.givenKittyWindowOutput(socket: goodSocket, 1, content: """
+            ✻ Thinking… (5s)
+            ────────────────────
+            ❯
+            """)
 
         let hub = makeHub(shell: shell)
         await hub.refresh()
