@@ -15,14 +15,14 @@ struct ContentView: View {
             } else {
                 List(hub.sessions) { session in
                     HStack {
-                        Circle()
-                            .fill(color(for: session.status))
-                            .frame(width: 10, height: 10)
                         Text(session.id)
                             .font(.system(.body, design: .monospaced))
                         Spacer()
                         Text(label(for: session.status))
                             .foregroundStyle(.secondary)
+                        Circle()
+                            .fill(color(for: session.status))
+                            .frame(width: 10, height: 10)
                     }
                     .padding(.vertical, 4)
                 }
