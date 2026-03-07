@@ -3,7 +3,10 @@ import AgentHubCore
 
 @main
 struct CodingAgentHubApp: App {
-    @State private var hub = AgentHub(shell: ProcessShellExecutor())
+    @State private var hub = AgentHub(
+        shell: ProcessShellExecutor(),
+        kittyPassword: GeneratedConfig.kittyPassword
+    )
 
     var body: some Scene {
         WindowGroup {

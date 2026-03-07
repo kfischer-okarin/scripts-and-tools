@@ -7,9 +7,10 @@ struct KittyWindow {
 
 struct KittySessionSource: SessionSource {
     let shell: ShellExecutor
+    let password: String?
 
     func discoverSessions() async throws -> [String] {
-        let json = try await shell.run("kitten", arguments: ["@", "ls"])
+        let json = try await shell.run("kitten", arguments: kittenArgs(["ls"]))
         let windows = parseWindows(from: json)
         return windows
             .filter { $0.cmdline.contains(where: { $0.contains("claude") }) }
@@ -17,7 +18,14 @@ struct KittySessionSource: SessionSource {
     }
 
     func captureOutput(session: String) async -> String {
-        (try? await shell.run("kitten", arguments: ["@", "get-text", "--match", "id:\(session)"])) ?? ""
+        (try? await shell.run("kitten", arguments: kittenArgs(["get-text", "--match", "id:\(session)"]))) ?? ""
+    }
+
+    private func kittenArgs(_ command: [String]) -> [String] {
+        if let password {
+            return ["@", "--password", password] + command
+        }
+        return ["@"] + command
     }
 
     private func parseWindows(from json: String) -> [KittyWindow] {

@@ -8,8 +8,8 @@ public final class AgentHub {
 
     private let source: SessionSource
 
-    public init(shell: ShellExecutor) {
-        self.source = KittySessionSource(shell: shell)
+    public init(shell: ShellExecutor, kittyPassword: String? = nil) {
+        self.source = KittySessionSource(shell: shell, password: kittyPassword)
     }
 
     public func refresh() async {
