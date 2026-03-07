@@ -4,13 +4,13 @@ public struct StatusParser {
     public func parse(_ output: String) -> SessionStatus {
         let lines = output.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         guard let inputAreaIndex = findInputArea(lines: lines) else {
-            return .awaitingPermission
+            return .needingUserInput
         }
         let hyphenLineIndex = inputAreaIndex - 1
         if hasThinkingIndicator(lines: lines, above: hyphenLineIndex, within: 5) {
             return .working
         }
-        return .awaitingUserInput
+        return .idle
     }
 
     private func findInputArea(lines: [String]) -> Int? {

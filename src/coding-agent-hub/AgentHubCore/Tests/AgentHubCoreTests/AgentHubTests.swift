@@ -69,7 +69,7 @@ struct AgentHubTests {
         #expect(hub.sessions[0].id == "\(socket1):1")
         #expect(hub.sessions[0].status == .working)
         #expect(hub.sessions[1].id == "\(socket2):5")
-        #expect(hub.sessions[1].status == .awaitingUserInput)
+        #expect(hub.sessions[1].status == .idle)
     }
 
     @Test func ignoresProcessesThatContainClaudeButAreNotClaude() async throws {

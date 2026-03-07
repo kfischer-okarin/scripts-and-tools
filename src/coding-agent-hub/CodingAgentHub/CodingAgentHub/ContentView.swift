@@ -39,19 +39,17 @@ struct ContentView: View {
 
     private func color(for status: SessionStatus) -> Color {
         switch status {
+        case .idle: .green
         case .working: .blue
-        case .awaitingUserInput: .green
-        case .awaitingPermission: .orange
-        case .unknown: .gray
+        case .needingUserInput: .orange
         }
     }
 
     private func label(for status: SessionStatus) -> String {
         switch status {
+        case .idle: "Idle"
         case .working: "Working"
-        case .awaitingUserInput: "Awaiting Input"
-        case .awaitingPermission: "Needs Permission"
-        case .unknown: "Unknown"
+        case .needingUserInput: "Needs Input"
         }
     }
 }

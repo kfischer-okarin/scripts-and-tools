@@ -1,6 +1,5 @@
 public enum SessionStatus: Equatable {
+    case idle
     case working
-    case awaitingUserInput
-    case awaitingPermission
-    case unknown
+    case needingUserInput
 }

@@ -15,17 +15,17 @@ struct StatusParserTests {
         #expect(parser.parse(output) == .working)
     }
 
-    @Test func detectsAwaitingUserInput() {
+    @Test func detectsIdle() {
         let output = """
             Some output here
             ────────────────────
             ❯
             """
 
-        #expect(parser.parse(output) == .awaitingUserInput)
+        #expect(parser.parse(output) == .idle)
     }
 
-    @Test func detectsAwaitingPermission() {
+    @Test func detectsNeedingUserInput() {
         let output = """
             ───────────────────────────────────────────────
              Bash command
@@ -36,7 +36,7 @@ struct StatusParserTests {
                3. No
             """
 
-        #expect(parser.parse(output) == .awaitingPermission)
+        #expect(parser.parse(output) == .needingUserInput)
     }
 
     @Test func doesNotFalsePositiveOnDoYouWantInOutput() {
@@ -47,7 +47,7 @@ struct StatusParserTests {
             ❯
             """
 
-        #expect(parser.parse(output) == .awaitingUserInput)
+        #expect(parser.parse(output) == .idle)
     }
 
     @Test func workingTakesPriorityOverInputPrompt() {
