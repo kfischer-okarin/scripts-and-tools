@@ -11,6 +11,26 @@ struct AgentHubTests {
         hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix)
     }
 
+    @Test func discoversSessionWithCwd() async throws {
+        shell.givenKittySessions([
+            Window(foregroundCmdline: ["claude"], cwd: "/tmp/some-project"),
+        ])
+
+        await hub.refresh()
+
+        #expect(hub.sessions[0].cwd == "/tmp/some-project")
+    }
+
+    @Test func replacesHomeDirectoryWithTildeInCwd() async throws {
+        shell.givenKittySessions([
+            Window(foregroundCmdline: ["claude"], cwd: "\(shell.homeDirectory)/projects/my-app"),
+        ])
+
+        await hub.refresh()
+
+        #expect(hub.sessions[0].cwd == "~/projects/my-app")
+    }
+
     @Test func discoversActiveSessionWithTitleAndStatus() async throws {
         shell.givenKittySessions([
             Window(foregroundCmdline: ["claude"], title: "✳ Doing Important Work", output: """

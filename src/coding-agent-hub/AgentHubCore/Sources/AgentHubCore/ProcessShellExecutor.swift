@@ -1,6 +1,7 @@
 import Foundation
 
 public final class ProcessShellExecutor: ShellExecutor {
+    public let homeDirectory = FileManager.default.homeDirectoryForCurrentUser.path
     private let logHandle: FileHandle?
 
     public init(logPath: String = "/tmp/coding-agent-hub.log", loggingEnabled: Bool = false) {

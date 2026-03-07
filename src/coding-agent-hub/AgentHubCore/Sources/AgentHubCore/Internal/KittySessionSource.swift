@@ -3,6 +3,7 @@ import Foundation
 struct KittyWindow {
     let id: Int
     let title: String
+    let cwd: String
     let foregroundCmdlines: [[String]]
 }
 
@@ -28,7 +29,7 @@ struct KittySessionSource: SessionSource {
                             && !cmdline.contains("--print")
                         }
                     }
-                    .map { DiscoveredSession(id: "\(socket):\($0.id)", title: $0.title) }
+                    .map { DiscoveredSession(id: "\(socket):\($0.id)", title: $0.title, cwd: $0.cwd) }
                 sessions.append(contentsOf: discovered)
             } catch {
                 errors.append(error)
@@ -77,7 +78,8 @@ struct KittySessionSource: SessionSource {
                     let title = window["title"] as? String ?? ""
                     let fgProcesses = window["foreground_processes"] as? [[String: Any]] ?? []
                     let cmdlines = fgProcesses.compactMap { $0["cmdline"] as? [String] }
-                    result.append(KittyWindow(id: id, title: title, foregroundCmdlines: cmdlines))
+                    let cwd = fgProcesses.first.flatMap { $0["cwd"] as? String } ?? ""
+                    result.append(KittyWindow(id: id, title: title, cwd: cwd, foregroundCmdlines: cmdlines))
                 }
             }
         }

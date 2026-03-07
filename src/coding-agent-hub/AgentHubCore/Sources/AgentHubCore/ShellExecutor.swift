@@ -1,6 +1,7 @@
 import Foundation
 
 public protocol ShellExecutor: Sendable {
+    var homeDirectory: String { get }
     func run(_ command: String, arguments: [String]) async throws -> String
 }
 

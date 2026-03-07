@@ -1,6 +1,7 @@
 @testable import AgentHubCore
 
 final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
+    let homeDirectory = "/Users/testuser"
     private var stubs: [String: String] = [:]
     private var errors: [String: ShellError] = [:]
     private var sockets: [String] = []
@@ -33,15 +34,17 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
         var id: Int
         var foregroundCmdline: [String]
         var title: String = "~/some-project"
+        var cwd: String = "/tmp"
         var output: String = MockShellExecutor.idlePrompt
 
         nonisolated(unsafe) private static var nextId = 1
 
-        init(id: Int? = nil, foregroundCmdline: [String], title: String = "~/some-project", output: String = MockShellExecutor.idlePrompt) {
+        init(id: Int? = nil, foregroundCmdline: [String], title: String = "~/some-project", cwd: String = "/tmp", output: String = MockShellExecutor.idlePrompt) {
             self.id = id ?? Self.nextId
             Self.nextId += 1
             self.foregroundCmdline = foregroundCmdline
             self.title = title
+            self.cwd = cwd
             self.output = output
         }
     }
@@ -57,7 +60,7 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
             return """
             {"id": \(w.id), "title": "\(w.title)", "cwd": "/tmp", "pid": 1000, \
             "cmdline": ["/bin/zsh"], \
-            "foreground_processes": [{"cmdline": [\(cmdlineJson)], "cwd": "/tmp", "pid": 2000}]}
+            "foreground_processes": [{"cmdline": [\(cmdlineJson)], "cwd": "\(w.cwd)", "pid": 2000}]}
             """
         }.joined(separator: ", ")
         let json = """

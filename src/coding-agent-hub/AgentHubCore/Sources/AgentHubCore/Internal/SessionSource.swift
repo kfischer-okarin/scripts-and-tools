@@ -1,6 +1,7 @@
 struct DiscoveredSession {
     let id: String
     let title: String
+    let cwd: String
 }
 
 protocol SessionSource {

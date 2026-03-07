@@ -15,8 +15,13 @@ struct ContentView: View {
             } else {
                 List(hub.sessions) { session in
                     HStack {
-                        Text(session.title)
-                            .font(.headline)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(session.title)
+                                .font(.headline)
+                            Text(session.cwd)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                         Spacer()
                         Text(label(for: session.status))
                             .foregroundStyle(.secondary)
