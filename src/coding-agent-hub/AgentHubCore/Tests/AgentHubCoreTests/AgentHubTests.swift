@@ -95,6 +95,20 @@ struct AgentHubTests {
         #expect(hub.sessions.isEmpty)
     }
 
+    @Test func ignoresNonInteractiveClaudeWithPrintFlag() async throws {
+        let shell = MockShellExecutor()
+        shell.givenKittySessions([
+            (id: 1, foregroundCmdline: ["claude", "-p", "summarize this"]),
+            (id: 2, foregroundCmdline: ["claude", "--print", "do something"]),
+            (id: 3, foregroundCmdline: ["claude", "some", "args", "-p"]),
+        ])
+
+        let hub = makeHub(shell: shell)
+        await hub.refresh()
+
+        #expect(hub.sessions.isEmpty)
+    }
+
     // Discovery:
     // - shows no sessions when no claude windows exist ✅
     // - shows no sessions when no sockets found ✅

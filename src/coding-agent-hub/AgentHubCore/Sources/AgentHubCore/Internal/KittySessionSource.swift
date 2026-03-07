@@ -23,6 +23,8 @@ struct KittySessionSource: SessionSource {
                     .filter { window in
                         window.foregroundCmdlines.contains { cmdline in
                             cmdline.first == "claude"
+                            && !cmdline.contains("-p")
+                            && !cmdline.contains("--print")
                         }
                     }
                     .map { "\(socket):\($0.id)" }
