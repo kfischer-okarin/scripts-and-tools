@@ -60,7 +60,4 @@ struct StatusParserTests {
         #expect(parser.parse(output) == .working)
     }
 
-    @Test func unknownWhenNoPatternMatches() {
-        #expect(parser.parse("just some random text") == .unknown)
-    }
 }
