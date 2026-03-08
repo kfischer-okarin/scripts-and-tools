@@ -63,7 +63,7 @@ struct ContentView: View {
         .task {
             while !Task.isCancelled {
                 await hub.refresh()
-                try? await Task.sleep(for: .seconds(2))
+                try? await Task.sleep(for: .seconds(1))
             }
         }
     }
