@@ -168,6 +168,28 @@ struct AgentHubTests {
         #expect(hub.sessions[0].lastUpdated == firstSeen.addingTimeInterval(15), "Timestamp updated when output changed")
     }
 
+    @Test func sessionsAreSortedByLastUpdatedDescending() async throws {
+        shell.givenKittySessions([
+            Window(id: 1, foregroundCmdline: ["claude"]),
+            Window(id: 2, foregroundCmdline: ["claude"]),
+        ])
+
+        await hub.refresh()
+        clock.advance(by: 10)
+        shell.kittyWindowOutputChanged(2, content: """
+            New output
+
+            ────────────────────
+            ❯
+            ────────────────────
+            """)
+        await hub.refresh()
+
+        let socket = MockShellExecutor.testSocket
+        #expect(hub.sessions[0].id == "\(socket):2")
+        #expect(hub.sessions[1].id == "\(socket):1")
+    }
+
     @Test func focusSessionSendsFocusWindowCommand() async throws {
         shell.givenKittySessions([
             Window(id: 42, foregroundCmdline: ["claude"]),

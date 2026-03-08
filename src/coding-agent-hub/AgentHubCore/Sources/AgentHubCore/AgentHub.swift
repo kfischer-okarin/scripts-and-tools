@@ -57,6 +57,6 @@ public final class AgentHub {
                 lastUpdated: lastUpdatedTimes[session.id] ?? now
             ))
         }
-        sessions = updated
+        sessions = updated.sorted { $0.lastUpdated > $1.lastUpdated }
     }
 }
