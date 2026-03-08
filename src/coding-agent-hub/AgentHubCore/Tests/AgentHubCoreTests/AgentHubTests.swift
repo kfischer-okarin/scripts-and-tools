@@ -23,52 +23,13 @@ struct AgentHubTests {
         hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix, clock: clock)
     }
 
-    @Test func discoversSessionWithCwd() async throws {
+    @Test func discoversAndParsesSessions() async throws {
         shell.givenKittySessions([
-            Window(foregroundCmdline: ["claude"], cwd: "/tmp/some-project"),
-        ])
-
-        await hub.refresh()
-
-        #expect(hub.sessions[0].cwd == "/tmp/some-project")
-    }
-
-    @Test func replacesHomeDirectoryWithTildeInCwd() async throws {
-        shell.givenKittySessions([
-            Window(foregroundCmdline: ["claude"], cwd: "\(shell.homeDirectory)/projects/my-app"),
-        ])
-
-        await hub.refresh()
-
-        #expect(hub.sessions[0].cwd == "~/projects/my-app")
-    }
-
-    @Test func parsesContextFromTerminalOutput() async throws {
-        shell.givenKittySessions([
-            Window(foregroundCmdline: ["claude"], output: """
+            Window(foregroundCmdline: ["claude"], title: "✳ Doing Important Work", cwd: "\(shell.homeDirectory)/projects/my-app", output: """
                 Read the file
                 Edited src/main.swift
                 All tests passed
 
-                ────────────────────
-                ❯
-                ────────────────────
-                """),
-        ])
-
-        await hub.refresh()
-
-        #expect(hub.sessions[0].context == [
-            "Read the file",
-            "Edited src/main.swift",
-            "All tests passed",
-        ])
-    }
-
-    @Test func discoversActiveSessionWithTitleAndStatus() async throws {
-        shell.givenKittySessions([
-            Window(foregroundCmdline: ["claude"], title: "✳ Doing Important Work", output: """
-                Some previous output
                 ✻ Thinking… (27s, 200 tokens)
 
                 ────────────────────
@@ -82,26 +43,13 @@ struct AgentHubTests {
 
         #expect(hub.sessions.count == 1)
         #expect(hub.sessions[0].title == "✳ Doing Important Work")
+        #expect(hub.sessions[0].cwd == "~/projects/my-app")
         #expect(hub.sessions[0].status == .working)
-    }
-
-    @Test func showsNoSessionsWhenNoClaude() async throws {
-        shell.givenKittySessions([
-            Window(foregroundCmdline: ["vim"]),
-            Window(foregroundCmdline: ["zsh"]),
+        #expect(hub.sessions[0].context == [
+            "Read the file",
+            "Edited src/main.swift",
+            "All tests passed",
         ])
-
-        await hub.refresh()
-
-        #expect(hub.sessions.isEmpty)
-    }
-
-    @Test func showsNoSessionsWhenNoSocketsFound() async throws {
-        shell.givenNoKittySockets()
-
-        await hub.refresh()
-
-        #expect(hub.sessions.isEmpty)
     }
 
     @Test func aggregatesSessionsAcrossMultipleKittyInstances() async throws {
@@ -123,6 +71,25 @@ struct AgentHubTests {
         #expect(hub.sessions[0].status == .working)
         #expect(hub.sessions[1].id == "\(socket2):5")
         #expect(hub.sessions[1].status == .idle)
+    }
+
+    @Test func showsNoSessionsWhenNoClaude() async throws {
+        shell.givenKittySessions([
+            Window(foregroundCmdline: ["vim"]),
+            Window(foregroundCmdline: ["zsh"]),
+        ])
+
+        await hub.refresh()
+
+        #expect(hub.sessions.isEmpty)
+    }
+
+    @Test func showsNoSessionsWhenNoSocketsFound() async throws {
+        shell.givenNoKittySockets()
+
+        await hub.refresh()
+
+        #expect(hub.sessions.isEmpty)
     }
 
     @Test func ignoresProcessesThatContainClaudeButAreNotClaude() async throws {
