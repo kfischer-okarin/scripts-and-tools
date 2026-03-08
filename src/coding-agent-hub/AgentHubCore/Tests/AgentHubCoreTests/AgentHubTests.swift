@@ -1,14 +1,26 @@
+import Foundation
 import Testing
 @testable import AgentHubCore
 
 private typealias Window = MockShellExecutor.KittyWindowStub
 
+final class MockClock: AppClock, @unchecked Sendable {
+    var current = Date(timeIntervalSinceReferenceDate: 0)
+
+    func now() -> Date { current }
+
+    func advance(by seconds: TimeInterval) {
+        current = current.addingTimeInterval(seconds)
+    }
+}
+
 struct AgentHubTests {
     let shell = MockShellExecutor()
+    let clock = MockClock()
     let hub: AgentHub
 
     init() {
-        hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix)
+        hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix, clock: clock)
     }
 
     @Test func discoversSessionWithCwd() async throws {
@@ -163,6 +175,30 @@ struct AgentHubTests {
         #expect(hub.sessions.count == 1)
         #expect(hub.sessions[0].id == "\(goodSocket):1")
         #expect(hub.errorMessage == nil)
+    }
+
+    @Test func tracksLastUpdatedTimestamp() async throws {
+        shell.givenKittySessions([
+            Window(id: 1, foregroundCmdline: ["claude"]),
+        ])
+
+        await hub.refresh()
+        let firstSeen = hub.sessions[0].lastUpdated
+
+        clock.advance(by: 10)
+        await hub.refresh()
+        #expect(hub.sessions[0].lastUpdated == firstSeen, "Timestamp unchanged when output unchanged")
+
+        clock.advance(by: 5)
+        shell.kittyWindowOutputChanged(1, content: """
+            New output here
+
+            ────────────────────
+            ❯
+            ────────────────────
+            """)
+        await hub.refresh()
+        #expect(hub.sessions[0].lastUpdated == firstSeen.addingTimeInterval(15), "Timestamp updated when output changed")
     }
 
     @Test func focusSessionSendsFocusWindowCommand() async throws {

@@ -86,6 +86,11 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
                   error: ShellError(message: "Remote control is disabled"))
     }
 
+    func kittyWindowOutputChanged(socket: String = testSocket, _ windowId: Int, content: String) {
+        stub("kitten", arguments: kittenPrefix(socket) + ["get-text", "--extent", "all", "--match", "id:\(windowId)"],
+             output: content)
+    }
+
     func run(_ command: String, arguments: [String]) async throws -> String {
         let key = ([command] + arguments).joined(separator: " ")
         ranCommands.append(key)

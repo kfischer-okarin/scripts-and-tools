@@ -14,40 +14,46 @@ struct ContentView: View {
                 )
             } else {
                 List(hub.sessions) { session in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
                             Text(session.title)
                                 .font(.headline)
-                            Text(session.cwd)
+                            Spacer()
+                            Button {
+                                Task { await hub.focusSession(session) }
+                            } label: {
+                                Image(systemName: "arrow.up.forward.square")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Focus this session")
+                        }
+                        Text(session.cwd)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        if !session.context.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                Text(session.context.joined(separator: "\n"))
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize()
+                            }
+                            .padding(6)
+                            .frame(width: 720, alignment: .leading)
+                            .background(.quaternary)
+                            .cornerRadius(4)
+                        }
+                        HStack {
+                            Circle()
+                                .fill(color(for: session.status))
+                                .frame(width: 8, height: 8)
+                            Text(label(for: session.status))
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            if !session.context.isEmpty {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    Text(session.context.joined(separator: "\n"))
-                                        .font(.system(.caption, design: .monospaced))
-                                        .foregroundStyle(.secondary)
-                                        .fixedSize()
-                                }
-                                .padding(6)
-                                .frame(width: 720, alignment: .leading)
-                                .background(.quaternary)
-                                .cornerRadius(4)
-                            }
+                            Text("· \(formatTimestamp(session.lastUpdated))")
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
                         }
-                        Spacer()
-                        Text(label(for: session.status))
-                            .foregroundStyle(.secondary)
-                        Circle()
-                            .fill(color(for: session.status))
-                            .frame(width: 10, height: 10)
-                        Button {
-                            Task { await hub.focusSession(session) }
-                        } label: {
-                            Image(systemName: "arrow.up.forward.square")
-                                .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Focus this session")
                     }
                     .padding(.vertical, 4)
                 }
@@ -68,6 +74,16 @@ struct ContentView: View {
         case .working: .blue
         case .needingUserInput: .orange
         }
+    }
+
+    private func formatTimestamp(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        if Calendar.current.isDateInToday(date) {
+            formatter.dateFormat = "HH:mm:ss"
+        } else {
+            formatter.dateFormat = "MMM d, HH:mm:ss"
+        }
+        return formatter.string(from: date)
     }
 
     private func label(for status: SessionStatus) -> String {
