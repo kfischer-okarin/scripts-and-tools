@@ -67,9 +67,9 @@ public struct ContextParser {
     }
 
     private func findPromptBorder(lines: [String]) -> Int? {
-        let separator = String(repeating: "─", count: 10)
-        for index in lines.indices {
-            if trimmed(lines[index]).hasPrefix(separator) {
+        for index in lines.indices.reversed() {
+            guard isDashedLine(trimmed(lines[index])) else { continue }
+            if index == 0 || trimmed(lines[index - 1]).isEmpty {
                 return index
             }
         }

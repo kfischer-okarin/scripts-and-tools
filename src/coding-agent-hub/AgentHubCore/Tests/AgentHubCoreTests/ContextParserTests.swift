@@ -113,6 +113,39 @@ struct ContextParserTests {
         ])
     }
 
+    @Test func ignoresOldScrollbackBordersWhenFindingPrompt() {
+        let output = """
+            Old output from earlier session
+
+            ────────────────────────────────────────────────
+             Here is Claude's plan:
+            ╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+             Old Plan Title
+
+             This is stale content from scrollback
+
+            More output happened after that
+
+            ────────────────────────────────────────────────
+             Bash command
+
+               rm -rf /tmp/test
+               Remove test directory
+
+             Do you want to proceed?
+             ❯ 1. Yes
+               2. No
+            """
+
+        #expect(parser.parse(output) == [
+            " Bash command",
+            "",
+            "   rm -rf /tmp/test",
+            "   Remove test directory",
+            "",
+        ])
+    }
+
     @Test func extractsLinesFromPlanPrompt() {
         let output = """
             Some previous output
