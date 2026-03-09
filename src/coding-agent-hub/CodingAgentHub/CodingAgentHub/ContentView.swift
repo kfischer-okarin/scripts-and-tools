@@ -57,6 +57,7 @@ struct ContentView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .defaultScrollAnchor(.top)
             }
         }
         .frame(minWidth: 400, minHeight: 300)
