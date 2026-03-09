@@ -15,17 +15,18 @@ all state. SwiftUI views are a thin rendering layer in the Xcode project.
 
 - `AgentHub` - root domain object, owns polling and session state
 - `StatusParser` - parses terminal output into session status (idle/working/needingUserInput)
+- `ContextParser` - extracts recent context lines from terminal output
 - `SessionSource` (protocol, internal) - abstracts session discovery, returns `DiscoveredSession`
-- `KittySessionSource` - discovers sockets via `fd`, queries each via `kitten @` over unix socket
-- `ShellExecutor` (protocol) - single external boundary, only mock point in tests
+- `KittySessionSource` - discovers sockets via `fd`, queries each via `kitten @` over unix socket, focus via `focus-window`
+- `ShellExecutor` (protocol) - single external boundary, only mock point in tests; also exposes `homeDirectory`
 - `ProcessShellExecutor` - real impl using Foundation.Process, optional file logging
 
 ## Project Layout
 
 - `AgentHubCore/` - Swift package with domain logic + tests
-  - `Sources/AgentHubCore/` - public types (AgentHub, AgentSession, SessionStatus, StatusParser, ShellExecutor)
+  - `Sources/AgentHubCore/` - public types (AgentHub, AgentSession, SessionStatus, StatusParser, ContextParser, ShellExecutor)
   - `Sources/AgentHubCore/Internal/` - internal types (SessionSource, DiscoveredSession, KittySessionSource)
-  - `Tests/AgentHubCoreTests/` - tests (AgentHubTests, StatusParserTests, MockShellExecutor)
+  - `Tests/AgentHubCoreTests/` - tests (AgentHubTests, StatusParserTests, ContextParserTests, MockShellExecutor)
 - `CodingAgentHub/` - Xcode project (thin SwiftUI shell importing AgentHubCore)
   - `CodingAgentHub/GeneratedConfig.swift` - build-time generated, gitignored
 
@@ -40,6 +41,6 @@ all state. SwiftUI views are a thin rendering layer in the Xcode project.
 In `kitty.conf`:
 ```
 allow_remote_control password
-remote_control_password "your-password" get-text ls
+remote_control_password "your-password" get-text ls focus-window
 listen_on unix:/tmp/kitty-socket
 ```
