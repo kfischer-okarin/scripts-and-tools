@@ -3,7 +3,6 @@ import AgentHubCore
 
 struct ContentView: View {
     let hub: AgentHub
-
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             if hub.sessions.isEmpty {
@@ -13,51 +12,60 @@ struct ContentView: View {
                     description: Text("Start a session with the claude wrapper script")
                 )
             } else {
-                List(hub.sessions) { session in
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack {
-                            Text(session.title)
-                                .font(.headline)
-                            Spacer()
-                            Button {
-                                Task { await hub.focusSession(session) }
-                            } label: {
-                                Image(systemName: "arrow.up.forward.square")
-                                    .foregroundStyle(.secondary)
+                ScrollViewReader { proxy in
+                    List(hub.sessions) { session in
+                        VStack(alignment: .leading, spacing: 2) {
+                            HStack {
+                                Text(session.title)
+                                    .font(.headline)
+                                Spacer()
+                                Button {
+                                    Task { await hub.focusSession(session) }
+                                } label: {
+                                    Image(systemName: "arrow.up.forward.square")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Focus this session")
                             }
-                            .buttonStyle(.plain)
-                            .help("Focus this session")
-                        }
-                        Text(session.cwd)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        if !session.context.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                Text(session.context.joined(separator: "\n"))
-                                    .font(.system(.caption, design: .monospaced))
-                                    .foregroundStyle(.secondary)
-                                    .fixedSize()
-                            }
-                            .padding(6)
-                            .frame(width: 720, alignment: .leading)
-                            .background(.quaternary)
-                            .cornerRadius(4)
-                        }
-                        HStack {
-                            Circle()
-                                .fill(color(for: session.status))
-                                .frame(width: 8, height: 8)
-                            Text(label(for: session.status))
+                            Text(session.cwd)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                            Text("· \(formatTimestamp(session.lastUpdated))")
-                                .font(.subheadline)
-                                .foregroundStyle(.tertiary)
+                            if !session.context.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    Text(session.context.joined(separator: "\n"))
+                                        .font(.system(.caption, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                        .fixedSize()
+                                }
+                                .padding(6)
+                                .frame(width: 720, alignment: .leading)
+                                .background(.quaternary)
+                                .cornerRadius(4)
+                            }
+                            HStack {
+                                Circle()
+                                    .fill(color(for: session.status))
+                                    .frame(width: 8, height: 8)
+                                Text(label(for: session.status))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Text("· \(formatTimestamp(session.lastUpdated))")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                    .defaultScrollAnchor(.top)
+                    .onChange(of: hub.sessions.count) { oldCount, newCount in
+                        if newCount > oldCount, let first = hub.sessions.first {
+                            withAnimation {
+                                proxy.scrollTo(first.id, anchor: .top)
+                            }
                         }
                     }
-                    .padding(.vertical, 4)
-                }
-                .defaultScrollAnchor(.top)
+                } // ScrollViewReader
             }
         }
         .frame(minWidth: 400, minHeight: 300)
