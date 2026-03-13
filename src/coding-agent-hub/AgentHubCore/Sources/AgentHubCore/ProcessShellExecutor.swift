@@ -28,9 +28,9 @@ public final class ProcessShellExecutor: ShellExecutor {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
         try process.run()
+        async let stdoutResult = readToEnd(stdoutPipe.fileHandleForReading)
         async let stderrResult = readToEnd(stderrPipe.fileHandleForReading)
-        let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = await stderrResult
+        let (stdoutData, stderrData) = await (stdoutResult, stderrResult)
         process.waitUntilExit()
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
