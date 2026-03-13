@@ -1,4 +1,3 @@
 [env]
-KITTY_PASSWORD = "your-kitty-remote-control-password"
 KITTY_SOCKET_PREFIX = "/tmp/kitty-socket"
 SHELL_LOGS = "false"
