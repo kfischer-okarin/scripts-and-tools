@@ -1,5 +1,8 @@
 import AppKit
 import Foundation
+import os
+
+private let kittyLogger = Logger(subsystem: "com.codingagenthub", category: "kitty")
 
 struct KittyWindow {
     let id: Int
@@ -14,6 +17,7 @@ struct KittySessionSource: SessionSource {
 
     func discoverSessions() async throws -> [DiscoveredSession] {
         let sockets = try await findSockets()
+        kittyLogger.debug("Found \(sockets.count, privacy: .public) sockets")
         guard !sockets.isEmpty else { return [] }
 
         var sessions: [DiscoveredSession] = []
@@ -21,7 +25,9 @@ struct KittySessionSource: SessionSource {
         for socket in sockets {
             do {
                 let json = try await shell.run("kitten", arguments: kittenArgs(socket, ["ls"]))
-                let discovered = parseWindows(from: json)
+                let windows = parseWindows(from: json)
+                kittyLogger.debug("Socket \(socket, privacy: .public): \(windows.count, privacy: .public) windows")
+                let discovered = windows
                     .filter { window in
                         window.foregroundCmdlines.contains { cmdline in
                             cmdline.first == "claude"
@@ -30,8 +36,10 @@ struct KittySessionSource: SessionSource {
                         }
                     }
                     .map { DiscoveredSession(id: "\(socket):\($0.id)", title: $0.title, cwd: $0.cwd) }
+                kittyLogger.debug("Socket \(socket, privacy: .public): \(discovered.count, privacy: .public) claude sessions")
                 sessions.append(contentsOf: discovered)
             } catch {
+                kittyLogger.warning("Socket \(socket, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
                 errors.append(error)
             }
         }
@@ -43,8 +51,18 @@ struct KittySessionSource: SessionSource {
 
     func captureOutput(session: String) async -> String {
         let (socket, windowId) = parseSessionId(session)
-        guard let socket, let windowId else { return "" }
-        return (try? await shell.run("kitten", arguments: kittenArgs(socket, ["get-text", "--extent", "all", "--match", "id:\(windowId)"]))) ?? ""
+        guard let socket, let windowId else {
+            kittyLogger.warning("Invalid session ID: \(session, privacy: .public)")
+            return ""
+        }
+        do {
+            let output = try await shell.run("kitten", arguments: kittenArgs(socket, ["get-text", "--extent", "all", "--match", "id:\(windowId)"]))
+            kittyLogger.debug("Captured \(output.count, privacy: .public) chars from window \(windowId, privacy: .public)")
+            return output
+        } catch {
+            kittyLogger.warning("Capture failed for window \(windowId, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            return ""
+        }
     }
 
     func focusSession(_ sessionId: String) async {

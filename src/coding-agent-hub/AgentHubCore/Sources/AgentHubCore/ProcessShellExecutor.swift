@@ -1,4 +1,26 @@
 import Foundation
+import os
+
+private let shellLogger = Logger(subsystem: "com.codingagenthub", category: "shell")
+
+private final class PipeCollector: @unchecked Sendable {
+    var data = Data()
+}
+
+private func drainPipe(_ pipe: Pipe, group: DispatchGroup) -> PipeCollector {
+    let collector = PipeCollector()
+    group.enter()
+    pipe.fileHandleForReading.readabilityHandler = { handle in
+        let chunk = handle.availableData
+        if chunk.isEmpty {
+            pipe.fileHandleForReading.readabilityHandler = nil
+            group.leave()
+        } else {
+            collector.data.append(chunk)
+        }
+    }
+    return collector
+}
 
 public final class ProcessShellExecutor: ShellExecutor {
     public let homeDirectory = FileManager.default.homeDirectoryForCurrentUser.path
@@ -19,28 +41,59 @@ public final class ProcessShellExecutor: ShellExecutor {
     }
 
     public func run(_ command: String, arguments: [String]) async throws -> String {
-        let process = Process()
-        let stdoutPipe = Pipe()
-        let stderrPipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [command] + arguments
-        process.environment = Self.processEnvironment
-        process.standardOutput = stdoutPipe
-        process.standardError = stderrPipe
-        try process.run()
-        async let stdoutResult = readToEnd(stdoutPipe.fileHandleForReading)
-        async let stderrResult = readToEnd(stderrPipe.fileHandleForReading)
-        let (stdoutData, stderrData) = await (stdoutResult, stderrResult)
-        process.waitUntilExit()
+        let cmdString = ([command] + arguments).joined(separator: " ")
+        shellLogger.debug("START \(cmdString, privacy: .public)")
+        let start = ContinuousClock.now
+
+        let result = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<(Data, Data, Int32), Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                let stdoutPipe = Pipe()
+                let stderrPipe = Pipe()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                process.arguments = [command] + arguments
+                process.environment = Self.processEnvironment
+                process.standardOutput = stdoutPipe
+                process.standardError = stderrPipe
+
+                let group = DispatchGroup()
+                let stdoutCollector = drainPipe(stdoutPipe, group: group)
+                let stderrCollector = drainPipe(stderrPipe, group: group)
+
+                do {
+                    try process.run()
+                } catch {
+                    stdoutPipe.fileHandleForReading.readabilityHandler = nil
+                    stderrPipe.fileHandleForReading.readabilityHandler = nil
+                    continuation.resume(throwing: error)
+                    return
+                }
+
+                stdoutPipe.fileHandleForWriting.closeFile()
+                stderrPipe.fileHandleForWriting.closeFile()
+
+                process.waitUntilExit()
+                group.wait()
+
+                stdoutPipe.fileHandleForReading.closeFile()
+                stderrPipe.fileHandleForReading.closeFile()
+
+                continuation.resume(returning: (stdoutCollector.data, stderrCollector.data, process.terminationStatus))
+            }
+        }
+
+        let (stdoutData, stderrData, exitStatus) = result
+        let elapsed = ContinuousClock.now - start
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-        let cmdString = ([command] + arguments).joined(separator: " ")
 
-        if process.terminationStatus != 0 {
-            log("FAIL [\(process.terminationStatus)] \(cmdString)\nstderr: \(stderr)")
+        if exitStatus != 0 {
+            shellLogger.warning("FAIL [\(exitStatus, privacy: .public)] \(cmdString, privacy: .public) (\(elapsed, privacy: .public)) stderr=\(stderr.prefix(500), privacy: .public)")
+            log("FAIL [\(exitStatus)] \(cmdString)\nstderr: \(stderr)")
             throw ShellError(message: stderr.trimmingCharacters(in: .whitespacesAndNewlines))
         }
 
+        shellLogger.debug("OK \(cmdString, privacy: .public) (\(elapsed, privacy: .public)) stdout=\(stdoutData.count, privacy: .public)B")
         log("OK \(cmdString)\nstdout: \(String(stdout.prefix(500)))")
         return stdout
     }
@@ -59,14 +112,6 @@ public final class ProcessShellExecutor: ShellExecutor {
         }
         return env
     }()
-
-    private func readToEnd(_ handle: FileHandle) async -> Data {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global().async {
-                continuation.resume(returning: handle.readDataToEndOfFile())
-            }
-        }
-    }
 
     private func log(_ message: String) {
         let timestamp = ISO8601DateFormatter().string(from: Date())

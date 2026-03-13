@@ -1,5 +1,8 @@
 import Foundation
 import Observation
+import os
+
+private let hubLogger = Logger(subsystem: "com.codingagenthub", category: "hub")
 
 @Observable
 public final class AgentHub {
@@ -25,6 +28,7 @@ public final class AgentHub {
     }
 
     public func refresh() async {
+        let start = ContinuousClock.now
         let discovered: [DiscoveredSession]
         do {
             discovered = try await source.discoverSessions()
@@ -32,8 +36,10 @@ public final class AgentHub {
         } catch {
             sessions = []
             errorMessage = error.localizedDescription
+            hubLogger.error("Discovery failed: \(error.localizedDescription, privacy: .public)")
             return
         }
+        hubLogger.debug("Discovered \(discovered.count, privacy: .public) sessions")
 
         let now = clock.now()
         var updated: [AgentSession] = []
@@ -56,7 +62,10 @@ public final class AgentHub {
                 context: context, status: status,
                 lastUpdated: lastUpdatedTimes[session.id] ?? now
             ))
+            hubLogger.debug("Session \(session.title, privacy: .public): status=\(String(describing: status), privacy: .public) output=\(output.count, privacy: .public)chars")
         }
         sessions = updated.sorted { $0.lastUpdated > $1.lastUpdated }
+        let elapsed = ContinuousClock.now - start
+        hubLogger.info("Refresh complete: \(updated.count, privacy: .public) sessions in \(elapsed, privacy: .public)")
     }
 }
