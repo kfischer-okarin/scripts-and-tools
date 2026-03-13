@@ -14,8 +14,8 @@ public final class AgentHub {
     private var lastOutputHashes: [String: Int] = [:]
     private var lastUpdatedTimes: [String: Date] = [:]
 
-    public init(shell: ShellExecutor, kittyPassword: String, kittySocketPrefix: String, clock: AppClock = SystemClock()) {
-        self.source = KittySessionSource(shell: shell, password: kittyPassword, socketPrefix: kittySocketPrefix)
+    public init(shell: ShellExecutor, kittySocketPrefix: String, clock: AppClock = SystemClock()) {
+        self.source = KittySessionSource(shell: shell, socketPrefix: kittySocketPrefix)
         self.homeDirectory = shell.homeDirectory
         self.clock = clock
     }

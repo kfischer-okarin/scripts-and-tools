@@ -4,11 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(dirname "$0")"
 APP_DIR="$SCRIPT_DIR/../CodingAgentHub/CodingAgentHub"
 
-if [ -z "${KITTY_PASSWORD:-}" ]; then
-    echo "Error: KITTY_PASSWORD environment variable is required" >&2
-    exit 1
-fi
-
 if [ -z "${KITTY_SOCKET_PREFIX:-}" ]; then
     echo "Error: KITTY_SOCKET_PREFIX environment variable is required" >&2
     exit 1
@@ -18,7 +13,6 @@ SHELL_LOGS="${SHELL_LOGS:-false}"
 
 cat > "$APP_DIR/GeneratedConfig.swift" <<EOF
 enum GeneratedConfig {
-    static let kittyPassword = "$KITTY_PASSWORD"
     static let kittySocketPrefix = "$KITTY_SOCKET_PREFIX"
     static let shellLogs = $SHELL_LOGS
 }

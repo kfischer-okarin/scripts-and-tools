@@ -20,7 +20,7 @@ struct AgentHubTests {
     let hub: AgentHub
 
     init() {
-        hub = AgentHub(shell: shell, kittyPassword: MockShellExecutor.testPassword, kittySocketPrefix: MockShellExecutor.testSocketPrefix, clock: clock)
+        hub = AgentHub(shell: shell, kittySocketPrefix: MockShellExecutor.testSocketPrefix, clock: clock)
     }
 
     @Test func discoversAndParsesSessions() async throws {
@@ -199,6 +199,6 @@ struct AgentHubTests {
         await hub.focusSession(hub.sessions[0])
 
         let focusCommand = shell.ranCommands.first { $0.contains("focus-window") }
-        #expect(focusCommand == "kitten @ --password test-pass --to unix:/tmp/test-socket-12345 focus-window --match id:42")
+        #expect(focusCommand == "kitten @ --to unix:/tmp/test-socket-12345 focus-window --match id:42")
     }
 }

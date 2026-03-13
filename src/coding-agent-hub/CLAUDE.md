@@ -32,7 +32,6 @@ all state. SwiftUI views are a thin rendering layer in the Xcode project.
 
 ## Build Environment (mise.local.toml)
 
-- `KITTY_PASSWORD` - kitty remote control password
 - `KITTY_SOCKET_PREFIX` - socket path prefix (kitty appends `-<PID>`)
 - `SHELL_LOGS` - `true`/`false`, enables file logging
 
@@ -40,7 +39,6 @@ all state. SwiftUI views are a thin rendering layer in the Xcode project.
 
 In `kitty.conf`:
 ```
-allow_remote_control password
-remote_control_password "your-password" get-text ls focus-window
+allow_remote_control socket-only
 listen_on unix:/tmp/kitty-socket
 ```

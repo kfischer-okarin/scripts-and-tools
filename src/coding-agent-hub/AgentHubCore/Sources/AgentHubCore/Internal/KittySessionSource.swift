@@ -10,7 +10,6 @@ struct KittyWindow {
 
 struct KittySessionSource: SessionSource {
     let shell: ShellExecutor
-    let password: String
     let socketPrefix: String
 
     func discoverSessions() async throws -> [DiscoveredSession] {
@@ -80,7 +79,7 @@ struct KittySessionSource: SessionSource {
     }
 
     private func kittenArgs(_ socket: String, _ command: [String]) -> [String] {
-        ["@", "--password", password, "--to", "unix:\(socket)"] + command
+        ["@", "--to", "unix:\(socket)"] + command
     }
 
     private func parseWindows(from json: String) -> [KittyWindow] {

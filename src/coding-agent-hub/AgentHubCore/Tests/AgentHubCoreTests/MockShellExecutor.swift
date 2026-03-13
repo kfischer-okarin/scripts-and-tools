@@ -19,7 +19,6 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
 
     static let testSocketPrefix = "/tmp/test-socket"
     static let testSocket = "/tmp/test-socket-12345"
-    static let testPassword = "test-pass"
 
     func givenNoKittySockets() {
         stub("fd", arguments: ["--glob", "test-socket-*", "--type", "socket", "--max-depth", "1", "/tmp"],
@@ -101,6 +100,6 @@ final class MockShellExecutor: ShellExecutor, @unchecked Sendable {
     }
 
     private func kittenPrefix(_ socket: String) -> [String] {
-        ["@", "--password", Self.testPassword, "--to", "unix:\(socket)"]
+        ["@", "--to", "unix:\(socket)"]
     }
 }
