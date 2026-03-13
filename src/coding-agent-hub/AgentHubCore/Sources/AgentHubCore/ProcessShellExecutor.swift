@@ -28,8 +28,9 @@ public final class ProcessShellExecutor: ShellExecutor {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
         try process.run()
+        async let stderrResult = readToEnd(stderrPipe.fileHandleForReading)
         let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        let stderrData = await stderrResult
         process.waitUntilExit()
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
@@ -58,6 +59,14 @@ public final class ProcessShellExecutor: ShellExecutor {
         }
         return env
     }()
+
+    private func readToEnd(_ handle: FileHandle) async -> Data {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global().async {
+                continuation.resume(returning: handle.readDataToEndOfFile())
+            }
+        }
+    }
 
     private func log(_ message: String) {
         let timestamp = ISO8601DateFormatter().string(from: Date())
