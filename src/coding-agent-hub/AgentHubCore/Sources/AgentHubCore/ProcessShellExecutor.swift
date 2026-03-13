@@ -24,6 +24,7 @@ public final class ProcessShellExecutor: ShellExecutor {
         let stderrPipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [command] + arguments
+        process.environment = Self.processEnvironment
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
         try process.run()
@@ -42,6 +43,21 @@ public final class ProcessShellExecutor: ShellExecutor {
         log("OK \(cmdString)\nstdout: \(String(stdout.prefix(500)))")
         return stdout
     }
+
+    private static let processEnvironment: [String: String] = {
+        var env = ProcessInfo.processInfo.environment
+        let extra = [
+            "/opt/homebrew/bin",
+            "/opt/homebrew/sbin",
+            "/usr/local/bin",
+        ]
+        let current = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
+        let missing = extra.filter { !current.contains($0) }
+        if !missing.isEmpty {
+            env["PATH"] = (missing + [current]).joined(separator: ":")
+        }
+        return env
+    }()
 
     private func log(_ message: String) {
         let timestamp = ISO8601DateFormatter().string(from: Date())
