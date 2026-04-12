@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+PROJECT_DIR="$(dirname $0)/../src/format-md"
+
+eval $(mise env --cd $PROJECT_DIR)
+
+exec ruby "$PROJECT_DIR/format_md.rb" "$@"
