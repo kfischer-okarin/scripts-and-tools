@@ -23,6 +23,21 @@ formats (e.g., `1:30.5`, `90s`, `1h`).
 ./bin/extend-loop -i input.mp3 --loop-start 0:18.744 --loop-end 1:52.563 --min-length 1h --output extended.mp3
 ```
 
+## `transcribe-audio`
+
+Transcribes an audio file using `mlx-whisper` on Apple Silicon. Uses
+`kaiinui/kotoba-whisper-v2.0-mlx` for Japanese and
+`mlx-community/whisper-large-v3-turbo` for everything else. Live-prints each
+segment with timestamps as it decodes, and writes `.txt`, `.vtt`, `.srt`,
+`.tsv`, and `.json` files next to the input.
+
+**Usage:**
+
+```bash
+transcribe-audio path/to/audio.mp3 --lang en
+transcribe-audio path/to/audio.mp3 --lang ja
+```
+
 ## `is-mic-on` / `is-camera-on`
 
 Swift utilities to check if the microphone or camera is currently in use on macOS.
