@@ -153,4 +153,4 @@ Exceptions raised by Tracker, caught and displayed by CLI:
 - `AlreadyWorkingError` - start when already working
 - `OutsideWorkingHoursError` - stop/break/lunch/adjust when outside working hours
 - `LunchAlreadyTakenError` - lunch toggle after lunch completed
-- `InvalidAdjustmentError` - adjust to time before previous event
+- `InvalidAdjustmentError` - adjust to time before previous event, or unparseable/out-of-range time input (HH:MM, single-digit hour allowed and normalized to zero-padded)

@@ -253,6 +253,7 @@ module Worktime
     def adjust(new_time)
       raise OutsideWorkingHoursError if state == :unstarted
 
+      new_time = normalize_time(new_time)
       today_events = events_for_date(@now.to_date)
 
       if today_events.size > 1
@@ -283,6 +284,16 @@ module Worktime
     end
 
     private
+
+    def normalize_time(time_str)
+      raise InvalidAdjustmentError unless time_str =~ /\A(\d{1,2}):(\d{2})\z/
+
+      hours = ::Regexp.last_match(1).to_i
+      minutes = ::Regexp.last_match(2).to_i
+      raise InvalidAdjustmentError if hours > 23 || minutes > 59
+
+      format("%02d:%02d", hours, minutes)
+    end
 
     def work_log_for_date(date)
       WorkLog.new(events: events_for_date(date), date: date)

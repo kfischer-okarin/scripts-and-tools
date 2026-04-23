@@ -700,6 +700,17 @@ class AdjustTest < Minitest::Test
     assert_raises(Worktime::OutsideWorkingHoursError) { tracker.adjust("09:00") }
   end
 
+  def test_adjust_normalizes_single_digit_hour
+    at_nine = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    tracker.start
+
+    tracker.adjust("8:50")
+
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
+    assert_equal "08:50", tracker.status.last_event_time
+  end
+
   def test_adjust_to_time_before_previous_event_raises
     at_nine = Time.new(2024, 12, 10, 9, 0, 0)
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
