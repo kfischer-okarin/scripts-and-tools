@@ -266,7 +266,9 @@ module Worktime
     end
 
     def month_statistics
-      dates = @events.map { |e| e[:date] }.uniq.sort
+      event_dates = @events.map { |e| e[:date] }
+      override_dates = @overrides.keys.select { |d| d.year == @now.year && d.month == @now.month }
+      dates = (event_dates + override_dates).uniq.sort
       days = dates.map do |date|
         work_log = work_log_for_date(date)
         work_mins = work_minutes_for_log(work_log)

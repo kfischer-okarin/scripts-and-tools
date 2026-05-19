@@ -86,6 +86,7 @@ Total overtime: -0:30
 
 - Days with non-standard expected hours (set via `set_hours`) show `[Xh expected]` suffix.
 - Active working days (currently working/on break/on lunch) show `[working]` suffix with work time calculated as of current moment.
+- Days with a `set_hours` override but no recorded work events are still included (work=0, full negative overtime). Lets you burn overtime as a holiday by setting expected hours without working.
 
 ## Architecture
 

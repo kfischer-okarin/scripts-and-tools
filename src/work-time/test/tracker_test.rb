@@ -238,6 +238,21 @@ class TrackerTest < Minitest::Test
     assert_equal 60, result.total_overtime_minutes
   end
 
+  def test_month_statistics_includes_days_with_only_override_and_no_events
+    now = Time.new(2024, 12, 10, 9, 0, 0)
+    tracker = Worktime::Tracker.new(data_dir: @data_dir, now: now)
+    tracker.set_hours(8, date: Date.new(2024, 12, 9))
+
+    result = tracker.month_statistics
+
+    holiday = result.days.find { |d| d.date == Date.new(2024, 12, 9) }
+    assert holiday, "expected override-only day to appear in month statistics"
+    assert_equal 0, holiday.work_minutes
+    assert_equal 8 * 60, holiday.expected_minutes
+    assert_equal(-8 * 60, holiday.overtime_minutes)
+    refute holiday.active
+  end
+
   def test_month_statistics_shows_work_minutes_for_active_day
     at_nine = Time.new(2024, 12, 10, 9, 0, 0)
     tracker = Worktime::Tracker.new(data_dir: @data_dir, now: at_nine)
