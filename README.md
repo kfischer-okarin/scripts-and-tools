@@ -61,10 +61,14 @@ claude-history sessions-updated-on 2025-04-12         # Find sessions by date
 
 ## `format-md`
 
-Formats markdown files in-place: pads table columns to uniform width, wraps wide
-tables (>80 chars) in `<!-- markdownlint-disable MD013 -->` comments, removes
-the wrapper from tables that no longer need it, and runs `markdownlint-cli2 --fix`
-for general cleanup. Tables that fail to parse are left untouched.
+Formats markdown files in-place. Wraps prose paragraphs and list items at 80
+columns (preserving list continuation indent), leaves fenced and indented code
+blocks alone, and never splits inline backtick spans. Pads table columns to
+uniform width, wraps wide tables in `<!-- markdownlint-disable MD013 -->`
+comments, and removes the wrapper from tables that no longer need it. All width
+calculations are Unicode display-width aware (CJK and emoji count as 2 columns).
+Finally runs `markdownlint-cli2 --fix` for general cleanup. Tables that fail to
+parse are left untouched.
 
 **Usage:**
 
