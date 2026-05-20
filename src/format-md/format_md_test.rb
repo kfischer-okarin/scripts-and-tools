@@ -169,6 +169,24 @@ class FormatMdTest < Minitest::Test
     assert_equal expected, FormatMd.format(input)
   end
 
+  def test_trailing_plus_token_is_kept_on_line_even_if_it_pushes_to_82
+    input = "aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj kkkk llll mmmm nnnn pppppppppp + cccc.\n"
+    expected = <<~MD
+      aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj kkkk llll mmmm nnnn pppppppppp +
+      cccc.
+    MD
+    assert_equal expected, FormatMd.format(input)
+  end
+
+  def test_plus_is_not_treated_as_list_marker
+    input = "+ this line starts with a plus character and should not be treated as a bullet list item with continuation indent.\n"
+    expected = <<~MD
+      + this line starts with a plus character and should not be treated as a bullet
+      list item with continuation indent.
+    MD
+    assert_equal expected, FormatMd.format(input)
+  end
+
   def test_blockquote_preserves_inner_list_with_continuation_indent
     input = <<~MD
       > - first short item

@@ -111,7 +111,7 @@ module FormatMd
       return false if line.empty?
       return false if line.match?(/\A\s*\|/)
       return false if line.match?(/\A\s{0,3}#/)
-      return false if line.match?(/\A\s{0,3}(?:[-*+]|\d+\.)\s/)
+      return false if line.match?(/\A\s{0,3}(?:[-*]|\d+\.)\s/)
       return false if line.match?(/\A\s{0,3}>/)
       return false if line.match?(/\A\s*(?:```|~~~)/)
       return false if line == MD013_DISABLE || line == MD013_ENABLE
@@ -168,7 +168,7 @@ module FormatMd
     end
 
     def wrap_prose(lines, width)
-      m = lines.first.match(/\A(?<indent>\s*)(?<marker>(?:[-*+]|\d+\.)\s+)?(?<rest>.*)\z/)
+      m = lines.first.match(/\A(?<indent>\s*)(?<marker>(?:[-*]|\d+\.)\s+)?(?<rest>.*)\z/)
       indent = m[:indent] || ""
       marker = m[:marker] || ""
       first_prefix = indent + marker
@@ -228,7 +228,7 @@ module FormatMd
       current = first_prefix + tokens.shift
       tokens.each do |tok|
         candidate = "#{current} #{tok}"
-        if display_width(candidate) <= width
+        if display_width(candidate) <= width || keep_plus_on_line?(tok, candidate, width)
           current = candidate
         else
           out << current
@@ -237,6 +237,13 @@ module FormatMd
       end
       out << current
       out
+    end
+
+    # A lone "+" on the next line would be auto-corrected to "-" by
+    # markdownlint (it normalizes list markers). Letting it spill 2 cols past
+    # the limit keeps the "+" attached to the previous line.
+    def keep_plus_on_line?(tok, candidate, width)
+      tok == "+" && display_width(candidate) <= width + 2
     end
 
     def try_consume_wrapped_table(lines, start)
