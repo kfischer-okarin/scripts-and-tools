@@ -160,14 +160,41 @@ class FormatMdTest < Minitest::Test
     assert_equal input, FormatMd.format(input)
   end
 
-  def test_blockquote_does_not_get_merged_into_prose
+  def test_blockquote_wraps_with_blockquote_prefix_on_continuation
+    input = "> This is a very long blockquote line that exceeds eighty characters and should wrap onto multiple lines.\n"
+    expected = <<~MD
+      > This is a very long blockquote line that exceeds eighty characters and should
+      > wrap onto multiple lines.
+    MD
+    assert_equal expected, FormatMd.format(input)
+  end
+
+  def test_blockquote_preserves_inner_list_with_continuation_indent
+    input = <<~MD
+      > - first short item
+      > - second very long item that should wrap onto multiple lines because the text goes on and on
+    MD
+    expected = <<~MD
+      > - first short item
+      > - second very long item that should wrap onto multiple lines because the text
+      >   goes on and on
+    MD
+    assert_equal expected, FormatMd.format(input)
+  end
+
+  def test_blockquote_joins_adjacent_lines_for_wrapping
     input = <<~MD
       Some paragraph text.
 
       > a blockquote
       > with two lines
     MD
-    assert_equal input, FormatMd.format(input)
+    expected = <<~MD
+      Some paragraph text.
+
+      > a blockquote with two lines
+    MD
+    assert_equal expected, FormatMd.format(input)
   end
 
   def test_wide_table_wrapper_decision_uses_display_width

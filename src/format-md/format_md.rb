@@ -15,45 +15,70 @@ module FormatMd
   class << self
     def format(text)
       lines = text.lines.map(&:chomp)
-      table_buf = []
       output = []
       i = consume_frontmatter(lines, output)
+      output.concat(wrap_at_char_length(lines[i..], WRAP_WIDTH))
+      output.join("\n") + "\n"
+    end
+
+    def wrap_at_char_length(lines, width)
+      output = []
+      table_buf = []
+      i = 0
 
       while i < lines.length
         if lines[i] == MD013_DISABLE
           consumed = try_consume_wrapped_table(lines, i)
           if consumed
             table_lines, i = consumed
-            flush_table(table_buf, output)
+            flush_table(table_buf, output, width)
             table_buf.concat(table_lines)
             next
           end
         end
 
         if lines[i].match?(/\A\s*(?:```+|~~~+)/)
-          flush_table(table_buf, output)
+          flush_table(table_buf, output, width)
           fenced, i = consume_fenced_code(lines, i)
           output.concat(fenced)
         elsif indented_code_start?(lines, i)
-          flush_table(table_buf, output)
+          flush_table(table_buf, output, width)
           code, i = consume_indented_code(lines, i)
           output.concat(code)
         elsif lines[i].match?(/^\s*\|/)
           table_buf << lines[i]
           i += 1
+        elsif blockquote_line?(lines[i])
+          flush_table(table_buf, output, width)
+          bq, i = consume_blockquote(lines, i)
+          output.concat(wrap_blockquote_block(bq, width))
         elsif prose_line?(lines, i)
-          flush_table(table_buf, output)
+          flush_table(table_buf, output, width)
           prose, i = consume_prose(lines, i)
-          output.concat(wrap_prose(prose))
+          output.concat(wrap_prose(prose, width))
         else
-          flush_table(table_buf, output)
+          flush_table(table_buf, output, width)
           output << lines[i]
           i += 1
         end
       end
-      flush_table(table_buf, output)
+      flush_table(table_buf, output, width)
+      output
+    end
 
-      output.join("\n") + "\n"
+    def consume_blockquote(lines, i)
+      bq = []
+      while i < lines.length && blockquote_line?(lines[i])
+        bq << lines[i]
+        i += 1
+      end
+      [bq, i]
+    end
+
+    def wrap_blockquote_block(bq_lines, width)
+      inner = bq_lines.map { |l| l.sub(/\A\s{0,3}>\s?/, "") }
+      wrapped = wrap_at_char_length(inner, width - 2)
+      wrapped.map { |l| l.empty? ? ">" : "> #{l}" }
     end
 
     private
@@ -138,7 +163,11 @@ module FormatMd
       [prose, i]
     end
 
-    def wrap_prose(lines)
+    def blockquote_line?(line)
+      line.match?(/\A\s{0,3}>/)
+    end
+
+    def wrap_prose(lines, width)
       m = lines.first.match(/\A(?<indent>\s*)(?<marker>(?:[-*+]|\d+\.)\s+)?(?<rest>.*)\z/)
       indent = m[:indent] || ""
       marker = m[:marker] || ""
@@ -149,7 +178,7 @@ module FormatMd
       tokens = tokenize_for_wrap(content_lines.join(" ").strip)
       return [first_prefix.rstrip] if tokens.empty?
 
-      wrap_tokens(tokens, first_prefix, cont_indent, WRAP_WIDTH)
+      wrap_tokens(tokens, first_prefix, cont_indent, width)
     end
 
     def tokenize_for_wrap(text)
@@ -231,12 +260,12 @@ module FormatMd
       [table_lines, i + 1]
     end
 
-    def flush_table(buf, output)
+    def flush_table(buf, output, width)
       return if buf.empty?
 
       formatted = try_format_table(buf)
       lines = formatted || buf
-      wide = lines.any? { |l| display_width(l) > WRAP_WIDTH }
+      wide = lines.any? { |l| display_width(l) > width }
       if wide
         output << MD013_DISABLE
         output << ""
