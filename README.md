@@ -40,8 +40,9 @@ transcribe-audio path/to/audio.mp3 --lang ja
 
 ## `is-mic-on` / `is-camera-on`
 
-Swift utilities to check if the microphone or camera is currently in use on macOS.
-Returns exit code 0 if in use, 1 if not. Use `-q` for quiet mode (exit code only).
+Swift utilities to check if the microphone or camera is currently in use on
+macOS. Returns exit code 0 if in use, 1 if not. Use `-q` for quiet mode (exit
+code only).
 
 ## `claude-history`
 
@@ -94,9 +95,9 @@ joplin create-note <folder-id> "Title" "Body"  # Create note
 ## `with-secure-env`
 
 A CLI tool for launching processes with encrypted environment variables. Stores
-secrets securely in the macOS Keychain and prompts for approval before injection,
-preventing plain-text `.env` files from being scattered around the filesystem.
-Available in both Go and Ruby implementations.
+secrets securely in the macOS Keychain and prompts for approval before
+injection, preventing plain-text `.env` files from being scattered around the
+filesystem. Available in both Go and Ruby implementations.
 
 **Usage:**
 
