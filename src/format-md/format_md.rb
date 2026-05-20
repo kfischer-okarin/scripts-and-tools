@@ -17,7 +17,7 @@ module FormatMd
       lines = text.lines.map(&:chomp)
       table_buf = []
       output = []
-      i = 0
+      i = consume_frontmatter(lines, output)
 
       while i < lines.length
         if lines[i] == MD013_DISABLE
@@ -61,6 +61,17 @@ module FormatMd
     MD013_DISABLE = "<!-- markdownlint-disable MD013 -->"
     MD013_ENABLE = "<!-- markdownlint-enable MD013 -->"
     WRAP_WIDTH = 80
+
+    def consume_frontmatter(lines, output)
+      return 0 unless lines.first == "---"
+
+      j = 1
+      j += 1 while j < lines.length && lines[j] != "---"
+      return 0 if j >= lines.length
+
+      output.concat(lines[0..j])
+      j + 1
+    end
 
     def prose_line?(lines, i)
       line = lines[i]

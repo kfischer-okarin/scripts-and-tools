@@ -146,6 +146,20 @@ class FormatMdTest < Minitest::Test
     assert_equal expected, FormatMd.format(input)
   end
 
+  def test_frontmatter_is_not_wrapped
+    input = <<~MD
+      ---
+      name: my-skill
+      description: This is a very long description that goes on and on and on past the eighty character limit easily.
+      metadata:
+        type: feedback
+      ---
+
+      Body text that is not really long enough to wrap.
+    MD
+    assert_equal input, FormatMd.format(input)
+  end
+
   def test_blockquote_does_not_get_merged_into_prose
     input = <<~MD
       Some paragraph text.
