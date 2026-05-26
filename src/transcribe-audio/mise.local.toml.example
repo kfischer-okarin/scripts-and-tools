@@ -1,0 +1,6 @@
+# Copy to `mise.local.toml` (gitignored) and fill in your token.
+# mise auto-loads this file on top of mise.toml when you cd into the project,
+# so HF_TOKEN is exported automatically for `diarize-audio`.
+
+[env]
+HF_TOKEN = "hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"

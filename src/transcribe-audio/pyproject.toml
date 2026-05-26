@@ -5,4 +5,5 @@ description = "Transcribe audio files with mlx-whisper"
 requires-python = ">=3.13"
 dependencies = [
     "mlx-whisper",
+    "pyannote-audio>=4.0.4",
 ]

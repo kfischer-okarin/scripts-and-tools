@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+PROJECT_DIR="$(dirname $0)/../src/transcribe-audio"
+
+eval $(mise env --cd $PROJECT_DIR)
+
+# Manually do what uv run would do so we can keep our working directory
+uv sync --directory $PROJECT_DIR -q
+source $PROJECT_DIR/.venv/bin/activate
+
+python $PROJECT_DIR/diarize_audio.py "$@"

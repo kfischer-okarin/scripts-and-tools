@@ -38,6 +38,23 @@ transcribe-audio path/to/audio.mp3 --lang en
 transcribe-audio path/to/audio.mp3 --lang ja
 ```
 
+## `diarize-audio`
+
+Speaker diarization with `pyannote.audio` 4.x
+(`pyannote/speaker-diarization-community-1`). Prints `start  end  speaker`
+ranges to stdout and writes an `.rttm` file next to the input. Optional
+`--num-speakers` / `--min-speakers` / `--max-speakers` hints improve quality
+when the count is known. Requires accepting the model license on HuggingFace
+once and setting `HF_TOKEN` (or `HUGGINGFACE_TOKEN`) to a read token.
+
+**Usage:**
+
+```bash
+export HF_TOKEN=hf_xxxxxxxxxxxx
+diarize-audio path/to/audio.mp3
+diarize-audio path/to/audio.mp3 --num-speakers 2
+```
+
 ## `is-mic-on` / `is-camera-on`
 
 Swift utilities to check if the microphone or camera is currently in use on
