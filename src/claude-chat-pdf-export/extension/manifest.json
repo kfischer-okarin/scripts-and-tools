@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Chat → PDF",
+  "version": "1.0.0",
+  "description": "Export the current Claude.ai conversation as a printable PDF via Chrome's print dialog.",
+  "content_scripts": [
+    {
+      "matches": ["https://claude.ai/chat/*"],
+      "js": ["lib/marked.umd.js", "renderer.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": ["https://claude.ai/*"]
+}

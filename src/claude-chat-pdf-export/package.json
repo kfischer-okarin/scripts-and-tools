@@ -1,0 +1,13 @@
+{
+  "name": "claude-chat-pdf-export",
+  "version": "1.0.0",
+  "description": "Export a Claude.ai conversation as a printable PDF (Chrome extension + CLI).",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p extension/lib && cp node_modules/marked/lib/marked.umd.js extension/lib/marked.umd.js",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "marked": "^18.0.4"
+  }
+}

@@ -1,0 +1,7 @@
+*.json
+!package.json
+!package-lock.json
+!manifest.json
+node_modules/
+out/
+extension/lib/

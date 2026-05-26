@@ -140,6 +140,38 @@ worktime status [DATE]      # Show current status
 worktime month [MONTH]      # Show monthly overview with overtime
 ```
 
+## `claude-chat-pdf-export`
+
+Exports a Claude.ai conversation as a printable PDF. Two pieces:
+
+- A **Chrome extension** that adds a floating "PDF" button to any
+  `claude.ai/chat/*` page. Clicking it opens a print-ready tab; pick
+  *Save as PDF* from Chrome's print dialog.
+- A **Node CLI** (`render.mjs`) that turns a conversation JSON into a
+  standalone HTML file, ready to feed into `chrome --headless
+  --print-to-pdf` for unattended export.
+
+Both share the same renderer, which lays out `text`, `thinking`,
+`tool_use`, and `tool_result` blocks with print-friendly CSS.
+
+**Usage (extension):**
+
+```bash
+cd src/claude-chat-pdf-export && npm install && npm run build
+# then chrome://extensions → Developer mode → Load unpacked →
+#   src/claude-chat-pdf-export/extension
+```
+
+**Usage (CLI):**
+
+```bash
+cd src/claude-chat-pdf-export && npm install
+node render.mjs path/to/conv.json path/to/out.html
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+  --headless --disable-gpu --no-pdf-header-footer \
+  --print-to-pdf=out.pdf "file://$PWD/out.html"
+```
+
 ## `hammerspoon-spoons/`
 
 Custom Hammerspoon Spoons for macOS automation.
