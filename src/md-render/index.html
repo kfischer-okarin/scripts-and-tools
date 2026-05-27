@@ -183,6 +183,7 @@
       <option value="solarized">Solarized Light</option>
     </select>
   </label>
+  <button id="insert-pagebreak" title="Insert page break at cursor">Insert page break</button>
   <span class="spacer"></span>
   <button id="clear" title="Clear the editor">Clear</button>
   <button id="print">Print / Save as PDF…</button>
@@ -263,6 +264,23 @@
   src.addEventListener("input", render);
   themeSel.addEventListener("change", () => applyTheme(themeSel.value));
   document.getElementById("print").addEventListener("click", () => window.print());
+  document.getElementById("insert-pagebreak").addEventListener("click", insertPageBreak);
+
+  function insertPageBreak() {
+    src.focus();
+    const marker = "\n\n<!-- pagebreak -->\n\n";
+    // execCommand("insertText") integrates with the textarea's native undo
+    // stack and replaces the current selection — i.e. it behaves as if the
+    // text were typed. Deprecated on paper but still the only way to do this
+    // reliably in textareas.
+    let inserted = false;
+    try { inserted = document.execCommand("insertText", false, marker); } catch (_) {}
+    if (!inserted) {
+      const s = src.selectionStart, e = src.selectionEnd;
+      src.setRangeText(marker, s, e, "end");
+      render();
+    }
+  }
   document.getElementById("clear").addEventListener("click", () => {
     if (src.value && !confirm("Clear the editor?")) return;
     src.value = "";
