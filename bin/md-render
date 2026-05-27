@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DIR=$(cd "$(dirname "$0")/.." && pwd)
+HTML="$DIR/src/md-render/index.html"
+
+if [[ ! -f "$HTML" ]]; then
+  echo "md-render: cannot find $HTML" >&2
+  exit 1
+fi
+
+open "$HTML"

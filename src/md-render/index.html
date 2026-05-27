@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Markdown Renderer</title>
+
+<link id="md-css" rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/github-markdown-css@5.9.0/github-markdown-light.css">
+<link id="hl-css" rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css">
+
+<script src="https://cdn.jsdelivr.net/npm/marked@18.0.4/lib/marked.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
+<style>
+  :root {
+    --toolbar-h: 44px;
+    --border: #d0d7de;
+    --toolbar-bg: #f6f8fa;
+    --toolbar-fg: #1f2328;
+  }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  .toolbar {
+    height: var(--toolbar-h);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--toolbar-bg);
+    color: var(--toolbar-fg);
+    box-sizing: border-box;
+  }
+
+  .toolbar label { font-size: 13px; }
+  .toolbar select, .toolbar button {
+    font: inherit;
+    font-size: 13px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+  }
+  .toolbar .spacer { flex: 1; }
+
+  .split {
+    display: flex;
+    height: calc(100% - var(--toolbar-h));
+  }
+
+  #src, #out {
+    flex: 1 1 50%;
+    height: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+  }
+
+  #src {
+    border: none;
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    font: 14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    resize: none;
+    outline: none;
+    background: #fafbfc;
+    color: #1f2328;
+    tab-size: 2;
+  }
+
+  #out {
+    padding: 32px 48px;
+    background: white;
+  }
+
+  /* Reading (serif) theme — applies on top of github-markdown-css when active */
+  body[data-theme="reading"] #out {
+    background: #fdfaf3;
+    color: #2b2825;
+    font-family: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
+    font-size: 17px;
+    line-height: 1.7;
+    max-width: none;
+  }
+  body[data-theme="reading"] #out h1,
+  body[data-theme="reading"] #out h2,
+  body[data-theme="reading"] #out h3,
+  body[data-theme="reading"] #out h4 {
+    font-family: inherit;
+    border-bottom: none;
+  }
+  body[data-theme="reading"] #out code,
+  body[data-theme="reading"] #out pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  /* Solarized-light overlay */
+  body[data-theme="solarized"] #out {
+    background: #fdf6e3;
+    color: #586e75;
+  }
+  body[data-theme="solarized"] #out a { color: #268bd2; }
+  body[data-theme="solarized"] #out h1,
+  body[data-theme="solarized"] #out h2,
+  body[data-theme="solarized"] #out h3 { color: #073642; border-color: #eee8d5; }
+  body[data-theme="solarized"] #out code,
+  body[data-theme="solarized"] #out pre { background: #eee8d5; }
+
+  /* Dark toolbar when a dark theme is active */
+  body[data-theme="github-dark"] {
+    --toolbar-bg: #161b22;
+    --toolbar-fg: #e6edf3;
+    --border: #30363d;
+  }
+  body[data-theme="github-dark"] .toolbar select,
+  body[data-theme="github-dark"] .toolbar button {
+    background: #21262d;
+    color: #e6edf3;
+  }
+  body[data-theme="github-dark"] #src {
+    background: #0d1117;
+    color: #e6edf3;
+  }
+  body[data-theme="github-dark"] #out { background: #0d1117; }
+
+  @media print {
+    html, body { height: auto; }
+    .toolbar, #src { display: none !important; }
+    .split { display: block; height: auto; }
+    #out {
+      flex: none;
+      height: auto;
+      overflow: visible;
+      padding: 0;
+      width: 100%;
+      max-width: none;
+    }
+    /* Make github-markdown-css honor full width on print */
+    .markdown-body { max-width: none !important; padding: 0 !important; }
+  }
+</style>
+</head>
+<body data-theme="github-light">
+
+<header class="toolbar">
+  <label>Theme
+    <select id="theme">
+      <option value="github-light">GitHub Light</option>
+      <option value="github-dark">GitHub Dark</option>
+      <option value="reading">Reading (serif)</option>
+      <option value="solarized">Solarized Light</option>
+    </select>
+  </label>
+  <span class="spacer"></span>
+  <button id="clear" title="Clear the editor">Clear</button>
+  <button id="print">Print / Save as PDF…</button>
+</header>
+
+<main class="split">
+  <textarea id="src" spellcheck="false" placeholder="Paste or type Markdown here…"></textarea>
+  <article id="out" class="markdown-body"></article>
+</main>
+
+<script>
+(function () {
+  const STORAGE_KEY = "md-render:content";
+  const THEME_KEY = "md-render:theme";
+
+  const themes = {
+    "github-light": {
+      md: "https://cdn.jsdelivr.net/npm/github-markdown-css@5.9.0/github-markdown-light.css",
+      hl: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github.min.css",
+    },
+    "github-dark": {
+      md: "https://cdn.jsdelivr.net/npm/github-markdown-css@5.9.0/github-markdown-dark.css",
+      hl: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css",
+    },
+    "reading": {
+      md: "https://cdn.jsdelivr.net/npm/github-markdown-css@5.9.0/github-markdown-light.css",
+      hl: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/atom-one-light.min.css",
+    },
+    "solarized": {
+      md: "https://cdn.jsdelivr.net/npm/github-markdown-css@5.9.0/github-markdown-light.css",
+      hl: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/base16/solarized-light.min.css",
+    },
+  };
+
+  const src = document.getElementById("src");
+  const out = document.getElementById("out");
+  const themeSel = document.getElementById("theme");
+  const mdCss = document.getElementById("md-css");
+  const hlCss = document.getElementById("hl-css");
+
+  marked.setOptions({ gfm: true, breaks: false });
+
+  function render() {
+    const text = src.value;
+    out.innerHTML = marked.parse(text);
+    out.querySelectorAll("pre code").forEach((el) => {
+      try { hljs.highlightElement(el); } catch (_) { /* unknown lang */ }
+    });
+    localStorage.setItem(STORAGE_KEY, text);
+  }
+
+  function applyTheme(name) {
+    const t = themes[name] || themes["github-light"];
+    mdCss.href = t.md;
+    hlCss.href = t.hl;
+    document.body.dataset.theme = name;
+    localStorage.setItem(THEME_KEY, name);
+  }
+
+  // Restore state
+  const savedTheme = localStorage.getItem(THEME_KEY);
+  if (savedTheme && themes[savedTheme]) {
+    themeSel.value = savedTheme;
+    applyTheme(savedTheme);
+  }
+  const savedContent = localStorage.getItem(STORAGE_KEY);
+  src.value = savedContent != null ? savedContent : defaultSample();
+
+  // Wire events
+  src.addEventListener("input", render);
+  themeSel.addEventListener("change", () => applyTheme(themeSel.value));
+  document.getElementById("print").addEventListener("click", () => window.print());
+  document.getElementById("clear").addEventListener("click", () => {
+    if (src.value && !confirm("Clear the editor?")) return;
+    src.value = "";
+    render();
+    src.focus();
+  });
+
+  // Tab inserts two spaces instead of jumping focus
+  src.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    const s = src.selectionStart, en = src.selectionEnd;
+    src.value = src.value.slice(0, s) + "  " + src.value.slice(en);
+    src.selectionStart = src.selectionEnd = s + 2;
+    render();
+  });
+
+  render();
+
+  function defaultSample() {
+    return [
+      "# Markdown Renderer",
+      "",
+      "Paste or type Markdown on the **left**. The rendered version appears on the **right**.",
+      "",
+      "- Live re-renders on every change",
+      "- Pick a theme from the toolbar",
+      "- *Print / Save as PDF* uses your browser's print dialog",
+      "",
+      "## Code",
+      "",
+      "```python",
+      "def greet(name: str) -> str:",
+      "    return f\"Hello, {name}!\"",
+      "```",
+      "",
+      "## Table",
+      "",
+      "| Theme | Good for |",
+      "| --- | --- |",
+      "| GitHub Light | Printing |",
+      "| GitHub Dark | Late nights |",
+      "| Reading | Long prose |",
+      "",
+      "> Tip: switch to a light theme before printing if you want a clean PDF.",
+      "",
+    ].join("\n");
+  }
+})();
+</script>
+</body>
+</html>

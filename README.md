@@ -172,6 +172,23 @@ node render.mjs path/to/conv.json path/to/out.html
   --print-to-pdf=out.pdf "file://$PWD/out.html"
 ```
 
+## `md-render`
+
+A single-page Markdown renderer. Split view: paste/edit Markdown on the left,
+see it rendered with GitHub-style typography on the right. Each pane scrolls
+independently. Pick from a few themes (GitHub Light, GitHub Dark, a serif
+*Reading* theme, Solarized Light) and use the browser's print dialog to save
+the rendered side as PDF. Content and theme persist in `localStorage` so the
+page survives reloads. Runs from a single HTML file with CDN-loaded
+[`marked`](https://marked.js.org/), [`highlight.js`](https://highlightjs.org/),
+and [`github-markdown-css`](https://github.com/sindresorhus/github-markdown-css).
+
+**Usage:**
+
+```bash
+md-render            # opens src/md-render/index.html in your default browser
+```
+
 ## `hammerspoon-spoons/`
 
 Custom Hammerspoon Spoons for macOS automation.
