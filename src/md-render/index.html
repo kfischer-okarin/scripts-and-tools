@@ -130,6 +130,29 @@
   }
   body[data-theme="github-dark"] #out { background: #0d1117; }
 
+  /* Page breaks: hidden on screen, forced when printing */
+  .page-break {
+    height: 0;
+    border-top: 1px dashed #c0c4cc;
+    margin: 24px 0;
+    page-break-after: always;
+    break-after: page;
+  }
+  .page-break::before {
+    content: "page break";
+    display: block;
+    text-align: center;
+    font: 11px/1 ui-sans-serif, sans-serif;
+    color: #999;
+    background: white;
+    width: max-content;
+    margin: -7px auto 0;
+    padding: 0 8px;
+  }
+  body[data-theme="github-dark"] .page-break::before { background: #0d1117; color: #6e7681; }
+  body[data-theme="reading"] .page-break::before { background: #fdfaf3; }
+  body[data-theme="solarized"] .page-break::before { background: #fdf6e3; }
+
   @media print {
     html, body { height: auto; }
     .toolbar, #src { display: none !important; }
@@ -144,6 +167,8 @@
     }
     /* Make github-markdown-css honor full width on print */
     .markdown-body { max-width: none !important; padding: 0 !important; }
+    .page-break { border: none; margin: 0; height: 0; }
+    .page-break::before { display: none; }
   }
 </style>
 </head>
@@ -200,9 +225,17 @@
 
   marked.setOptions({ gfm: true, breaks: false });
 
+  function preprocess(text) {
+    // Convert page-break markers into HTML that we style for screen + print.
+    // Accepts: <!-- pagebreak --> or a line containing only \pagebreak
+    return text
+      .replace(/<!--\s*pagebreak\s*-->/gi, '<div class="page-break"></div>')
+      .replace(/^[ \t]*\\pagebreak[ \t]*$/gim, '<div class="page-break"></div>');
+  }
+
   function render() {
     const text = src.value;
-    out.innerHTML = marked.parse(text);
+    out.innerHTML = marked.parse(preprocess(text));
     out.querySelectorAll("pre code").forEach((el) => {
       try { hljs.highlightElement(el); } catch (_) { /* unknown lang */ }
     });
