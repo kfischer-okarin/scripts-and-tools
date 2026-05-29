@@ -146,6 +146,15 @@ class FormatMdTest < Minitest::Test
     assert_equal expected, FormatMd.format(input)
   end
 
+  def test_inline_link_with_spaces_in_text_is_not_split
+    input = "aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj kkkk llll [the link text](http://example.com).\n"
+    expected = <<~MD
+      aaaa bbbb cccc dddd eeee ffff gggg hhhh iiii jjjj kkkk llll
+      [the link text](http://example.com).
+    MD
+    assert_equal expected, FormatMd.format(input)
+  end
+
   def test_frontmatter_is_not_wrapped
     input = <<~MD
       ---

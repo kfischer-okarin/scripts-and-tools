@@ -197,6 +197,16 @@ module FormatMd
           span, advance = scan_backtick_span(text, i)
           buf << span
           i += advance
+        elsif c == "[" || (c == "!" && text[i + 1] == "[")
+          bracket = c == "!" ? i + 1 : i
+          span, advance = scan_link_span(text, bracket)
+          if span
+            buf << (c == "!" ? "!" : "") << span
+            i = bracket + advance
+          else
+            buf << c
+            i += 1
+          end
         else
           buf << c
           i += 1
@@ -221,6 +231,38 @@ module FormatMd
         end
       end
       [text[i...(i + ticks)], ticks]
+    end
+
+    # Scans a markdown inline link `[text](url)` starting at the opening "[".
+    # Returns [span, advance] for the whole link, or [nil, 0] if the bracket is
+    # not part of a well-formed link, so the "[" is treated as an ordinary char.
+    def scan_link_span(text, i)
+      close = matching_delimiter(text, i, "[", "]")
+      return [nil, 0] unless close && text[close + 1] == "("
+
+      paren = matching_delimiter(text, close + 1, "(", ")")
+      return [nil, 0] unless paren
+
+      [text[i..paren], paren - i + 1]
+    end
+
+    def matching_delimiter(text, i, open, close)
+      depth = 0
+      j = i
+      while j < text.length
+        c = text[j]
+        if c == "\\"
+          j += 2
+          next
+        elsif c == open
+          depth += 1
+        elsif c == close
+          depth -= 1
+          return j if depth.zero?
+        end
+        j += 1
+      end
+      nil
     end
 
     def wrap_tokens(tokens, first_prefix, cont_indent, width)
