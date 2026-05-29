@@ -332,23 +332,63 @@ module FormatMd
       col_count = rows.first.length
       return nil unless rows.all? { |r| r.length == col_count }
 
-      separator_indices = rows.each_index.select { |i| rows[i].all? { |c| c.match?(/\A-+\z/) } }
+      separator_indices = rows.each_index.select { |i| separator_row?(rows[i]) }
       return nil if separator_indices.empty?
 
-
+      alignments = column_alignments(rows[separator_indices.first])
       widths = (0...col_count).map { |i| rows.map { |r| display_width(r[i]) }.max }
 
       rows.each_with_index.map do |row, idx|
         if separator_indices.include?(idx)
-          "| " + widths.map { |w| "-" * w }.join(" | ") + " |"
+          render_separator_row(widths, alignments)
         else
-          "| " + row.each_with_index.map { |c, i| pad_to_width(c, widths[i]) }.join(" | ") + " |"
+          render_data_row(row, widths, alignments)
         end
       end
     end
 
-    def pad_to_width(str, width)
-      str + " " * [width - display_width(str), 0].max
+    def separator_row?(cells)
+      cells.all? { |c| c.match?(/\A:?-+:?\z/) }
+    end
+
+    def column_alignments(separator_cells)
+      separator_cells.map do |cell|
+        left = cell.start_with?(":")
+        right = cell.end_with?(":")
+        if left && right then :center
+        elsif right then :right
+        elsif left then :left
+        else :none
+        end
+      end
+    end
+
+    def render_separator_row(widths, alignments)
+      cells = widths.each_with_index.map { |w, i| dash_cell(w, alignments[i]) }
+      "| " + cells.join(" | ") + " |"
+    end
+
+    def dash_cell(width, align)
+      case align
+      when :center then ":" + "-" * [width - 2, 1].max + ":"
+      when :right then "-" * [width - 1, 1].max + ":"
+      when :left then ":" + "-" * [width - 1, 1].max
+      else "-" * width
+      end
+    end
+
+    def render_data_row(row, widths, alignments)
+      cells = row.each_with_index.map { |c, i| pad_cell(c, widths[i], alignments[i]) }
+      "| " + cells.join(" | ") + " |"
+    end
+
+    def pad_cell(str, width, align)
+      pad = [width - display_width(str), 0].max
+      case align
+      when :right then " " * pad + str
+      when :center then " " * (pad / 2) + str + " " * (pad - pad / 2)
+      else str + " " * pad
+      end
     end
 
     def display_width(str)

@@ -306,6 +306,40 @@ class FormatMdTest < Minitest::Test
     assert_equal expected, FormatMd.format(input)
   end
 
+  def test_aligned_table_is_recognized_and_not_double_wrapped
+    input = <<~MD
+      <!-- markdownlint-disable MD013 -->
+
+      | Programming language | Garbage collected | Statically typed | Compiles to native machine code |
+      | -------------------- | :---------------: | :--------------: | :-----------------------------: |
+      | Rust                 |        No         |       Yes        |               Yes               |
+      | Python               |        Yes        |        No        |               No                |
+      | Go                   |        Yes        |       Yes        |               Yes               |
+
+      <!-- markdownlint-enable MD013 -->
+    MD
+
+    formatted = FormatMd.format(input)
+    assert_equal 1, formatted.scan("<!-- markdownlint-disable MD013 -->").length
+    assert_equal formatted, FormatMd.format(formatted)
+  end
+
+  def test_table_alignment_markers_are_preserved_and_applied_to_cells
+    input = <<~MD
+      | A | B | C |
+      | :--- | :---: | ---: |
+      | x | y | z |
+    MD
+
+    expected = <<~MD
+      | A    |   B   |    C |
+      | :--- | :---: | ---: |
+      | x    |   y   |    z |
+    MD
+
+    assert_equal expected, FormatMd.format(input)
+  end
+
   def test_unparseable_table_in_wrapper_left_untouched
     input = <<~MD
       # Heading
