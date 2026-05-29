@@ -262,6 +262,22 @@ class FormatMdTest < Minitest::Test
     assert_equal expected, FormatMd.format(input)
   end
 
+  def test_emoji_presentation_chars_count_as_double_width
+    input = <<~MD
+      | A | B |
+      | - | - |
+      | ✅ | x |
+    MD
+
+    expected = <<~MD
+      | A  | B |
+      | -- | - |
+      | ✅ | x |
+    MD
+
+    assert_equal expected, FormatMd.format(input)
+  end
+
   def test_indented_code_block_is_preserved
     input = <<~MD
       Text before.
