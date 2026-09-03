@@ -4,16 +4,18 @@ import pathlib
 import mlx_whisper
 from mlx_whisper.writers import get_writer
 
-JAPANESE_MODEL = "kaiinui/kotoba-whisper-v2.0-mlx"
-DEFAULT_MODEL = "mlx-community/whisper-large-v3-turbo"
+MODEL = "mlx-community/whisper-large-v3-turbo"
 
 
 def main():
     args = parse_args()
     result = mlx_whisper.transcribe(
         args.file,
-        path_or_hf_repo=pick_model(args.lang),
+        path_or_hf_repo=MODEL,
         language=args.lang,
+        # Each 30s window decodes independently. Conditioning on the previous
+        # window lets one bad decode poison the rest of a long recording.
+        condition_on_previous_text=False,
         verbose=True,
     )
     write_outputs(result, args.file)
@@ -24,12 +26,6 @@ def parse_args():
     parser.add_argument("file", help="Path to the audio file")
     parser.add_argument("--lang", required=True, help="Language code (e.g. en, ja, de)")
     return parser.parse_args()
-
-
-def pick_model(lang):
-    if lang == "ja":
-        return JAPANESE_MODEL
-    return DEFAULT_MODEL
 
 
 def write_outputs(result, audio_path):

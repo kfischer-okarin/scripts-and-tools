@@ -25,11 +25,10 @@ formats (e.g., `1:30.5`, `90s`, `1h`).
 
 ## `transcribe-audio`
 
-Transcribes an audio file using `mlx-whisper` on Apple Silicon. Uses
-`kaiinui/kotoba-whisper-v2.0-mlx` for Japanese and
-`mlx-community/whisper-large-v3-turbo` for everything else. Live-prints each
-segment with timestamps as it decodes, and writes `.txt`, `.vtt`, `.srt`,
-`.tsv`, and `.json` files next to the input.
+Transcribes an audio file using `mlx-whisper` on Apple Silicon, with
+`mlx-community/whisper-large-v3-turbo`. Live-prints each segment with
+timestamps as it decodes, and writes `.txt`, `.vtt`, `.srt`, `.tsv`, and
+`.json` files next to the input.
 
 **Usage:**
 
