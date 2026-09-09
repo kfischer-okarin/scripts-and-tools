@@ -1,204 +1,224 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
+  # Renders a session's records, in file order, as a readable transcript.
+  #
+  # Records arrive through the visitor methods below, one per record class. The
+  # renderer never reorders or pairs anything: a tool result prints under the
+  # tool call because that is where the file put it.
+  #
+  # Verbose mode keeps everything — thinking blocks, expanded prompts, full tool
+  # output and Claude Code's own bookkeeping lines. Plain mode keeps the
+  # conversation and counts the rest.
   class SessionRenderer
+    RESULT_PREFIX = "  ⎿  "
+    RESULT_INDENT = "     "
+    RESULT_PREVIEW_LINES = 3
+
+    attr_reader :hidden_counts
+
     def initialize(verbose: false)
       @verbose = verbose
       @output = +""
+      @hidden_counts = Hash.new(0)
     end
 
     def output
       @output.rstrip + "\n"
     end
 
-    # Note: tool_result messages are skipped during parsing and aggregated
-    # into AssistantMessage's tool_call_records instead
+    # A note on what plain mode left out, so nothing looks silently missing
+    def hidden_summary
+      return nil if hidden_counts.empty?
+
+      counts = hidden_counts.sort_by { |kind, count| [-count, kind] }
+      "#{counts.sum { |_, count| count }} records hidden " \
+        "(#{counts.map { |kind, count| "#{count} #{kind}" }.join(", ")}); use --verbose to show them"
+    end
+
+    # Visitor methods, one per record class
+
     def render_user_message(record)
-      ts = format_timestamp(record)
-      @output << "#{ts}<User> #{record.content.to_s.rstrip}\n\n"
-    end
-
-    def format_tool_result(result)
-      return format_string_result(result) if result.is_a?(String)
-      return "Done" unless result.is_a?(Hash)
-
-      # Edit tool result (has structuredPatch)
-      if result[:structuredPatch]
-        return format_edit_result(result[:structuredPatch])
-      end
-
-      # Bash tool result (has stdout)
-      if result.key?(:stdout)
-        return format_string_result(result[:stdout]) unless result[:stdout].to_s.empty?
-
-        return "Done"
-      end
-
-      # Grep tool result (has numFiles)
-      if result.key?(:numFiles)
-        return "Found #{result[:numFiles]} files"
-      end
-
-      # Task tool result (has status)
-      if result.key?(:status)
-        task_result = result.dig(:content, 0, :text)
-        return format_string_result(task_result) if @verbose && task_result
-
-        return "Done"
-      end
-
-      case result[:type]
-      when "text"
-        file = result[:file]
-        if file
-          "Read #{file[:numLines]} lines"
-        else
-          "Done"
-        end
-      else
-        "Done"
-      end
-    end
-
-    def format_string_result(result)
-      lines = result.lines.map(&:chomp)
-      return "Done" if lines.empty?
-
-      if @verbose
-        output = lines.first
-        lines[1..].each { |line| output += "\n     #{line}" }
-        output
-      else
-        preview_lines = lines.first(3)
-        remaining = lines.size - 3
-
-        output = preview_lines.first
-        preview_lines[1..].each { |line| output += "\n     #{line}" }
-        output += "\n     … +#{remaining} lines" if remaining > 0
-        output
-      end
-    end
-
-    def format_edit_result(patches)
-      added = 0
-      removed = 0
-      patches.each do |patch|
-        patch[:lines]&.each do |line|
-          if line.start_with?("+")
-            added += 1
-          elsif line.start_with?("-")
-            removed += 1
-          end
-        end
-      end
-
-      parts = []
-      parts << "Removed #{removed} lines" if removed > 0
-      parts << "added #{added} lines" if added > 0
-      summary = parts.empty? ? "No changes" : parts.join(", ")
-
-      # Build diff output with line numbers
-      diff_lines = []
-      patches.each do |patch|
-        line_num = patch[:newStart]
-        patch[:lines]&.each do |line|
-          content = line[1..] || ""
-          if line.start_with?("+")
-            diff_lines << format("%4d +  %s", line_num, content).rstrip
-            line_num += 1
-          elsif line.start_with?("-")
-            diff_lines << format("     -  %s", content).rstrip
-          else
-            diff_lines << format("%4d    %s", line_num, content).rstrip
-            line_num += 1
-          end
-        end
-      end
-
-      output = summary
-      diff_lines.each { |line| output += "\n     #{line}" }
-      output
-    end
-
-    private
-
-    def format_timestamp(record)
-      return "" unless record.timestamp
-
-      "[#{record.timestamp.getlocal.strftime('%Y-%m-%d %H:%M')}] "
-    end
-
-    public
-
-    def render_built_in_command(record)
-      ts = format_timestamp(record)
-      @output << "#{ts}<User> #{record.command_name}\n\n"
-    end
-
-    def render_user_defined_command(record)
-      ts = format_timestamp(record)
-      args = record.command_args&.strip
-      if args && !args.empty?
-        @output << "#{ts}<User> #{record.command_name} #{args}\n\n"
-      else
-        @output << "#{ts}<User> #{record.command_name}\n\n"
+      case record.content_type
+      when :tool_result then render_tool_result(record)
+      when :command then emit(record, "<User>", record.command.invocation)
+      when :command_output then render_command_output(record)
+      when :interrupt then emit(record, "<Interrupted>", nil)
+      when :compact_summary then emit(record, "<Compacted context>", record.text)
+      when :meta then emit_if_verbose(record, "<Meta>", record.text, counted_as: "expanded prompt")
+      else emit(record, "<User>", record.text)
       end
     end
 
     def render_assistant_message(record)
-      ts = format_timestamp(record)
-      output_before = @output.length
-      record.content_blocks&.each do |block|
-        case block[:type]
-        when "text"
-          @output << "#{ts}<Assistant> #{block[:text].to_s.rstrip}\n"
-        when "tool_use"
-          render_tool_call(ts, block, record.tool_call_records)
-        when "thinking"
-          @output << "#{ts}💭 #{block[:thinking]}\n" if @verbose
-        end
-      end
-      # Only add trailing newline if we output something (e.g., skip for thinking-only in non-verbose)
-      @output << "\n" if @output.length > output_before
+      record.content_blocks.each { |block| render_content_block(record, block) }
     end
 
-    def render_tool_call(timestamp, block, tool_call_records)
-      @output << "#{timestamp}<Assistant> #{format_tool_use(block)}\n"
+    def render_system_record(record)
+      return render_command_output(record) if record.command&.output
+      return emit(record, "<Compacted>", compaction_note(record)) if record.compact_boundary?
 
-      tool_call = tool_call_records.find { |tc| tc.tool_use_id == block[:id] }
-      return unless tool_call&.tool_result_data
+      label = [record.subtype, record.command&.invocation].compact.join(": ")
+      emit_if_verbose(record, "<System>", label.empty? ? record.content : label)
+    end
 
-      summary = format_tool_result(tool_call.tool_result_data)
-      @output << "  ⎿  #{summary}\n"
+    def compaction_note(record)
+      trigger = record.compaction[:trigger]
+      summarized = record.compaction[:messagesSummarized]
+      details = [trigger, summarized && "#{summarized} messages summarized"].compact
+      details.empty? ? "context compacted" : "context compacted (#{details.join(", ")})"
+    end
+
+    def render_summary(record)
+      emit(record, "<Summary>", record.text)
+    end
+
+    def render_metadata(record)
+      emit_if_verbose(record, "·", record.label)
+    end
+
+    private
+
+    # Emitting lines
+
+    def emit(record, prefix, text)
+      body = text.to_s.rstrip
+      @output << "#{timestamp(record)}#{prefix}#{body.empty? ? "" : " #{body}"}\n\n"
+    end
+
+    # `counted_as` names what the reader is missing. It defaults to the record's
+    # type, which is right for a whole bookkeeping line but not for a block
+    # hidden out of a message the reader can otherwise see.
+    def emit_if_verbose(record, prefix, text, counted_as: nil)
+      return @hidden_counts[counted_as || hidden_label(record)] += 1 unless @verbose
+
+      emit(record, prefix, text)
+    end
+
+    def hidden_label(record)
+      record.is_a?(SystemRecord) ? "system/#{record.subtype}" : record.type.to_s
+    end
+
+    def timestamp(record)
+      return "" unless record.timestamp
+
+      "[#{record.timestamp.getlocal.strftime("%Y-%m-%d %H:%M")}] "
+    end
+
+    # Assistant content blocks
+
+    def render_content_block(record, block)
+      case block[:type]
+      when "text" then emit(record, "<Assistant>", block[:text])
+      when "tool_use" then emit(record, "<Assistant>", format_tool_use(block))
+      when "thinking" then emit_if_verbose(record, "💭", block[:thinking], counted_as: "thinking block")
+      else emit(record, "<Assistant>", "[#{block[:type]}]")
+      end
     end
 
     def format_tool_use(block)
-      name = block[:name]
-      input = block[:input]
+      "#{block[:name]}(#{format_tool_input(block[:name], block[:input] || {})})"
+    end
 
+    def format_tool_input(name, input)
       case name
-      when "Read", "Edit", "Write"
-        file = File.basename(input[:file_path])
-        "#{name}(#{file})"
-      when "Bash"
-        command = input[:command] || ""
-        if @verbose
-          "#{name}(#{command})"
-        else
-          first_line = command.lines.first&.chomp || ""
-          if command.lines.size > 1
-            "#{name}(#{first_line}…)"
-          else
-            "#{name}(#{first_line})"
-          end
-        end
-      when "Task"
-        subagent = input[:subagent_type] || "Agent"
-        content = @verbose ? input[:prompt] : input[:description]
-        "#{name}(#{subagent}: #{content})"
-      else
-        args = input.map { |k, v| "#{k}: #{v.inspect}" }.join(", ")
-        "#{name}(#{args})"
+      when "Read", "Edit", "Write" then File.basename(input[:file_path].to_s)
+      when "Bash" then first_line_of(input[:command])
+      when "Task" then "#{input[:subagent_type] || "Agent"}: #{@verbose ? input[:prompt] : input[:description]}"
+      else input.map { |key, value| "#{key}: #{value.inspect}" }.join(", ")
+      end
+    end
+
+    def first_line_of(text)
+      lines = text.to_s.lines
+      return text.to_s if @verbose || lines.size <= 1
+
+      "#{lines.first.chomp}…"
+    end
+
+    # Tool results and command output
+
+    def render_tool_result(record)
+      prefix = record.tool_error? ? "#{RESULT_PREFIX}Error: " : RESULT_PREFIX
+      @output << "#{prefix}#{format_tool_result(record.tool_result)}\n\n"
+    end
+
+    def render_command_output(record)
+      output = record.is_a?(SystemRecord) ? record.command.output : record.text
+      @output << "#{RESULT_PREFIX}#{indent_lines(output.to_s.lines.map(&:chomp))}\n\n"
+    end
+
+    def format_tool_result(result)
+      case result
+      when String then format_text_result(result)
+      when Array then format_text_result(result.filter_map { |block| block[:text] if block.is_a?(Hash) }.join("\n"))
+      when Hash then format_structured_result(result)
+      else "Done"
+      end
+    end
+
+    def format_structured_result(result)
+      return format_edit_result(result[:structuredPatch]) if result[:structuredPatch]
+      return format_text_result(result[:stdout].to_s) if result.key?(:stdout)
+      return "Found #{result[:numFiles]} files" if result.key?(:numFiles)
+      return format_task_result(result) if result.key?(:status)
+      return "Read #{result.dig(:file, :numLines)} lines" if result.dig(:file, :numLines)
+
+      "Done"
+    end
+
+    def format_task_result(result)
+      text = result.dig(:content, 0, :text)
+      @verbose && text ? format_text_result(text) : "Done"
+    end
+
+    def format_text_result(text)
+      lines = text.lines.map(&:chomp)
+      return "Done" if lines.empty?
+      return indent_lines(lines) if @verbose
+
+      preview = lines.first(RESULT_PREVIEW_LINES)
+      remaining = lines.size - preview.size
+      preview << "… +#{remaining} lines" if remaining.positive?
+      indent_lines(preview)
+    end
+
+    def indent_lines(lines)
+      return "" if lines.empty?
+
+      ([lines.first] + lines.drop(1).map { |line| "#{RESULT_INDENT}#{line}" }).join("\n")
+    end
+
+    def format_edit_result(patches)
+      indent_lines([edit_change_summary(patches)] + diff_lines(patches))
+    end
+
+    def edit_change_summary(patches)
+      lines = patches.flat_map { |patch| patch[:lines] || [] }
+      removed = lines.count { |line| line.start_with?("-") }
+      added = lines.count { |line| line.start_with?("+") }
+
+      parts = []
+      parts << "Removed #{removed} lines" if removed.positive?
+      parts << "added #{added} lines" if added.positive?
+      parts.empty? ? "No changes" : parts.join(", ")
+    end
+
+    def diff_lines(patches)
+      patches.flat_map { |patch| numbered_patch_lines(patch) }
+    end
+
+    # Removed lines have no line number in the new file, so only kept and added
+    # lines advance the counter.
+    def numbered_patch_lines(patch)
+      line_number = patch[:newStart]
+      (patch[:lines] || []).map do |line|
+        body = line[1..] || ""
+        next format("     -  %s", body).rstrip if line.start_with?("-")
+
+        numbered = format("%4d %s  %s", line_number, line.start_with?("+") ? "+" : " ", body).rstrip
+        line_number += 1
+        numbered
       end
     end
   end

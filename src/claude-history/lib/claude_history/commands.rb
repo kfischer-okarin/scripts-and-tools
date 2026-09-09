@@ -1,0 +1,157 @@
+# frozen_string_literal: true
+
+require "date"
+
+module ClaudeHistory
+  # The application API: one method per CLI command, each returning the text to
+  # print. The CLI forwards its parsed arguments here and prints the result.
+  class Commands
+    TITLE_WIDTH = 60
+    SHORT_ID_LENGTH = 8
+    TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+    def initialize(projects_path, color: false)
+      @history = History.new(projects_path)
+      @color = color
+    end
+
+    def projects
+      rows = @history.projects
+                     .sort_by { |project| project.last_updated_at || Time.at(0) }
+                     .reverse
+                     .map { |project| [project.id, format_time(project.last_updated_at)] }
+      return "No projects found." if rows.empty?
+
+      table({ name: "PROJECT ID", color: :green }, { name: "LAST UPDATED AT", color: :grey }).render(rows)
+    end
+
+    def sessions(project:, limit: 20, agents: false, full_ids: false)
+      project_id = @history.resolve_project_id(project)
+      all = @history.sessions(project_id: project_id, agents: agents)
+      shown = all.first(limit)
+      return "No sessions found in #{project_id}." if shown.empty?
+
+      [
+        "Showing #{shown.size} of #{all.size} sessions in #{project_id}",
+        "",
+        session_table.render(shown.map { |session| session_row(session, full_ids: full_ids) })
+      ].join("\n")
+    end
+
+    def show_session(session_id, project: nil, verbose: false)
+      project_id = project && @history.resolve_project_id(project)
+      session = @history.resolve_session(session_id, project_id: project_id)
+      renderer = SessionRenderer.new(verbose: verbose)
+      session.render(renderer)
+
+      [
+        session_header(session),
+        renderer.output,
+        renderer.hidden_summary,
+        warning_report(session.warnings)
+      ].compact.join("\n")
+    end
+
+    def sessions_updated_on(date, full_ids: false)
+      day = parse_date(date)
+      results = @history.sessions_updated_on(day)
+      return "No sessions found with activity on #{day}." if results.empty?
+
+      [
+        "Sessions with activity on #{day}:",
+        "",
+        activity_table.render(results.map { |result| activity_row(result, full_ids: full_ids) })
+      ].join("\n")
+    end
+
+    private
+
+    # Session listing
+
+    def session_table
+      table(
+        { name: "SESSION ID", color: :green },
+        { name: "LAST UPDATED AT", color: :grey },
+        { name: "BRANCH", color: :cyan },
+        { name: "TITLE", width: TITLE_WIDTH }
+      )
+    end
+
+    def session_row(session, full_ids:)
+      [
+        session_id_for_display(session, full_ids: full_ids),
+        format_time(session.last_updated_at),
+        session.git_branch.to_s,
+        one_line(session.title)
+      ]
+    end
+
+    # Activity listing
+
+    def activity_table
+      table(
+        { name: "PROJECT", color: :cyan },
+        { name: "SESSION", color: :green },
+        { name: "LAST UPDATED AT", color: :grey },
+        { name: "TITLE", width: TITLE_WIDTH }
+      )
+    end
+
+    def activity_row(result, full_ids:)
+      session = result[:session]
+      [
+        result[:project].id,
+        session_id_for_display(session, full_ids: full_ids),
+        format_time(session.last_updated_at),
+        one_line(session.title)
+      ]
+    end
+
+    # Transcript header: what file this came from, so the answer can be checked
+    # against the file itself.
+
+    def session_header(session)
+      [
+        "Session: #{session.id}",
+        "File:    #{session.path}",
+        "Title:   #{one_line(session.title)}",
+        ""
+      ].join("\n")
+    end
+
+    # Format drift is reported next to the transcript rather than kept in a
+    # log: a line the tool could not read is a line the reader should not trust.
+    def warning_report(warnings)
+      return nil if warnings.empty?
+
+      lines = warnings.map { |warning| "  line #{warning.line_number}: #{warning.type}: #{warning.message}" }
+      ["Format warnings (#{warnings.size}):", *lines].join("\n")
+    end
+
+    # Shared formatting
+
+    def table(*column_specs)
+      Table.new(column_specs.map { |spec| Table::Column.new(**spec) }, color: @color)
+    end
+
+    def session_id_for_display(session, full_ids:)
+      full_ids ? session.id : session.id[0, SHORT_ID_LENGTH]
+    end
+
+    def one_line(text)
+      text.to_s.gsub(/\s+/, " ").strip
+    end
+
+    def format_time(time)
+      time ? time.getlocal.strftime(TIMESTAMP_FORMAT) : "N/A"
+    end
+
+    # Strict on purpose: Date.parse would happily read "last tuesday" as a day
+    # of this week and list sessions nobody asked about.
+    def parse_date(date)
+      Date.strptime(date.to_s, "%Y-%m-%d")
+    rescue Date::Error
+      raise Error, "Not a date: #{date}"
+    end
+  end
+end

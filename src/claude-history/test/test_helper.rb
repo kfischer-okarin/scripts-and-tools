@@ -2,7 +2,6 @@
 
 require "fileutils"
 require "minitest/autorun"
-require "securerandom"
 require "tmpdir"
 require_relative "../lib/claude_history"
 
@@ -21,62 +20,28 @@ module ClaudeHistory
       super
     end
 
-    def projects_fixture_path
-      File.expand_path("fixtures/claude-projects", __dir__)
-    end
-
-    def fixture_project_id
-      "-Users-user-project"
-    end
-
-    def fixture_main_session_id
-      "b3edadab-bca0-4054-9b41-f7ffa6941260"
-    end
-
-    def fixture_summary_session_id
-      "be89c3cd-bfbf-4c4f-a515-5af6e13249bf"
-    end
-
-    def build_project(name_or_files = nil, files = {})
-      # Handle both build_project({...}) and build_project("name", {...})
-      if name_or_files.is_a?(Hash)
-        files = name_or_files
-        name = "project-#{SecureRandom.uuid}"
-      else
-        name = name_or_files || "project-#{SecureRandom.uuid}"
-      end
-
+    # Writes session files into a project directory under the temporary
+    # ~/.claude/projects stand-in.
+    def build_project(name, files = {})
       project_path = File.join(@projects_path, name)
       FileUtils.mkdir_p(project_path)
-
-      base_time = Time.now - files.size
-      files.each_with_index do |(filename, content), index|
-        path = File.join(project_path, filename)
-        mtime = base_time + index
-        File.write(path, content)
-        File.utime(mtime, mtime, path)
-      end
-
+      files.each { |filename, content| File.write(File.join(project_path, filename), content) }
       Project.new(project_path)
     end
 
-    def build_and_validate_project!(name_or_files = nil, files = {})
-      project = build_project(name_or_files, files)
+    # A session's last activity is the file's modification time, so tests that
+    # assert on ordering or timestamps set it explicitly.
+    def touch_session(project, filename, at:)
+      path = File.join(project.path, filename)
+      File.utime(at, at, path)
+    end
 
-      all_warnings = []
-      project.sessions.each do |session|
-        session.warnings.each do |warning|
-          all_warnings << { session_id: session.id, warning: warning }
-        end
-      end
+    def commands(color: false)
+      Commands.new(@projects_path, color: color)
+    end
 
-      assert_empty all_warnings, -> {
-        "Expected no warnings but got:\n" + all_warnings.map { |w|
-          "  [#{w[:session_id]}] #{w[:warning].type}: #{w[:warning].message}"
-        }.join("\n")
-      }
-
-      project
+    def projects_fixture_path
+      File.expand_path("fixtures/claude-projects", __dir__)
     end
   end
 end
