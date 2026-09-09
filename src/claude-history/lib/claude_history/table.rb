@@ -4,8 +4,8 @@ module ClaudeHistory
   # A left-aligned text table: header, rule, rows.
   #
   # Columns size themselves to their content unless given a width, which also
-  # truncates. Put a variable-width column last: display width is counted in
-  # characters, so CJK text in a middle column would push the rest out of line.
+  # truncates. Widths are in terminal columns, not characters, so a Japanese
+  # session title lines up with the rest.
   class Table
     ELLIPSIS = "..."
     GAP = "  "
@@ -32,7 +32,7 @@ module ClaudeHistory
 
     def line(values, widths, colorize: false)
       values.each_with_index.map { |value, index|
-        padded = value.ljust(widths[index])
+        padded = pad(value, widths[index])
         colorize ? paint(padded, @columns[index].color) : padded
       }.join(GAP).rstrip
     end
@@ -41,14 +41,18 @@ module ClaudeHistory
       @columns.each_with_index.map do |column, index|
         next column.width if column.width
 
-        [column.name.length, *rows.map { |row| row[index].to_s.length }].max
+        [DisplayWidth.of(column.name), *rows.map { |row| DisplayWidth.of(row[index].to_s) }].max
       end
     end
 
-    def truncate(value, width)
-      return value if value.length <= width
+    def pad(value, width)
+      value + (" " * [width - DisplayWidth.of(value), 0].max)
+    end
 
-      "#{value[0, width - ELLIPSIS.length]}#{ELLIPSIS}"
+    def truncate(value, width)
+      return value if DisplayWidth.of(value) <= width
+
+      "#{DisplayWidth.take(value, width - ELLIPSIS.length)}#{ELLIPSIS}"
     end
 
     def paint(text, color)

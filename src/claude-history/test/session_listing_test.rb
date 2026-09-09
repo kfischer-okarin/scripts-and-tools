@@ -112,6 +112,17 @@ class SessionListingTest < ClaudeHistory::TestCase
     assert_includes commands.sessions(project: "project", full_ids: true), "3f6ddfee-788c-48a5-8f7a-d43377b51472"
   end
 
+  # 40 CJK characters occupy 80 terminal columns, so the 60-column title column
+  # keeps 28 of them — cutting at 60 characters would run the table crooked.
+  def test_truncates_a_title_to_the_columns_it_occupies
+    build_project("project", "session.jsonl" => <<~JSONL)
+      {"type":"user","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"Hello"}}
+      {"type":"ai-title","aiTitle":"#{"あ" * 40}"}
+    JSONL
+
+    assert_includes commands.sessions(project: "project"), "#{"あ" * 28}..."
+  end
+
   def test_says_so_when_a_project_has_no_sessions
     build_project("project")
 
