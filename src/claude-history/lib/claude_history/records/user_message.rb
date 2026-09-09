@@ -45,10 +45,6 @@ module ClaudeHistory
       @command ||= CommandMarkup.new(content)
     end
 
-    def tool_use_id
-      tool_result_blocks.first&.dig(:tool_use_id)
-    end
-
     # The tool's output. Claude Code writes a structured copy in toolUseResult;
     # the content block is the fallback for tools that get no such copy.
     def tool_result

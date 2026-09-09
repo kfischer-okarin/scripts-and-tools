@@ -20,10 +20,6 @@ module ClaudeHistory
       raw_data.dig(:message, :content) || []
     end
 
-    def tool_uses
-      content_blocks.select { |block| block[:type] == "tool_use" }
-    end
-
     # Visitor pattern: dispatch to renderer
     def render(renderer)
       renderer.render_assistant_message(self)

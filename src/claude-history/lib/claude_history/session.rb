@@ -28,10 +28,6 @@ module ClaudeHistory
       @records ||= read_records
     end
 
-    def messages
-      records.select { |record| record.is_a?(UserMessage) || record.is_a?(AssistantMessage) }
-    end
-
     def warnings
       records.flat_map(&:warnings)
     end

@@ -7,10 +7,6 @@ module ClaudeHistory
   class Summary < Record
     EXPECTED_ATTRIBUTES = %i[summary leafUuid].freeze
 
-    def leaf_uuid
-      raw_data[:leafUuid]
-    end
-
     def text
       raw_data[:summary]
     end

@@ -37,10 +37,6 @@ module ClaudeHistory
       raw_data[:uuid]
     end
 
-    def parent_uuid
-      raw_data[:parentUuid]
-    end
-
     def timestamp
       ts = raw_data[:timestamp]
       ts ? Time.iso8601(ts) : nil
