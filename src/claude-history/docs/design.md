@@ -87,7 +87,9 @@ so opts out: its shapes are Claude Code's own bookkeeping and change often.
 | `:unparsable_line`          | A line that is not JSON                            |
 
 `show-session` prints them under the transcript, so drift is visible at the
-point where it might mislead a reader.
+point where it might mislead a reader. `check-format` reads every session file
+under `~/.claude/projects` and groups the warnings by what went wrong, which is
+how the format is verified against reality rather than against fixtures.
 
 ## Rendering
 

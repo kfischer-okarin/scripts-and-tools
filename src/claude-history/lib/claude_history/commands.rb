@@ -52,6 +52,18 @@ module ClaudeHistory
       ].compact.join("\n")
     end
 
+    # Reads every session file and reports what the parser could not account
+    # for. The fixtures only prove the tool still reads what it read before;
+    # this is what catches Claude Code having moved on.
+    def check_format(project: nil)
+      sessions = sessions_to_check(project)
+      findings = collect_findings(sessions)
+      checked = "Checked #{sessions.size} session files"
+      return "#{checked}. No format warnings." if findings.empty?
+
+      ["#{checked}, #{findings.sum { |finding| finding[:count] }} warnings:", "", findings_table.render(findings_rows(findings))].join("\n")
+    end
+
     def sessions_updated_on(date, full_ids: false)
       day = parse_date(date)
       results = @history.sessions_updated_on(day)
@@ -117,6 +129,37 @@ module ClaudeHistory
         "Title:   #{one_line(session.title)}",
         ""
       ].join("\n")
+    end
+
+    # Format check
+
+    def sessions_to_check(project)
+      return @history.all_sessions(agents: true) unless project
+
+      @history.sessions(project_id: @history.resolve_project_id(project), agents: true)
+    end
+
+    # Grouped by what went wrong rather than by where: the same drift shows up
+    # in thousands of files, and the count is the interesting part.
+    def collect_findings(sessions)
+      grouped = sessions.flat_map(&:warnings).group_by { |warning| [warning.type, warning.message] }
+      grouped.map { |(type, message), warnings|
+        first = warnings.first
+        { count: warnings.size, type: type, message: message, example: "#{first.filename}:#{first.line_number}" }
+      }.sort_by { |finding| [-finding[:count], finding[:type].to_s] }
+    end
+
+    def findings_table
+      table(
+        { name: "COUNT", color: :grey },
+        { name: "TYPE", color: :cyan },
+        { name: "EXAMPLE", color: :green },
+        { name: "MESSAGE" }
+      )
+    end
+
+    def findings_rows(findings)
+      findings.map { |finding| [finding[:count].to_s, finding[:type].to_s, finding[:example], one_line(finding[:message])] }
     end
 
     # Format drift is reported next to the transcript rather than kept in a

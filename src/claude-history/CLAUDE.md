@@ -40,7 +40,29 @@ or timestamps set them with `touch_session`.
 
 `test/real_session_files_test.rb` reads the captured session files in
 `test/fixtures/claude-projects/-Users-user-project/` and fails on any format
-warning. When Claude Code's format moves on, add a fresh capture there.
+warning. Those fixtures were captured in 2025-12, so they only prove the tool
+still reads what it read then.
+
+## Checking the format against reality
+
+The fixtures cannot catch Claude Code having moved on. `check-format` can: it
+reads every session file under `~/.claude/projects` and reports every line the
+parser could not account for, grouped by what went wrong.
+
+```bash
+claude-history check-format                 # all projects, ~20s for 4000 files
+claude-history check-format --project foo   # one project
+```
+
+**Run it after any change to the record classes, and whenever you are asked
+whether the format has drifted.** A clean run prints one line. Anything else is
+drift: add the field to the right `EXPECTED_ATTRIBUTES` (or
+`Record::ENVELOPE_ATTRIBUTES` if it appears on more than one record type), or
+the type to `MetadataRecord::DETAIL_PATHS`, then record what changed in
+`docs/claude-code-history-format-spec.md` and its changelog.
+
+A field appearing on several record types belongs in the envelope, not copied
+into each list — `forkedFrom` was the case that taught us this.
 
 ## Reference Documentation
 

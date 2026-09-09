@@ -39,6 +39,12 @@ module ClaudeHistory
       puts commands.show_session(session_id, project: options[:project], verbose: options[:verbose])
     end
 
+    desc "check-format", "Read every session file and report what the parser cannot account for"
+    method_option :project, type: :string, desc: "Check one project only (default: all, which takes a while)"
+    def check_format
+      puts commands.check_format(project: options[:project])
+    end
+
     desc "sessions-updated-on DATE", "List sessions with activity on a date (YYYY-MM-DD)"
     method_option :full_ids, type: :boolean, default: false, desc: "Show full session IDs"
     def sessions_updated_on(date)

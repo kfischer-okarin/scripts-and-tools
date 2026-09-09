@@ -24,6 +24,10 @@ module ClaudeHistory
       project(project_id).sessions(agents: agents)
     end
 
+    def all_sessions(agents: false)
+      projects.flat_map { |project| project.sessions(agents: agents) }
+    end
+
     def resolve_project_id(query)
       all_ids = projects.map(&:id)
       return query if all_ids.include?(query)

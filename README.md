@@ -78,6 +78,7 @@ claude-history sessions --project myproject          # List a project's session 
 claude-history show-session SESSION_ID               # Print a transcript
 claude-history show-session SESSION_ID --verbose     # …with thinking, full tool output, metadata
 claude-history sessions-updated-on 2026-04-12        # Find sessions by date
+claude-history check-format                          # Report format drift across all files
 ```
 
 A session id is matched by prefix, and searched across all projects unless
