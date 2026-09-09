@@ -20,13 +20,13 @@ class RealSessionFilesTest < ClaudeHistory::TestCase
     output = fixture_commands.show_session("b3edadab-bca0-4054-9b41-f7ffa6941260", project: "-Users-user-project")
 
     assert_includes output, "<User> Hello I want to have some test conversation with you create some file for me"
-    assert_includes output, "<Assistant> Write(test-file.txt)"
+    assert_includes output, "<Tool> Write(test-file.txt)"
   end
 
   def test_renders_a_captured_agent_session
     output = fixture_commands.show_session("agent-a434715", project: "-Users-user-project")
 
-    assert_includes output, "<Assistant> Read(test-file.txt)"
+    assert_includes output, "<Tool> Read(test-file.txt)"
   end
 
   private

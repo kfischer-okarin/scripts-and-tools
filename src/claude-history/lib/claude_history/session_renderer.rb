@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "json"
+
 module ClaudeHistory
   # Renders a session's records, in file order, as a readable transcript.
   #
@@ -16,6 +18,9 @@ module ClaudeHistory
     RESULT_PREVIEW_LINES = 3
     COMMAND_PREFIX = "     $ "
     COMMAND_INDENT = "       "
+    ARGUMENT_INDENT = "       "
+    MCP_PREFIX = "mcp__"
+    FIELD_WIDTH = 80
 
     attr_reader :hidden_counts
 
@@ -23,6 +28,7 @@ module ClaudeHistory
       @verbose = verbose
       @output = +""
       @hidden_counts = Hash.new(0)
+      @tool_names = {}
     end
 
     def output
@@ -124,9 +130,17 @@ module ClaudeHistory
     end
 
     def render_tool_use(record, block)
-      return render_bash_call(record, block[:input] || {}) if block[:name] == "Bash"
+      @tool_names[block[:id]] = block[:name]
+      input = block[:input] || {}
 
-      emit(record, "<Assistant>", format_tool_use(block))
+      return render_bash_call(record, input) if block[:name] == "Bash"
+      return render_mcp_call(record, block[:name], input) if mcp_tool?(block[:name])
+
+      emit(record, "<Tool>", format_tool_use(block))
+    end
+
+    def mcp_tool?(name)
+      name.to_s.start_with?(MCP_PREFIX)
     end
 
     # Bash gets two lines rather than one. Its `description` says what the call
@@ -134,37 +148,52 @@ module ClaudeHistory
     # gives the call a phrase worth grepping for; the command follows
     # underneath, in full under --verbose.
     def render_bash_call(record, input)
-      emit_line(record, "<Assistant>", ["Bash", input[:description]].compact.join(": "))
-      emit_command(input[:command].to_s)
+      emit_line(record, "<Tool>", ["Bash", input[:description]].compact.join(": "))
+      emit_indented(input[:command].to_s.lines.map(&:chomp), COMMAND_PREFIX, COMMAND_INDENT)
     end
 
-    def emit_command(command)
-      lines = command.lines.map(&:chomp)
+    # An MCP tool's arguments are a JSON object of the server's own design, so
+    # they get the same shape as a Bash script: the tool on one line, its input
+    # underneath, pretty-printed under --verbose.
+    def render_mcp_call(record, name, input)
+      emit_line(record, "<Tool>", name)
+      body = @verbose ? JSON.pretty_generate(input) : JSON.generate(input)
+      emit_indented(body.lines.map(&:chomp), ARGUMENT_INDENT, ARGUMENT_INDENT)
+    end
+
+    def emit_indented(lines, prefix, continuation)
       shown = @verbose ? lines : lines.first(1)
       elision = !@verbose && lines.size > 1 ? "…" : ""
 
-      first = "#{COMMAND_PREFIX}#{shown.first}#{elision}"
-      continued = shown.drop(1).map { |line| "#{COMMAND_INDENT}#{line}" }
+      first = "#{prefix}#{shown.first}#{elision}"
+      continued = shown.drop(1).map { |line| "#{continuation}#{line}" }
       @output << [first, *continued].join("\n") << "\n\n"
     end
 
     def format_tool_use(block)
-      "#{block[:name]}(#{format_tool_input(block[:name], block[:input] || {})})"
+      summary = format_tool_input(block[:name], block[:input] || {})
+      summary.empty? ? block[:name].to_s : "#{block[:name]}(#{summary})"
     end
+
+    # Tools whose input is a whole document — a plan, a set of questions, a todo
+    # list. Inlining it would bury the transcript, and their result prints it.
+    DOCUMENT_INPUT_TOOLS = %w[ExitPlanMode AskUserQuestion TodoWrite].freeze
 
     def format_tool_input(name, input)
       case name
+      when *DOCUMENT_INPUT_TOOLS then ""
       when "Read", "Edit", "Write" then File.basename(input[:file_path].to_s)
       when "Task", "Agent" then "#{input[:subagent_type] || "Agent"}: #{@verbose ? input[:prompt] : input[:description]}"
-      else input.map { |key, value| "#{key}: #{value.inspect}" }.join(", ")
+      else input.map { |key, value| "#{key}: #{format_field(value)}" }.join(", ")
       end
     end
 
     # Tool results and command output
 
     def render_tool_result(record)
+      result = ToolResult.new(record.tool_result, tool_name: @tool_names[record.tool_use_id])
       prefix = record.tool_error? ? "#{RESULT_PREFIX}Error: " : RESULT_PREFIX
-      @output << "#{prefix}#{format_tool_result(record.tool_result)}\n\n"
+      @output << "#{prefix}#{format_tool_result(result)}\n\n"
     end
 
     def render_command_output(record)
@@ -173,27 +202,132 @@ module ClaudeHistory
     end
 
     def format_tool_result(result)
-      case result
-      when String then format_text_result(result)
-      when Array then format_text_result(result.filter_map { |block| block[:text] if block.is_a?(Hash) }.join("\n"))
-      when Hash then format_structured_result(result)
+      case result.kind
+      when :edit then format_edit_result(result)
+      when :command then format_text_result(result[:stdout].to_s)
+      when :file then format_file_result(result[:file])
+      when :search then "Found #{result[:numFiles]} files"
+      when :questions then format_answers(result[:answers])
+      when :plan then format_plan(result)
+      when :skill then "Skill(#{result[:commandName]}) activated"
+      when :web_search then format_web_search(result)
+      when :web_fetch then format_web_fetch(result)
+      when :todos then format_todos(result[:newTodos])
+      when :task then format_task(result[:task])
+      when :task_update then format_task_update(result)
+      when :agent then format_agent_result(result)
+      when :text then format_text_result(result.text)
+      when :fields then format_fields(result.data)
       else "Done"
       end
     end
 
-    def format_structured_result(result)
-      return format_edit_result(result[:structuredPatch]) if result[:structuredPatch]
-      return format_text_result(result[:stdout].to_s) if result.key?(:stdout)
-      return "Found #{result[:numFiles]} files" if result.key?(:numFiles)
-      return format_task_result(result) if result.key?(:status)
-      return "Read #{result.dig(:file, :numLines)} lines" if result.dig(:file, :numLines)
+    # Every tool without a formatter of its own, including every tool added
+    # after this was written: print the fields the result carries. Nested
+    # values are named rather than dumped, which keeps one line per field.
+    def format_fields(data)
+      return "Done" if data.empty?
+
+      indent_lines(data.map { |key, value| "#{key}: #{format_field(value)}" })
+    end
+
+    def format_field(value)
+      case value
+      when Hash then "{#{value.keys.join(", ")}}"
+      when Array then "[#{value.size} items]"
+      when String then shorten(value.gsub(/\s+/, " ").strip)
+      else value.inspect
+      end
+    end
+
+    def shorten(text)
+      return text if @verbose || DisplayWidth.of(text) <= FIELD_WIDTH
+
+      "#{DisplayWidth.take(text, FIELD_WIDTH)}…"
+    end
+
+    # Answers and plans print in full in both modes: they are the content, not
+    # a preview of content held somewhere else. An answer is a decision the
+    # user made, and losing it loses the reason the work went the way it did.
+
+    def format_answers(answers)
+      return "No answer" unless answers.is_a?(Hash)
+
+      lines = answers.flat_map { |question, answer| ["Q: #{question}", *"A: #{answer}".lines.map(&:chomp)] }
+      indent_lines(lines)
+    end
+
+    def format_plan(result)
+      plan = result[:plan] || result.text
+      indent_lines(["Plan:", *plan.to_s.lines.map(&:chomp)])
+    end
+
+    # Read reports a text file's line count, but an image or an extracted PDF
+    # arrives with neither lines nor content.
+    def format_file_result(file)
+      return "Done" unless file.is_a?(Hash)
+      return "Read #{file[:numLines]} lines" if file[:numLines]
+      return "Read an image" if file[:base64]
+      return "Read #{file[:count]} files into #{file[:outputDir]}" if file[:count]
+      return "Read #{File.basename(file[:filePath].to_s)}" if file[:filePath]
 
       "Done"
     end
 
-    def format_task_result(result)
-      text = result.dig(:content, 0, :text)
-      @verbose && text ? format_text_result(text) : "Done"
+    def format_web_search(result)
+      headline = "Searched for #{result[:query].to_s.inspect}"
+      return headline unless @verbose
+
+      indent_lines([headline, *nested_content_lines(result[:results])])
+    end
+
+    # WebSearch nests its results one level deeper, inside content blocks
+    def nested_content_lines(results)
+      return results.to_s.lines.map(&:chomp) unless results.is_a?(Array)
+
+      results.flat_map { |entry| (entry.is_a?(Hash) ? entry[:content] : entry).to_s.lines.map(&:chomp) }
+    end
+
+    def format_web_fetch(result)
+      headline = "HTTP #{result[:code]} #{result[:url]} (#{result[:bytes]} bytes)"
+      return headline unless @verbose
+
+      indent_lines([headline, *result[:result].to_s.lines.map(&:chomp)])
+    end
+
+    def format_todos(todos)
+      return "Done" unless todos.is_a?(Array)
+
+      counts = todos.group_by { |todo| todo[:status] }.transform_values(&:size)
+      headline = "#{todos.size} todos (#{counts.map { |status, count| "#{count} #{status}" }.join(", ")})"
+      return headline unless @verbose
+
+      indent_lines([headline, *todos.map { |todo| "[#{todo[:status]}] #{todo[:content] || todo[:subject]}" }])
+    end
+
+    def format_task(task)
+      return "Done" unless task.is_a?(Hash)
+
+      id = task[:task_id] || task[:id]
+      ["Task #{id}", task[:description] || task[:subject], task[:status]].compact.join(": ")
+    end
+
+    # TaskUpdate reports a status change when there was one, and otherwise just
+    # which fields it touched.
+    def format_task_update(result)
+      change = result[:statusChange]
+      return "Task #{result[:taskId]}: #{change[:from]} → #{change[:to]}" if change.is_a?(Hash)
+
+      fields = result[:updatedFields]
+      suffix = fields.is_a?(Array) && fields.any? ? " (#{fields.join(", ")})" : ""
+      "Task #{result[:taskId]} updated#{suffix}"
+    end
+
+    def format_agent_result(result)
+      text = result.dig(:content, 0, :text) || result[:content]
+      return format_text_result(text.to_s) if @verbose && text
+
+      [result[:status], result[:agentType]].compact.join(" ")
     end
 
     def format_text_result(text)
@@ -213,8 +347,19 @@ module ClaudeHistory
       ([lines.first] + lines.drop(1).map { |line| "#{RESULT_INDENT}#{line}" }).join("\n")
     end
 
-    def format_edit_result(patches)
+    # Writing a new file reports an empty patch — there was nothing to diff
+    # against — so the content is what says what happened.
+    def format_edit_result(result)
+      patches = result[:structuredPatch]
+      return format_written_file(result) if patches.nil? || patches.empty?
+
       indent_lines([edit_change_summary(patches)] + diff_lines(patches))
+    end
+
+    def format_written_file(result)
+      return "No changes" unless result[:content]
+
+      "Wrote #{result[:content].lines.size} lines"
     end
 
     def edit_change_summary(patches)

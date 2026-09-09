@@ -28,7 +28,7 @@ class TranscriptTest < ClaudeHistory::TestCase
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Read(notes.md)
+      <Tool> Read(notes.md)
 
         ⎿  one
            two
@@ -44,7 +44,7 @@ class TranscriptTest < ClaudeHistory::TestCase
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Read(notes.md)
+      <Tool> Read(notes.md)
 
         ⎿  one
            two
@@ -62,7 +62,7 @@ class TranscriptTest < ClaudeHistory::TestCase
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Bash: Syntax-check every Ruby file
+      <Tool> Bash: Syntax-check every Ruby file
            $ set -e…
     OUTPUT
   end
@@ -73,7 +73,7 @@ class TranscriptTest < ClaudeHistory::TestCase
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Bash: Syntax-check every Ruby file
+      <Tool> Bash: Syntax-check every Ruby file
            $ set -e
              for f in *.rb; do
                ruby -c $f
@@ -87,7 +87,7 @@ class TranscriptTest < ClaudeHistory::TestCase
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Bash
+      <Tool> Bash
            $ ls -la
     OUTPUT
   end
@@ -107,7 +107,7 @@ class TranscriptTest < ClaudeHistory::TestCase
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Edit(greet.rb)
+      <Tool> Edit(greet.rb)
 
         ⎿  Removed 1 lines, added 1 lines
                 -  old line
