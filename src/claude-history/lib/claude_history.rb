@@ -7,6 +7,7 @@ end
 require_relative "claude_history/warning"
 require_relative "claude_history/display_width"
 require_relative "claude_history/command_markup"
+require_relative "claude_history/tool_result"
 require_relative "claude_history/record"
 require_relative "claude_history/records/assistant_message"
 require_relative "claude_history/records/metadata_record"

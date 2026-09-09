@@ -24,6 +24,7 @@ module ClaudeHistory
     def initialize(data, line_number, filename)
       super
       @content_type = determine_content_type
+      validate_tool_result if @content_type == :tool_result
     end
 
     def content
@@ -43,6 +44,10 @@ module ClaudeHistory
       return nil unless CommandMarkup.present_in?(content)
 
       @command ||= CommandMarkup.new(content)
+    end
+
+    def tool_use_id
+      tool_result_blocks.first&.dig(:tool_use_id)
     end
 
     # The tool's output. Claude Code writes a structured copy in toolUseResult;
@@ -107,6 +112,25 @@ module ClaudeHistory
 
     def warn_unexpected_content_type
       warn_content_shape("Unexpected user message content type: #{content.class}")
+    end
+
+    # A result the renderer cannot show at all: not text, not content blocks,
+    # not a set of fields. A shape it merely has no special formatter for still
+    # prints its fields, so it is not a warning.
+    #
+    # Results from MCP servers are exempt: their shapes belong to the server
+    # rather than to Claude Code, and may change at any time.
+    def validate_tool_result
+      return if raw_data[:mcpMeta]
+      return unless ToolResult.new(tool_result).unknown?
+
+      add_warning(Warning.new(
+        type: :unreadable_tool_result,
+        message: "Tool result is neither text nor fields: #{tool_result.class}",
+        line_number: line_number,
+        filename: filename,
+        raw_data: raw_data
+      ))
     end
 
     def warn_content_shape(message)
