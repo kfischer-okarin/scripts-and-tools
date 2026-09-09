@@ -148,9 +148,17 @@ attachments are not part of the message tree.
 
 ### Known gaps
 
-- **Nested shapes are not inventoried.** `toolUseResult` varies per tool, and
-  only a handful of shapes are documented below (as of v1.1). Same for
-  `attachment` payloads, `hookInfos` and `compactMetadata`.
+- **Nested shapes are only partly inventoried.** `toolUseResult` varies per
+  tool; the shapes worth reading specially are listed in
+  `ToolResult::KINDS_BY_MARKER`, and the rest are read as a set of fields
+  rather than documented. `attachment` payloads, `hookInfos` and
+  `compactMetadata` are not inventoried at all.
+- **A tool result never names its tool.** `toolUseResult` carries no field
+  identifying the tool that produced it; only the `tool_use_id` in the sibling
+  content block connects it back to the call.
+- **MCP tool results are the server's shape, not Claude Code's.** Records
+  carrying them are marked with `mcpMeta`, which is the field to key off when a
+  reader wants to hold them to a different standard.
 - **Retirement dates are approximate.** They come from file modification times
   in one user's history, not from release notes.
 - **Warmup agent files are gone.** The [Agent Files](#agent-files) section says

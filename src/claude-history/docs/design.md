@@ -29,6 +29,9 @@ CLI (Thor: parses arguments, prints what Commands returns)
                           └── SessionOverview (title, branch, start time)
 ```
 
+`ToolResult` classifies one tool's output, and `CommandMarkup` the pseudo-XML
+of a slash command — both value objects the records hand out.
+
 `Commands` is the surface the tests drive; the Thor class holds no logic beyond
 argument parsing. `SessionRenderer` turns records into the transcript, and
 `Table` renders the listings.
@@ -71,6 +74,29 @@ project. So listings never parse whole files:
 
 `sessions-updated-on` uses the mtime to rule a session out before opening it.
 
+## Tool results
+
+Claude Code records a tool's output in `toolUseResult` with a different shape
+per tool and no field saying which tool produced it. `ToolResult` classifies a
+result by the fields it carries, and that `kind` is what the renderer formats
+against.
+
+The list of kinds is deliberately short. Only tools whose output reads badly as
+a list of fields earn one: the file-editing and shell tools, plus
+`AskUserQuestion` and `ExitPlanMode`, whose results are content in their own
+right and so print in full in both modes. Everything else — the long tail of
+smaller tools, and every tool added after this was written — falls to `:fields`,
+which prints what the result contains without knowing which tool it came from.
+That is why there is no warning for an unrecognised result shape: a shape
+without a formatter still reads fine, so warning about it would only produce a
+list of work nobody intends to do.
+
+The renderer needs the tool's name for one case — `ExitPlanMode` sometimes
+records its plan as a bare string, which nothing else distinguishes from any
+other text result. It gets the name by remembering the `tool_use` blocks it has
+already printed. That is not the pairing this tool avoids: the call has gone
+past in file order, and an id it never saw simply yields nil.
+
 ## Warnings
 
 Warnings exist to catch format drift rather than to fail. Each `Record`
@@ -85,6 +111,7 @@ so opts out: its shapes are Claude Code's own bookkeeping and change often.
 | `:unexpected_content_shape` | A user content block or content type nobody expects |
 | `:unknown_record_type`      | A `type` that is not in the known set              |
 | `:unparsable_line`          | A line that is not JSON                            |
+| `:unreadable_tool_result`   | A tool result that is neither text nor fields (MCP results exempt) |
 
 `show-session` prints them under the transcript, so drift is visible at the
 point where it might mislead a reader. `check-format` reads every session file
