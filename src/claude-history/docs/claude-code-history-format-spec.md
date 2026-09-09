@@ -857,10 +857,10 @@ so it should be filtered from session listings.
 
 ## Implementation Notes
 
-> One way to read these files, not this tool's way. `claude-history` prints
-> every line in file order and reconstructs no tree, so it skips none of the
-> records filtered below — commands, interrupts and compaction boundaries are
-> all transcript lines. See `docs/design.md` for why.
+> One way to read these files. `claude-history` takes a different one: it
+> prints every line in file order, so the commands, interrupts and compaction
+> boundaries filtered out below are transcript lines for it. See
+> `docs/design.md`.
 
 ### Filtering for Display
 

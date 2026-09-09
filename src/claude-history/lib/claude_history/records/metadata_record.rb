@@ -3,11 +3,11 @@
 module ClaudeHistory
   # A bookkeeping line: session titles, permission modes, file history
   # snapshots, injected attachments and the like. These carry no conversation
-  # content, so a metadata record exposes only a short label instead of parsing
-  # each type field by field.
+  # content, so a metadata record exposes just a short label — enough to say
+  # what the line was.
   #
-  # Every JSONL line that is not a message becomes one of these, which is what
-  # keeps unknown lines visible instead of dropped.
+  # Every JSONL line that is not a message becomes one of these, so an
+  # unfamiliar line still has a place in the transcript.
   class MetadataRecord < Record
     # The known bookkeeping types, each mapped to the path of the field holding
     # its gist, or to nil when the type carries nothing worth showing. Keeping

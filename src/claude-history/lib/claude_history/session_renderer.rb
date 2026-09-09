@@ -5,9 +5,9 @@ require "json"
 module ClaudeHistory
   # Renders a session's records, in file order, as a readable transcript.
   #
-  # Records arrive through the visitor methods below, one per record class. The
-  # renderer never reorders or pairs anything: a tool result prints under the
-  # tool call because that is where the file put it.
+  # Records arrive through the visitor methods below, one per record class, in
+  # the order the file holds them — which is why a tool result prints under its
+  # tool call, and why the renderer needs no index to put it there.
   #
   # Verbose mode keeps everything — thinking blocks, expanded prompts, full tool
   # output and Claude Code's own bookkeeping lines. Plain mode keeps the

@@ -65,10 +65,10 @@ code only).
 A Ruby CLI tool for browsing Claude Code conversation histories from
 `~/.claude/projects/`. A session is one JSONL file: the tool resolves a session
 id to that file and prints it as a readable transcript, in the order Claude Code
-wrote it — no branch reconstruction, so a reverted turn stays visible where the
-file has it. Lines Claude Code writes for its own bookkeeping are counted rather
-than printed, and any line the tool cannot read is reported under the
-transcript.
+wrote it, so the output matches the file line for line — where a session was
+reverted and continued, the abandoned attempt and the retry both appear. Lines
+Claude Code writes for its own bookkeeping are counted rather than printed, and
+any line the tool cannot read is reported under the transcript.
 
 **Usage:**
 

@@ -5,10 +5,10 @@ require "json"
 module ClaudeHistory
   # Turns one line of a session file into one Record.
   #
-  # Every line becomes a record. Messages get a class that understands their
-  # payload; everything else becomes a MetadataRecord, and a type nobody
-  # recognises becomes a MetadataRecord carrying an :unknown_record_type
-  # warning. Nothing is dropped, so a session prints what the file holds.
+  # Every line becomes a record, so a session holds what its file holds.
+  # Messages get a class that understands their payload; everything else
+  # becomes a MetadataRecord, and a type nobody recognises becomes a
+  # MetadataRecord carrying an :unknown_record_type warning.
   module RecordFactory
     MESSAGE_TYPES = {
       "user" => UserMessage,

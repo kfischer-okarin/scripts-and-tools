@@ -212,8 +212,9 @@ class TranscriptTest < ClaudeHistory::TestCase
     assert_includes output, "<Compacted context> This session is being continued from a previous conversation."
   end
 
-  # A revert leaves the abandoned messages in the file. The transcript shows
-  # them where the file has them rather than reconstructing which branch won.
+  # Reverting and asking again leaves both attempts in the file, the second
+  # answering the same parent as the first. The transcript shows each where the
+  # file has it.
   def test_keeps_the_file_order_across_a_revert
     output = transcript(<<~JSONL)
       {"type":"user","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"First question"}}

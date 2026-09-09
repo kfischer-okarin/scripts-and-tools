@@ -3,14 +3,14 @@
 ## The premise
 
 A session is one JSONL file. The tool resolves a session id to that file and
-prints it readably, in the order Claude Code wrote it.
+prints every line of it, in the order Claude Code wrote it.
 
-It deliberately does not reconstruct the conversation tree. `parentUuid` links
-records into a tree that branches on every revert, but reconstructing which
-branch "won" produces a transcript that no longer matches the file, and the
-answer is only ever a guess. Printing in file order means an abandoned branch
-stays visible where the file has it — the same thing reading the file by hand
-shows.
+File order is the whole model, and it is what makes the output trustworthy: the
+transcript holds what the file holds, so any line of it can be checked against
+the file, and a reader who greps a session and then opens it by hand finds the
+same things in the same places. Where a session was reverted and continued from
+an earlier point, the abandoned attempt and the retry both appear, in the order
+they were written.
 
 ## Architecture
 
@@ -50,8 +50,8 @@ picks the class from the line's `type`:
 | any other known bookkeeping type      | `MetadataRecord` |
 | an unknown type, or an unreadable line | `MetadataRecord` + warning |
 
-Nothing is skipped. A line the tool does not understand still becomes a record,
-carrying a warning.
+Every line becomes a record, an unfamiliar one included: it gets a warning and
+still prints.
 
 `UserMessage` covers more than typed prompts, so it classifies itself into a
 `content_type` — `:text`, `:command`, `:command_output`, `:tool_result`,
@@ -96,8 +96,9 @@ having taught the renderer about `Artifact`.
 The renderer needs the tool's name for one case — `ExitPlanMode` sometimes
 records its plan as a bare string, which nothing else distinguishes from any
 other text result. It gets the name by remembering the `tool_use` blocks it has
-already printed. That is not the pairing this tool avoids: the call has gone
-past in file order, and an id it never saw simply yields nil.
+already printed, which works because a call always precedes its result in the
+file; an id the renderer never saw yields nil and the result falls back to its
+shape.
 
 ## Warnings
 

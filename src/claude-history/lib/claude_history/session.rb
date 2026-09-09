@@ -3,10 +3,9 @@
 module ClaudeHistory
   # One session file, read in the order Claude Code wrote it.
   #
-  # There is deliberately no tree reconstruction here. A session is exactly one
-  # JSONL file and its records print in file order, so a revert or a branch
-  # leaves the abandoned lines in place — the same thing you would see reading
-  # the file by hand.
+  # A session is exactly one JSONL file, and #records holds every line of it in
+  # the file's own order — so the transcript can be checked line for line
+  # against the file it came from.
   class Session
     AGENT_PREFIX = "agent-"
 
