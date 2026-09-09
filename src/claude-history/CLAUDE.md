@@ -32,7 +32,9 @@ that affect the architecture, update design.md first.
 
 Behaviour is specified against `Commands`, the application API behind the CLI —
 one method per command, returning the text to print. Each test file covers one
-command's output; `test/transcript_test.rb` is the centerpiece.
+topic: what a transcript shows (`transcript_test.rb`, the centerpiece), how each
+tool's result reads (`tool_result_test.rb`), how ids resolve to files, and what
+each listing prints.
 
 `build_project` writes JSONL into a temporary project directory. Session
 timestamps come from file modification times, so tests that assert on ordering
@@ -40,14 +42,16 @@ or timestamps set them with `touch_session`.
 
 `test/real_session_files_test.rb` reads the captured session files in
 `test/fixtures/claude-projects/-Users-user-project/` and fails on any format
-warning. Those fixtures were captured in 2025-12, so they only prove the tool
-still reads what it read then.
+warning. It drives `History` and `Session` directly rather than going through
+`Commands`, because what it checks is parsing rather than output. Those fixtures
+were captured in 2025-12, so they only prove the tool still reads what it read
+then.
 
 ## Checking the format against reality
 
 The fixtures cannot catch Claude Code having moved on. `check-format` can: it
-reads every session file under `~/.claude/projects` and reports every line the
-parser could not account for, grouped by what went wrong.
+reads every non-empty session file under `~/.claude/projects` and reports every
+line the parser could not account for, grouped by what went wrong.
 
 ```bash
 claude-history check-format                 # all projects, ~20s for 4000 files
@@ -55,17 +59,25 @@ claude-history check-format --project foo   # one project
 ```
 
 **Run it after any change to the record classes, and whenever you are asked
-whether the format has drifted.** A clean run prints one line. Anything else is
-drift: add the field to the right `EXPECTED_ATTRIBUTES` (or
-`Record::ENVELOPE_ATTRIBUTES` if it appears on more than one record type), or
-the type to `MetadataRecord::DETAIL_PATHS`, then record what changed in
-`docs/claude-code-history-format-spec.md` and its changelog.
+whether the format has drifted.** A clean run prints one line. Anything else
+needs a decision, and which one depends on the warning:
 
-A field appearing on several record types belongs in the envelope, not copied
-into each list — `forkedFrom` was the case that taught us this.
+| Warning | What to do |
+|---------|------------|
+| `unexpected_attributes` | Add the field to that record class's `EXPECTED_ATTRIBUTES`, or to `Record::ENVELOPE_ATTRIBUTES` if it is part of the session envelope every record carries rather than that type's own payload. `error` sits on two types and still belongs to neither envelope. |
+| `unknown_record_type` | Add the type to `MetadataRecord::DETAIL_PATHS`, mapped to the path of the field holding its gist, or to `nil` when it carries nothing worth showing. |
+| `unexpected_content_shape` | A user message content block nobody expected. Add the block type to `UserMessage::TEXT_BLOCK_TYPES` if it is text-like; otherwise it needs its own handling in `determine_content_type`. |
+| `unparsable_line` | Not drift — a truncated or corrupt line, usually a half-written last line. Nothing to change in the code. |
+| `unreadable_tool_result` | A tool result that is neither text nor fields. Check what the tool now returns before deciding; `ToolResult` may need a new kind. |
+
+Then record what changed in `docs/claude-code-history-format-spec.md` and its
+changelog.
 
 ## Reference Documentation
 
-See `docs/claude-code-history-format-spec.md` for the Claude Code session file
-format specification, and its "Format coverage" section for what this tool
-currently understands and where the known gaps are.
+`docs/claude-code-history-format-spec.md` describes the Claude Code session
+file format; its "Format coverage" section is the part verified against current
+files, and the rest is older research. What *this tool* understands lives in
+the code — `RecordFactory::MESSAGE_TYPES`, `MetadataRecord::DETAIL_PATHS`,
+`ToolResult::KINDS_BY_MARKER` and the `EXPECTED_ATTRIBUTES` lists — with the
+reasoning in @docs/design.md.

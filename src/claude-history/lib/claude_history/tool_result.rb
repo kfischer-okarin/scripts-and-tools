@@ -9,11 +9,10 @@ module ClaudeHistory
   # vocabulary the renderer formats against, which keeps "the shapes we
   # understand" stated in one place.
   #
-  # The list below is deliberately short: only tools whose output reads badly
-  # as a list of fields earn an entry. Everything else — the long tail of
-  # smaller tools, and every tool added after this was written — falls to
-  # `:fields`, which prints what the result contains without needing to know
-  # which tool it came from.
+  # A tool earns an entry below when its result reads badly as a list of
+  # fields. Everything else — the long tail of smaller tools, and every tool
+  # added since — falls to `:fields`, which prints what the result contains
+  # without needing to know which tool it came from.
   class ToolResult
     # Ordered: the first marker field a result carries decides its kind. Order
     # matters where markers overlap — a Task result carries `status` inside

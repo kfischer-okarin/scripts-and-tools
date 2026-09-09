@@ -9,8 +9,10 @@ module ClaudeHistory
   # anything else on the line raises a warning, which is how the tool notices
   # that Claude Code's format moved on.
   class Record
-    # The fields Claude Code stamps on the records it writes, whatever the type.
-    # They belong here rather than in every subclass list.
+    # The session envelope: the fields Claude Code stamps on a conversation
+    # record whatever its type, declared once rather than in every subclass.
+    # A field that two types happen to share is not envelope — `error` is
+    # payload on both assistant and system records and stays in both lists.
     ENVELOPE_ATTRIBUTES = %i[
       type uuid parentUuid timestamp sessionId session_id cwd version
       gitBranch entrypoint isSidechain isMeta userType sessionKind slug

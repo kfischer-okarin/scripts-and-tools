@@ -51,7 +51,7 @@ picks the class from the line's `type`:
 | an unknown type, or an unreadable line | `MetadataRecord` + warning |
 
 Nothing is skipped. A line the tool does not understand still becomes a record,
-carrying a warning that `show-session` prints under the transcript.
+carrying a warning.
 
 `UserMessage` covers more than typed prompts, so it classifies itself into a
 `content_type` — `:text`, `:command`, `:command_output`, `:tool_result`,
@@ -63,16 +63,14 @@ commands are now logged as system records.
 ## Listings read only the ends of a file
 
 Session files reach tens of megabytes, and `sessions-updated-on` looks at every
-project. So listings never parse whole files:
+project.
 
 - **last activity** is the file's modification time, straight from the
-  filesystem.
+  filesystem, so `sessions-updated-on` can rule a session out before opening it.
 - **title, branch, start time** come from `SessionOverview`, which reads a 64 KiB
-  window at each end. Titles and summaries are appended as a session progresses,
-  so they are found near the tail; the opening prompt and first timestamp are in
-  the head.
-
-`sessions-updated-on` uses the mtime to rule a session out before opening it.
+  window at each end. Titles and summaries are re-appended as a session
+  progresses, so the latest of them is near the tail; the opening prompt and
+  first timestamp are in the head.
 
 ## Tool results
 
@@ -81,15 +79,19 @@ per tool and no field saying which tool produced it. `ToolResult` classifies a
 result by the fields it carries, and that `kind` is what the renderer formats
 against.
 
-The list of kinds is deliberately short. Only tools whose output reads badly as
-a list of fields earn one: the file-editing and shell tools, plus
-`AskUserQuestion` and `ExitPlanMode`, whose results are content in their own
-right and so print in full in both modes. Everything else — the long tail of
-smaller tools, and every tool added after this was written — falls to `:fields`,
-which prints what the result contains without knowing which tool it came from.
-That is why there is no warning for an unrecognised result shape: a shape
-without a formatter still reads fine, so warning about it would only produce a
-list of work nobody intends to do.
+A kind is worth adding when a result reads badly as a list of fields. That
+covers the tools used most — the shell, file and search tools — and the tools
+whose result is content in its own right rather than a summary of something
+stored elsewhere: `AskUserQuestion` and `ExitPlanMode` print in full in both
+modes, because an answer is a decision the user made and a plan is the work
+they approved.
+
+Everything else falls to `:fields`, which prints what a result contains without
+knowing which tool it came from. That covers the long tail of smaller tools and
+every tool added since, which is why an unrecognised shape is not a warning: it
+still reads fine, so warning about it would only produce a list of work nobody
+intends to do. An `Artifact` result shows its published URL without anyone
+having taught the renderer about `Artifact`.
 
 The renderer needs the tool's name for one case — `ExitPlanMode` sometimes
 records its plan as a bare string, which nothing else distinguishes from any
@@ -101,9 +103,12 @@ past in file order, and an id it never saw simply yields nil.
 
 Warnings exist to catch format drift rather than to fail. Each `Record`
 subclass lists the fields particular to its type in `EXPECTED_ATTRIBUTES`;
-`Record::ENVELOPE_ATTRIBUTES` holds the fields Claude Code stamps on every
-record, so they are declared once. A `MetadataRecord` declares no attributes and
-so opts out: its shapes are Claude Code's own bookkeeping and change often.
+`Record::ENVELOPE_ATTRIBUTES` holds the session envelope — the fields Claude
+Code stamps on a conversation record whatever its type — so they are declared
+once. The test is what a field belongs to, not how many types carry it: `error`
+appears on both assistant and system records and is payload on each, so it
+stays in both lists. A `MetadataRecord` declares no attributes and so opts out:
+its shapes are Claude Code's own bookkeeping and change often.
 
 | Warning type                | Trigger                                            |
 | --------------------------- | -------------------------------------------------- |
@@ -114,9 +119,9 @@ so opts out: its shapes are Claude Code's own bookkeeping and change often.
 | `:unreadable_tool_result`   | A tool result that is neither text nor fields (MCP results exempt) |
 
 `show-session` prints them under the transcript, so drift is visible at the
-point where it might mislead a reader. `check-format` reads every session file
-under `~/.claude/projects` and groups the warnings by what went wrong, which is
-how the format is verified against reality rather than against fixtures.
+point where it might mislead a reader. `check-format` reports them across the
+whole history, which is how the format is verified against reality rather than
+against fixtures.
 
 ## Rendering
 
@@ -124,14 +129,22 @@ how the format is verified against reality rather than against fixtures.
 class calls the matching `render_*` method (visitor pattern), which keeps
 formatting out of the record classes.
 
+A tool call is labelled `<Tool>` rather than `<Assistant>`: it is not something
+Claude said, and the two are much easier to read apart. Bash calls lead with
+their `description`, since the first line of an inline script rarely says what
+the call is for.
+
 ```text
 [2026-09-09 18:30] <User> Fix the failing parser test
 
 [2026-09-09 18:31] <Assistant> I'll look at the test first.
 
-[2026-09-09 18:31] <Assistant> Bash(bundle exec rake test)
+[2026-09-09 18:31] <Tool> Bash: Run the test suite
+     $ bundle exec rake test
+
   ⎿  Run options: --seed 42620
-     1 runs, 3 assertions, 1 failures
+     # Running:
+     F
      … +12 lines
 ```
 
