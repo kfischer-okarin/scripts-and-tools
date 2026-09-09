@@ -23,12 +23,12 @@ class TranscriptTest < ClaudeHistory::TestCase
 
   def test_prints_a_tool_call_followed_by_its_result
     output = transcript(<<~JSONL)
-      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"}}]}}
+      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/tmp/notes.md"}}]}}
       {"type":"user","uuid":"u1","parentUuid":"a1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1"}]},"toolUseResult":{"stdout":"one\\ntwo\\nthree\\nfour\\nfive"}}
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Bash(ls)
+      <Assistant> Read(notes.md)
 
         ⎿  one
            two
@@ -39,18 +39,56 @@ class TranscriptTest < ClaudeHistory::TestCase
 
   def test_verbose_prints_the_whole_tool_result
     output = transcript(<<~JSONL, verbose: true)
-      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls"}}]}}
+      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Read","input":{"file_path":"/tmp/notes.md"}}]}}
       {"type":"user","uuid":"u1","parentUuid":"a1","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1"}]},"toolUseResult":{"stdout":"one\\ntwo\\nthree\\nfour\\nfive"}}
     JSONL
 
     assert_includes output, <<~OUTPUT
-      <Assistant> Bash(ls)
+      <Assistant> Read(notes.md)
 
         ⎿  one
            two
            three
            four
            five
+    OUTPUT
+  end
+
+  # An inline script's first line says nothing about what the call is for, and
+  # the description doubles as something to grep for.
+  def test_heads_a_bash_call_with_its_description
+    output = transcript(<<~JSONL)
+      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"set -e\\nfor f in *.rb; do\\n  ruby -c $f\\ndone","description":"Syntax-check every Ruby file"}}]}}
+    JSONL
+
+    assert_includes output, <<~OUTPUT
+      <Assistant> Bash: Syntax-check every Ruby file
+           $ set -e…
+    OUTPUT
+  end
+
+  def test_verbose_prints_the_whole_bash_script
+    output = transcript(<<~JSONL, verbose: true)
+      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"set -e\\nfor f in *.rb; do\\n  ruby -c $f\\ndone","description":"Syntax-check every Ruby file"}}]}}
+    JSONL
+
+    assert_includes output, <<~OUTPUT
+      <Assistant> Bash: Syntax-check every Ruby file
+           $ set -e
+             for f in *.rb; do
+               ruby -c $f
+             done
+    OUTPUT
+  end
+
+  def test_prints_a_bash_call_that_has_no_description
+    output = transcript(<<~JSONL)
+      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[{"type":"tool_use","id":"t1","name":"Bash","input":{"command":"ls -la"}}]}}
+    JSONL
+
+    assert_includes output, <<~OUTPUT
+      <Assistant> Bash
+           $ ls -la
     OUTPUT
   end
 

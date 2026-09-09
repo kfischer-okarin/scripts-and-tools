@@ -14,6 +14,8 @@ module ClaudeHistory
     RESULT_PREFIX = "  ⎿  "
     RESULT_INDENT = "     "
     RESULT_PREVIEW_LINES = 3
+    COMMAND_PREFIX = "     $ "
+    COMMAND_INDENT = "       "
 
     attr_reader :hidden_counts
 
@@ -82,8 +84,13 @@ module ClaudeHistory
     # Emitting lines
 
     def emit(record, prefix, text)
+      emit_line(record, prefix, text)
+      @output << "\n"
+    end
+
+    def emit_line(record, prefix, text)
       body = text.to_s.rstrip
-      @output << "#{timestamp(record)}#{prefix}#{body.empty? ? "" : " #{body}"}\n\n"
+      @output << "#{timestamp(record)}#{prefix}#{body.empty? ? "" : " #{body}"}\n"
     end
 
     # `counted_as` names what the reader is missing. It defaults to the record's
@@ -110,10 +117,35 @@ module ClaudeHistory
     def render_content_block(record, block)
       case block[:type]
       when "text" then emit(record, "<Assistant>", block[:text])
-      when "tool_use" then emit(record, "<Assistant>", format_tool_use(block))
+      when "tool_use" then render_tool_use(record, block)
       when "thinking" then emit_if_verbose(record, "💭", block[:thinking], counted_as: "thinking block")
       else emit(record, "<Assistant>", "[#{block[:type]}]")
       end
+    end
+
+    def render_tool_use(record, block)
+      return render_bash_call(record, block[:input] || {}) if block[:name] == "Bash"
+
+      emit(record, "<Assistant>", format_tool_use(block))
+    end
+
+    # Bash gets two lines rather than one. Its `description` says what the call
+    # is for, which the first line of an inline script usually does not, and it
+    # gives the call a phrase worth grepping for; the command follows
+    # underneath, in full under --verbose.
+    def render_bash_call(record, input)
+      emit_line(record, "<Assistant>", ["Bash", input[:description]].compact.join(": "))
+      emit_command(input[:command].to_s)
+    end
+
+    def emit_command(command)
+      lines = command.lines.map(&:chomp)
+      shown = @verbose ? lines : lines.first(1)
+      elision = !@verbose && lines.size > 1 ? "…" : ""
+
+      first = "#{COMMAND_PREFIX}#{shown.first}#{elision}"
+      continued = shown.drop(1).map { |line| "#{COMMAND_INDENT}#{line}" }
+      @output << [first, *continued].join("\n") << "\n\n"
     end
 
     def format_tool_use(block)
@@ -123,17 +155,9 @@ module ClaudeHistory
     def format_tool_input(name, input)
       case name
       when "Read", "Edit", "Write" then File.basename(input[:file_path].to_s)
-      when "Bash" then first_line_of(input[:command])
-      when "Task" then "#{input[:subagent_type] || "Agent"}: #{@verbose ? input[:prompt] : input[:description]}"
+      when "Task", "Agent" then "#{input[:subagent_type] || "Agent"}: #{@verbose ? input[:prompt] : input[:description]}"
       else input.map { |key, value| "#{key}: #{value.inspect}" }.join(", ")
       end
-    end
-
-    def first_line_of(text)
-      lines = text.to_s.lines
-      return text.to_s if @verbose || lines.size <= 1
-
-      "#{lines.first.chomp}…"
     end
 
     # Tool results and command output
