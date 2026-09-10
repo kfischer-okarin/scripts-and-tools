@@ -62,19 +62,28 @@ code only).
 
 ## `claude-history`
 
-A Ruby CLI tool for searching and displaying Claude Code conversation histories
-from `~/.claude/projects/`. Parses JSONL session files into structured data,
-browse sessions by project, view full transcripts with timestamps, and search
-activity by date.
+A Ruby CLI tool for browsing Claude Code conversation histories from
+`~/.claude/projects/`. A session is one JSONL file: the tool resolves a session
+id to that file and prints it as a readable transcript, in the order Claude Code
+wrote it, so the output matches the file line for line — where a session was
+reverted and continued, the abandoned attempt and the retry both appear. Lines
+Claude Code writes for its own bookkeeping are counted rather than printed, and
+any line the tool cannot read is reported under the transcript.
 
 **Usage:**
 
 ```bash
 claude-history projects                              # List all projects
-claude-history sessions --project myproject           # List sessions in a project
-claude-history show-session SESSION_ID --project myproject  # Display a transcript
-claude-history sessions-updated-on 2025-04-12         # Find sessions by date
+claude-history sessions --project myproject          # List a project's session files
+claude-history show-session SESSION_ID               # Print a transcript
+claude-history show-session SESSION_ID --verbose     # …with thinking, full tool output, metadata
+claude-history sessions-updated-on 2026-04-12        # Find sessions by date
+claude-history check-format                          # Report format drift across all files
 ```
+
+A session id is matched by prefix, and searched across all projects unless
+`--project` narrows it. `sessions --agents` includes `agent-*.jsonl` subagent
+transcripts.
 
 ## `format-md`
 

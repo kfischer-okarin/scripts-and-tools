@@ -1,17 +1,13 @@
 # frozen_string_literal: true
 
+require "date"
+
 module ClaudeHistory
+  # The whole ~/.claude/projects tree: finds projects, and resolves the file a
+  # session id refers to.
   class History
     def initialize(projects_path)
       @projects_path = projects_path
-    end
-
-    def show_session(session_id, project_id:)
-      project(project_id).session(session_id)
-    end
-
-    def sessions(project_id:)
-      project(project_id).sessions.sort_by { |s| s.last_updated_at || Time.at(0) }.reverse
     end
 
     def projects
@@ -20,75 +16,68 @@ module ClaudeHistory
          .map { |path| Project.new(path) }
     end
 
+    def project(project_id)
+      Project.new(File.join(@projects_path, project_id))
+    end
+
+    def sessions(project_id:, agents: false)
+      project(project_id).sessions(agents: agents)
+    end
+
+    def all_sessions(agents: false)
+      projects.flat_map { |project| project.sessions(agents: agents) }
+    end
+
     def resolve_project_id(query)
       all_ids = projects.map(&:id)
-
       return query if all_ids.include?(query)
 
-      matches = all_ids.select { |id| id.include?(query) }
-
-      if matches.empty?
-        raise Error, "No project found matching '#{query}'"
-      end
-
-      if matches.size > 1
-        raise Error, "Ambiguous project '#{query}'. Matches:\n#{matches.map { |m| "  - #{m}" }.join("\n")}"
-      end
-
-      matches.first
+      unique_match!(all_ids.select { |id| id.include?(query) }, query, "project") { |id| id }
     end
 
-    def resolve_session_id(query, project_id:)
-      all_sessions = sessions(project_id: project_id)
-      matches = all_sessions.select { |s| s.id.start_with?(query) }
+    # A session id names a file, so resolving one is a file lookup: an exact hit
+    # first, then a prefix search. Without a project the search covers them all,
+    # which is still only file names.
+    def resolve_session(query, project_id: nil)
+      searched = project_id ? [project(project_id)] : projects
 
-      if matches.empty?
-        raise Error, "No session found matching '#{query}'"
-      end
+      exact = searched.filter_map { |project| project.session(query) }
+      return exact.first if exact.any?
 
-      if matches.size > 1
-        raise Error, "Ambiguous session '#{query}'. Matches:\n#{matches.map { |m| "  - #{m.id}" }.join("\n")}"
-      end
-
-      matches.first
+      matches = searched.flat_map { |project| project.sessions_matching(query) }
+      unique_match!(matches, query, "session", &:id)
     end
 
-    def sessions_updated_on(date)
-      start_time = date.to_time
-      end_time = (date + 1).to_time
-      results = []
-
-      projects.each do |project|
-        sessions(project_id: project.id).each do |session|
-          session.threads.each do |thread|
-            messages_on_date = thread.messages.select do |record|
-              ts = record.timestamp
-              ts && ts >= start_time && ts < end_time
-            end
-
-            next if messages_on_date.empty?
-
-            user_messages_on_date = messages_on_date.count { |m| m.is_a?(UserMessage) }
-
-            results << {
-              project: project,
-              session: session,
-              thread: thread,
-              message_count: user_messages_on_date,
-              latest_timestamp: messages_on_date.map(&:timestamp).max
-            }
-          end
-        end
-      end
-
-      results.sort_by { |r| r[:latest_timestamp] }.reverse
+    # Sessions whose span of activity covers the date. The file's mtime rules
+    # out most sessions without opening them.
+    def sessions_updated_on(date, agents: false)
+      projects.flat_map { |project|
+        project.sessions(agents: agents)
+               .select { |session| touched_by?(session, date) && started_by?(session, date) }
+               .map { |session| { project: project, session: session } }
+      }.sort_by { |result| result[:session].last_updated_at }.reverse
     end
 
     private
 
-    def project(project_id)
-      project_path = File.join(@projects_path, project_id)
-      Project.new(project_path)
+    def touched_by?(session, date)
+      session.last_updated_at.getlocal.to_date >= date
+    end
+
+    def started_by?(session, date)
+      started = session.started_at
+      started.nil? || started.getlocal.to_date <= date
+    end
+
+    def unique_match!(matches, query, subject)
+      raise Error, "No #{subject} found matching '#{query}'" if matches.empty?
+
+      if matches.size > 1
+        labels = matches.map { |match| "  - #{yield(match)}" }
+        raise Error, "Ambiguous #{subject} '#{query}'. Matches:\n#{labels.join("\n")}"
+      end
+
+      matches.first
     end
   end
 end

@@ -1,25 +1,28 @@
 # Claude Code Conversation History Format Specification
 
-**Version**: 1.1 (Based on Claude Code v2.1.22)
-**Last Updated**: 2026-01-30
+**Version**: 1.2 (Based on Claude Code v2.1.263)
+**Last Updated**: 2026-09-10
 **Author**: Research analysis of actual Claude Code session files
+
+> Sections below marked "as of v1.1" were written against v2.1.22 and have not
+> been re-verified line by line. [Format coverage](#format-coverage) is the
+> current, verified inventory — read it first where the two disagree.
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Directory Structure](#directory-structure)
-3. [File Types](#file-types)
-4. [JSONL Format](#jsonl-format)
-5. [Record Types Reference](#record-types-reference)
-6. [Message Tree Structure](#message-tree-structure)
-7. [Session Lifecycle](#session-lifecycle)
-8. [Agent Files](#agent-files)
-9. [Summary System](#summary-system)
-10. [File History Snapshots](#file-history-snapshots)
-11. [Special Cases](#special-cases)
-12. [Implementation Notes](#implementation-notes)
+2. [Format coverage](#format-coverage) — verified inventory, read first
+3. [Directory Structure](#directory-structure)
+4. [File Types](#file-types)
+5. [JSONL Format](#jsonl-format)
+6. [Record Types Reference](#record-types-reference)
+7. [Message Tree Structure](#message-tree-structure)
+8. [Session Lifecycle](#session-lifecycle)
+9. [Agent Files](#agent-files)
+10. [Special Cases](#special-cases)
+11. [Implementation Notes](#implementation-notes)
 
 ---
 
@@ -32,6 +35,139 @@ Claude Code stores conversation histories in JSONL (JSON Lines) format within th
 - Multiple file types serve different purposes (conversations, summaries, file history)
 - Agent/subagent conversations are stored in separate files with `agent-` prefix
 - Checkpoints and reverts create **branches** within the same file
+
+---
+
+## Format coverage
+
+Verified on 2026-09-09 by parsing all 4205 session files under
+`~/.claude/projects` (Claude Code v2.0.55 through v2.1.263) and collecting the
+union of record types and top-level fields per type.
+
+### Record types
+
+| Type | Status | Seen in versions | Carries |
+|------|--------|------------------|---------|
+| `user` | current | 2.0.55 – 2.1.263 | prompts, tool results, command invocations, command output, interrupts, compaction summaries |
+| `assistant` | current | 2.0.55 – 2.1.263 | `text`, `thinking` and `tool_use` content blocks |
+| `system` | current | 2.0.56 – 2.1.263 | hook results, turn durations, compaction boundaries, **built-in slash commands** |
+| `attachment` | current | 2.1.90 – 2.1.263 | context Claude Code injects into a turn; the most numerous type by far |
+| `file-history-snapshot` | current | — | checkpoint metadata (full snapshot) |
+| `file-history-delta` | current | — | checkpoint metadata (one tracked file) |
+| `ai-title` | current | — | generated session title, rewritten each turn |
+| `custom-title` | current | — | title the user set with `/rename` |
+| `mode` | current | — | conversation mode |
+| `permission-mode` | current | — | permission mode |
+| `atis-latch` | current | — | status line state |
+| `last-prompt` | current | — | `leafUuid` of the most recent prompt |
+| `queue-operation` | current | — | a queued message being added or absorbed |
+| `cost-state` | current | — | cumulative cost, duration and line counts |
+| `agent-name` | current | — | name of a background agent |
+| `pr-link` | current | — | pull request opened from the session |
+| `frame-link` | current | — | published Artifact URL |
+| `artifact-comment-monitor` | current | — | Artifact comment watch state |
+| `artifact-autoreact-ledger` | current | — | Artifact auto-reply state |
+| `summary` | **retired** | last written ~2026-02 | branch summary keyed by `leafUuid`; superseded by `ai-title` |
+| `progress` | **retired** | 2.1.9 – 2.1.83 | subagent/hook progress; superseded by `attachment` |
+
+Most of these types are **sidecar state** rather than conversation:
+`ai-title`, `custom-title`, `mode`, `permission-mode`, `atis-latch`,
+`last-prompt`, `queue-operation`, `cost-state`, `agent-name`, `pr-link`,
+`frame-link` and the two `artifact-*` types carry no `uuid`, `parentUuid`,
+`timestamp` or `version` — only `sessionId` and their own payload. They are
+re-appended as the session progresses, so the newest of each sits nearest the
+end of the file and the earlier copies are stale.
+
+The remaining types are shaped like conversation records: `attachment` and the
+retired `progress` carry the full envelope, while `summary` and
+`file-history-snapshot` carry neither the envelope nor `sessionId` — see their
+own sections for the fields they do have.
+
+### Envelope fields
+
+Records that are part of the conversation carry a common envelope:
+
+```
+type uuid parentUuid timestamp sessionId session_id cwd version gitBranch
+entrypoint isSidechain isMeta userType sessionKind slug agentId forkedFrom
+```
+
+`session_id` duplicates `sessionId` in snake_case — both appear on the same
+record. `slug` (a generated three-word session name) is no longer written;
+`entrypoint`, `sessionKind`, `agentId` and `forkedFrom` are newer. `forkedFrom`
+records the session and message a forked session branched from.
+
+### Per-type fields, beyond the envelope
+
+**`user`**: `message`, `toolUseResult`, `promptId`, `promptSource`, `origin`,
+`permissionMode`, `queuePriority`, `queueSkipAttachments`, `imagePasteIds`,
+`interruptedMessageId`, `sourceToolAssistantUUID`, `sourceToolUseID`,
+`turnCompanion`, `toolDenialKind`, `mcpMeta`, `classifierMetaLines`,
+`planContent`, `userFeedback`, `isCompactSummary`, `summarizeMetadata`,
+`thinkingMetadata` (legacy), `todos` (legacy)
+
+**`assistant`**: `message`, `requestId`, `effort`, `apiBlockIndex`,
+`truncatedAfterOutput`, `attributionSkill`, `attributionPlugin`,
+`attributionMcpServer`, `attributionMcpTool`, `apiErrorStatus`, `error`,
+`errorDetails`, `healsDistinctCarrier`, `isApiErrorMessage`,
+`isAbortedMidStream`
+
+**`system`**: `subtype`, `level`, `content`, `toolUseID`, `durationMs`,
+`messageCount`, `hasOutput`, `hookAdditionalContext`, `hookCount`, `hookErrors`,
+`hookInfos`, `preventedContinuation`, `stopReason`,
+`pendingBackgroundAgentCount`, `pendingWorkflowCount`, `compactMetadata`,
+`microcompactMetadata`, `logicalParentUuid`, `cause`, `error`, `maxRetries`,
+`retryAttempt`, `retryInMs`
+
+### `system` subtypes
+
+| Subtype | Meaning |
+|---------|---------|
+| `turn_duration` | how long a turn took |
+| `stop_hook_summary` | result of Stop hooks |
+| `local_command` | a built-in slash command's invocation markup, or its `<local-command-stdout>` |
+| `compact_boundary` | where the context was compacted; `compactMetadata` holds trigger, token counts and preserved message uuids |
+| `away_summary` | summary written while the user was away |
+
+### `attachment` subtypes
+
+`attachment.type` names what was injected. Observed:
+`total_tokens_reminder`, `output_style`, `output_style_instructions`,
+`hook_success`, `hook_additional_context`, `hook_system_message`,
+`hook_non_blocking_error`, `batching_reminder_sent`, `bash_output_audience_note`,
+`edited_text_file`, `file`, `opened_file_in_ide`, `selected_lines_in_ide`,
+`selected_lines_in_diff`, `read_truncation_notice`, `diagnostics`,
+`skill_listing`, `deferred_tools_delta`, `deferred_tools_record`,
+`mcp_instructions_delta`, `agent_listing_delta`, `command_permissions`,
+`queued_command`, `prompt_snapshot`, `environment`, `nested_memory`,
+`session_context`, `instructions`, `model`, `directory`, `date`, `date_change`,
+`auto_mode`, `silent_turn_reminder`, `task_reminder`, `fork_briefing`.
+
+An attachment record's `parentUuid` is `null` even mid-conversation, so
+attachments are not part of the message tree.
+
+### `message.content` blocks
+
+`user` content is either a string or an array of `text`, `image`, `document` or
+`tool_result` blocks. `assistant` content is an array of `text`, `thinking` and
+`tool_use` blocks.
+
+### Known gaps
+
+- **Nested shapes are only partly inventoried.** `toolUseResult` varies per
+  tool, and the shapes are recorded here only for the tools whose output is
+  read specially; `attachment` payloads, `hookInfos` and `compactMetadata` are
+  not inventoried at all.
+- **A tool result never names its tool.** `toolUseResult` carries no field
+  identifying the tool that produced it; only the `tool_use_id` in the sibling
+  content block connects it back to the call.
+- **MCP tool results are the server's shape, not Claude Code's.** Records
+  carrying them are marked with `mcpMeta`, which is the field to key off when a
+  reader wants to hold them to a different standard.
+- **Retirement dates are approximate.** They come from file modification times
+  in one user's history, not from release notes.
+- **Titles have an era gap.** `summary` stopped around 2026-02 and `ai-title`
+  started around 2026-04, so sessions in between carry neither.
 
 ---
 
@@ -66,7 +202,7 @@ Primary conversation storage. Contains:
 **Identification**: UUID v4 format filename, does NOT start with `agent-`
 
 **Size indicators**:
-- 0 bytes: Empty session (created by `--resume`/`--continue` with no action)
+- 0 bytes: see [Empty Sessions](#empty-sessions)
 - < 2KB: Likely metadata-only (summaries or file-history-snapshots only)
 - > 2KB: Contains actual conversation
 
@@ -79,8 +215,6 @@ Contains only `type: "summary"` records (and sometimes `file-history-snapshot`).
 - No `type: "user"` or `type: "assistant"` records
 - Typically small (< 2KB)
 
-**Purpose**: Track summaries for different conversation branches across sessions.
-
 ### 3. File History Files (`{uuid}.jsonl`)
 
 Contains only `type: "file-history-snapshot"` records.
@@ -90,20 +224,9 @@ Contains only `type: "file-history-snapshot"` records.
 - No conversation content
 - Created during checkpoint operations
 
-### 4. Agent Files (`agent-{agent-id}.jsonl`)
+### 4. Agent Files (`agent-{7-char-id}.jsonl`)
 
-Subagent conversation logs. Two categories:
-
-**a) Warmup Agents (internal)**
-- First message content is exactly `"Warmup"`
-- Models: `claude-haiku-4-5-*` or `claude-opus-4-5-*`
-- Should be filtered out for user-facing history
-
-**b) Task Agents (user-triggered)**
-- First message contains actual task prompt
-- Model: typically `claude-sonnet-4-5-*`
-- `isSidechain: true`
-- Contains real conversation with tool usage
+Subagent conversation logs — see [Agent Files](#agent-files) for their fields.
 
 ---
 
@@ -123,6 +246,10 @@ Each file contains one JSON object per line. Lines are appended as the conversat
 ---
 
 ## Record Types Reference
+
+The field lists in this section are as of v1.1. See
+[Per-type fields](#per-type-fields-beyond-the-envelope) for the current sets;
+`slug` in particular is no longer written.
 
 ### 1. User Message Record
 
@@ -168,20 +295,13 @@ Each file contains one JSON object per line. Lines are appended as the conversat
 ]
 ```
 
-**Interrupt marker**:
-```json
-"content": [{"type": "text", "text": "[Request interrupted by user]"}]
-```
+**Interrupt marker**: a single text block reading
+`[Request interrupted by user]` — see
+[Interrupted Response](#interrupted-response).
 
-**Command message** (e.g., /clear):
-```json
-"content": "<command-name>/clear</command-name>\n<command-message>clear</command-message>\n<command-args></command-args>"
-```
-
-**Command output**:
-```json
-"content": "<local-command-stdout></local-command-stdout>"
-```
+**Command invocation and output**: `<command-name>` tag markup, or a
+`<local-command-stdout>` payload — see
+[Command Messages](#command-messages).
 
 #### `thinkingMetadata` Object
 
@@ -358,6 +478,10 @@ All share the same `message.id` and `requestId`, but have different `uuid` value
 
 ### 3. Summary Record
 
+> **Retired** around 2026-02. Session titles now come from `ai-title` and
+> `custom-title` records, which are keyed by `sessionId` rather than by a
+> branch leaf.
+
 ```json
 {
   "type": "summary",
@@ -383,6 +507,9 @@ All share the same `message.id` and `requestId`, but have different `uuid` value
 ---
 
 ### 4. Progress Record
+
+> **Retired** after v2.1.83. The same information now arrives as `attachment`
+> records (`attachment.type` of `hook_success`, `hook_additional_context`, …).
 
 ```json
 {
@@ -453,14 +580,18 @@ execution.
 **Fields**:
 - `messageId`: Links to the user message this snapshot is associated with
 - `trackedFileBackups`: Map of filename → backup metadata
-- `backupFileName`: Format `{hash}@v{version}` or `null` for initial version
+- `backupFileName`: Format `{hash}@v{version}` (e.g. `d95c0fbaebe97e88@v2`), or
+  `null` for the initial version; the version increments on each edit
 - `isSnapshotUpdate`: `true` if updating existing snapshot, `false` if new
+
+The backup files themselves live outside the project directory (apparently
+under `~/.claude/file-history/`).
 
 ---
 
 ## Message Tree Structure
 
-Conversations are **trees**, not linear sequences. The `parentUuid` field creates the structure.
+`parentUuid` is what creates the structure.
 
 ### Root Message
 ```json
@@ -514,9 +645,8 @@ def get_branch(nodes, children, leaf_uuid):
 
 ### Finding Branch Endpoints
 
-A message is a branch endpoint if:
-- It has no children, OR
-- It's referenced by a `summary` record's `leafUuid`
+A message is a branch endpoint if it has no children. In files written before
+~2026-02, a `summary` record's `leafUuid` also pointed at one.
 
 ---
 
@@ -533,7 +663,6 @@ A message is a branch endpoint if:
 
 1. New messages appended to existing file
 2. `parentUuid` links to last message of previous session
-3. New warmup agents may be created
 
 ### Resume with No Action
 
@@ -554,7 +683,9 @@ A message is a branch endpoint if:
 ### /clear Command
 
 1. Current conversation continues in original file
-2. `/clear` command logged with `isMeta: true`
+2. `/clear` logged as a command record — a `system` record with
+   `subtype: "local_command"` in current versions, a `user` record with
+   `<command-name>` markup before that; not `isMeta` in either case
 3. New session file created
 4. New session becomes active
 
@@ -581,100 +712,15 @@ All agent records have:
 }
 ```
 
-### Warmup Agents (Filter These)
+### Task Agents
 
-**Identification**:
-```python
-def is_warmup_agent(records):
-    first_user = next((r for r in records if r.get('type') == 'user'), None)
-    if first_user:
-        content = first_user.get('message', {}).get('content', '')
-        return content == 'Warmup'
-    return False
-```
+An agent file holds one subagent's conversation: its task prompt, then real
+conversation with tool usage. Its `agentId` is referenced in the parent
+session's tool result.
 
-**Characteristics**:
-- Created in pairs (one haiku, one opus typically)
-- Models: `claude-haiku-4-5-*`, `claude-opus-4-5-*`
-- Only contain "Warmup" message and greeting response
-- Internal system mechanism, not user-visible
-
-### Task Agents (Include These)
-
-**Identification**:
-- First message is NOT "Warmup"
-- Contains actual task description
-
-**Characteristics**:
-- Model: typically `claude-sonnet-4-5-*`
-- Contains real conversation with tool usage
-- `agentId` referenced in parent session's tool result
-
----
-
-## Summary System
-
-### Summary Generation
-
-Summaries are generated:
-- When session ends (user exits Claude Code)
-- When session is resumed
-- Periodically during long sessions
-- After significant conversation events
-
-### Storage Locations
-
-1. **Dedicated summary files**: Contain multiple summaries for different branches
-2. **Inline in main file**: Single summary record within conversation
-3. **Mixed files**: Summaries + file-history-snapshots
-
-### Linking to Conversations
-
-The `leafUuid` field links to the last assistant message UUID in a branch:
-
-```
-Summary File                    Main Conversation File
-─────────────                   ──────────────────────
-leafUuid: "abc123"  ──────────► uuid: "abc123" (assistant message)
-```
-
-### Multiple Branches
-
-Each branch endpoint gets its own summary entry:
-
-```json
-{"type":"summary","summary":"First feature","leafUuid":"branch1-end"}
-{"type":"summary","summary":"Bug fix work","leafUuid":"branch2-end"}
-{"type":"summary","summary":"Refactoring","leafUuid":"branch3-end"}
-```
-
----
-
-## File History Snapshots
-
-### Purpose
-
-Track file versions for checkpoint/revert functionality. Allows Claude Code to restore files to previous states.
-
-### Backup File Location
-
-Backup files are stored separately (likely in `~/.claude/file-history/` or similar).
-
-Format: `{hash}@v{version}` (e.g., `d95c0fbaebe97e88@v2`)
-
-### Snapshot Lifecycle
-
-1. **Initial**: `backupFileName: null`, `version: 1`
-2. **After edit**: `backupFileName: "{hash}@v2"`, `version: 2`
-3. **Subsequent edits**: Version increments
-
-### Association with Messages
-
-`messageId` links snapshot to the user message that triggered file tracking:
-
-```
-file-history-snapshot.messageId ──► user message.uuid
-```
+Until ~2026-01, Claude Code also wrote **warmup agent** files — internal
+probes whose first message was exactly `"Warmup"`, created in haiku/opus pairs,
+which readers had to filter out. None have been written since.
 
 ---
 
@@ -694,7 +740,9 @@ When user presses Escape/Ctrl+C during response:
 }
 ```
 
-**No partial assistant response is saved.**
+As of v1.1 no partial assistant response was saved. Current assistant records
+carry `isAbortedMidStream` and `truncatedAfterOutput`, so a partial response
+can now be written — treat the flags as the authority.
 
 ### Meta Messages
 
@@ -731,7 +779,13 @@ Slash commands are logged as user messages with XML-like tags:
 
 #### Built-in Commands (with stdout)
 
-Built-in commands like `/clear` produce a child stdout message:
+> **Moved.** Built-in commands are now logged as `system` records with
+> `subtype: "local_command"`, whose `content` holds the same invocation markup
+> or the `<local-command-stdout>` payload. User-defined slash commands are
+> still `user` records as described below. A reader that skips `system` records
+> misses every built-in command invocation.
+
+As of v1.1, built-in commands like `/clear` produced a child stdout message:
 
 ```json
 {
@@ -786,24 +840,31 @@ Some commands appear as system records instead of user records:
 **Differences from user-type commands**:
 - `type` is `"system"` instead of `"user"`
 - Has `subtype: "local_command"`
-- Content is at top level, not wrapped in `message` object
-- Typically used for IDE/workspace commands (e.g., `/add-dir`)
+- Content is at top level, not wrapped in a `message` object
+- The output arrives as a second `local_command` record whose `content` is the
+  `<local-command-stdout>` payload, rather than as a child user message
 
-The same parent-child stdout pattern applies to system commands
+This is the shape **every** built-in command now takes; see the note under
+[Built-in Commands](#built-in-commands-with-stdout) above.
 
 ### Empty Sessions
 
-Files with 0 bytes exist when:
-- `claude --resume` or `claude --continue` with no action taken
-- Should be filtered from session listings
+A 0-byte `{uuid}.jsonl` file is created by `claude --resume` or
+`claude --continue` when no action follows. No records are ever written to it,
+so it should be filtered from session listings.
 
 ---
 
 ## Implementation Notes
 
+> One way to read these files. `claude-history` takes a different one: it
+> prints every line in file order, so the commands, interrupts and compaction
+> boundaries filtered out below are transcript lines for it. See
+> `docs/design.md`.
+
 ### Filtering for Display
 
-To get "real" conversation content:
+One approach to picking out "real" conversation content:
 
 ```python
 def is_displayable_message(record):
@@ -826,145 +887,18 @@ def is_displayable_message(record):
     return True
 ```
 
-### Counting Messages
-
-Only count records where:
-- `type` is `"user"` or `"assistant"`
-- `isMeta` is not `true`
-- Content is not interrupt marker or command
-
-### Handling Progress Records
-
-Progress records participate in the parentUuid chain but are not meaningful
-conversation records. When building the message tree, parsers should either:
-
-1. **Skip and remap**: Skip progress records but remap their children's
-   parentUuid to point to the progress record's parent
-2. **Include as type**: Include progress as a valid record type in the tree
-
-Option 1 is recommended. Failing to handle progress records properly breaks the
-parentUuid chain and orphans all subsequent messages in sessions with subagent
-activity.
-
-### Session Classification
-
-```python
-def classify_session_file(filepath):
-    records = load_jsonl(filepath)
-
-    if not records:
-        return 'empty'
-
-    types = {r.get('type') for r in records}
-
-    if types <= {'summary'}:
-        return 'summary-only'
-
-    if types <= {'file-history-snapshot'}:
-        return 'file-history-only'
-
-    if types <= {'summary', 'file-history-snapshot'}:
-        return 'metadata-only'
-
-    if 'user' in types or 'assistant' in types:
-        return 'conversation'
-
-    return 'unknown'
-```
-
-### Agent Classification
-
-```python
-def classify_agent_file(filepath):
-    records = load_jsonl(filepath)
-
-    first_user = next(
-        (r for r in records if r.get('type') == 'user'),
-        None
-    )
-
-    if not first_user:
-        return 'incomplete'
-
-    content = first_user.get('message', {}).get('content', '')
-
-    if content == 'Warmup':
-        return 'warmup'  # Filter out
-
-    return 'task'  # Include
-```
-
-### Getting Latest Summary
-
-```python
-def get_best_summary(project_dir, session_id):
-    """Get the most recent summary for a session."""
-    summaries = []
-
-    for filepath in project_dir.glob('*.jsonl'):
-        for record in load_jsonl(filepath):
-            if record.get('type') == 'summary':
-                summaries.append({
-                    'file': filepath,
-                    'mtime': filepath.stat().st_mtime,
-                    'summary': record.get('summary'),
-                    'leafUuid': record.get('leafUuid')
-                })
-
-    if not summaries:
-        return None
-
-    # Return summary from most recently modified file
-    return max(summaries, key=lambda s: s['mtime'])
-```
-
-### Reconstructing a Branch for Display
-
-```python
-def get_displayable_branch(records, leaf_uuid=None):
-    """Get messages for display, following one branch."""
-
-    # Build tree
-    nodes = {r['uuid']: r for r in records if 'uuid' in r}
-    children = defaultdict(list)
-
-    for uuid, record in nodes.items():
-        parent = record.get('parentUuid')
-        if parent:
-            children[parent].append(uuid)
-
-    # Find leaf (latest message if not specified)
-    if not leaf_uuid:
-        # Find nodes with no children
-        leaves = [u for u in nodes if u not in children or not children[u]]
-        if not leaves:
-            return []
-        # Pick most recent
-        leaf_uuid = max(leaves, key=lambda u: nodes[u].get('timestamp', ''))
-
-    # Walk back to root
-    path = []
-    current = leaf_uuid
-    while current and current in nodes:
-        record = nodes[current]
-        if is_displayable_message(record):
-            path.append(record)
-        current = record.get('parentUuid')
-
-    return list(reversed(path))
-```
-
----
-
 ## Appendix: Known Models
 
-Models observed in session files:
+`message.model` values observed in session files, most frequent first:
+`claude-opus-4-5-20251101`, `claude-opus-4-7`, `claude-opus-4-6`,
+`claude-opus-4-8`, `claude-opus-5`, `claude-fable-5`,
+`claude-haiku-4-5-20251001`, `claude-sonnet-4-5-20250929`,
+`claude-sonnet-4-6`, `claude-sonnet-5`, and `<synthetic>` for records Claude
+Code generates itself rather than receiving from the API.
 
-| Model ID | Usage |
-|----------|-------|
-| `claude-opus-4-5-20251101` | Main conversation, planning agents |
-| `claude-sonnet-4-5-20250929` | Task agents (default) |
-| `claude-haiku-4-5-20251001` | Warmup agents, lightweight tasks |
+Newer ids drop the date suffix that the 4.5 generation carried, and a context
+variant appears in brackets (`claude-opus-5[1m]`). Treat the list as a sample,
+not a closed set.
 
 ---
 
@@ -987,5 +921,14 @@ Common tool names observed:
 
 ## Changelog
 
+- **1.2** (2026-09-10): Added the [Format coverage](#format-coverage) inventory
+  verified against v2.1.263: 19 current record types (15 of them previously
+  undocumented, `attachment` chief among them), the shared envelope field set,
+  per-type fields, `system` and `attachment` subtypes. Marked `summary`,
+  `progress` and warmup agent files retired, and noted that built-in slash
+  commands moved into `system` records. Deleted the Summary System, File
+  History Snapshots and most Implementation Notes sections, which restated the
+  record-type sections or documented retired formats, and refreshed the model
+  appendix.
 - **1.1** (2026-01-30): Added `progress` record type documentation (subagent execution updates)
 - **1.0** (2025-12-20): Initial specification based on analysis of Claude Code v2.0.74 session files

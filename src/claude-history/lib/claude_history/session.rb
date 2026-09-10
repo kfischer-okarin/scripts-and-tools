@@ -1,92 +1,70 @@
 # frozen_string_literal: true
 
 module ClaudeHistory
-  # A logical conversation session aggregating records connected via parentUuid,
-  # potentially spanning multiple JSONL files. The session ID comes from the file
-  # containing the root record (parentUuid: null).
+  # One session file, read in the order Claude Code wrote it.
   #
-  # Warnings are aggregated from session-level issues (e.g., unknown record types)
-  # and record-level issues (e.g., unexpected attributes).
+  # A session is exactly one JSONL file, and #records holds every line of it in
+  # the file's own order — so the transcript can be checked line for line
+  # against the file it came from.
   class Session
-    attr_reader :id, :records, :root_segment
+    AGENT_PREFIX = "agent-"
 
-    def initialize(id:, records:, warnings: [])
-      @id = id
-      @records, @summaries = records.partition { |r| !r.is_a?(Summary) }
-      @direct_warnings = warnings
-      @root_segment = build_root_segment
+    attr_reader :path
+
+    def initialize(path)
+      @path = path
     end
 
-    def root
-      records.find { |r| r.parent_uuid.nil? }
+    def id
+      File.basename(path, ".jsonl")
+    end
+
+    def agent?
+      id.start_with?(AGENT_PREFIX)
+    end
+
+    def records
+      @records ||= read_records
     end
 
     def warnings
-      @direct_warnings + (@records + @summaries).flat_map(&:warnings)
+      records.flat_map(&:warnings)
     end
 
-    def threads
-      return [] if root_segment.nil?
-
-      collect_threads(root_segment, []).sort_by { |t| t.last_updated_at || Time.at(0) }.reverse
-    end
-
-    def last_updated_at
-      threads.map(&:last_updated_at).compact.max
+    def title
+      overview.title
     end
 
     def git_branch
-      threads.first&.git_branch
+      overview.git_branch
+    end
+
+    def started_at
+      overview.started_at
+    end
+
+    # The file's last write, which is when the session last did anything. Taking
+    # it from the filesystem keeps listings from having to read the file at all.
+    def last_updated_at
+      File.mtime(path)
+    end
+
+    # Visitor pattern: hand every record to the renderer, in file order
+    def render(renderer)
+      records.each { |record| record.render(renderer) }
     end
 
     private
 
-    def collect_threads(segment, segment_path)
-      current_path = segment_path + [segment]
-
-      if segment.children.empty?
-        [Thread.new(segments: current_path)]
-      else
-        segment.children.flat_map { |child| collect_threads(child, current_path) }
-      end
+    def overview
+      @overview ||= SessionOverview.new(path)
     end
 
-    def build_root_segment
-      return nil if root.nil?
-
-      children_index = records.group_by(&:parent_uuid)
-      summaries_index = @summaries.group_by(&:leaf_uuid)
-      build_segment_from(root, children_index, summaries_index)
-    end
-
-    def build_segment_from(start_record, children_index, summaries_index)
-      segment_records = []
-      current = start_record
-
-      loop do
-        segment_records << current
-        children = children_index[current.uuid] || []
-
-        case children.size
-        when 0
-          segment_summaries = collect_summaries(segment_records, summaries_index)
-          return Segment.new(records: segment_records, summaries: segment_summaries)
-        when 1
-          current = children.first
-        else
-          segment_summaries = collect_summaries(segment_records, summaries_index)
-          child_segments = children.map { |child| build_segment_from(child, children_index, summaries_index) }
-          return Segment.new(records: segment_records, children: child_segments, summaries: segment_summaries)
-        end
+    def read_records
+      filename = File.basename(path)
+      File.foreach(path).with_index(1).map do |line, line_number|
+        RecordFactory.build(line, line_number, filename)
       end
-    end
-
-    def collect_summaries(records, summaries_index)
-      records.reverse_each do |record|
-        summaries = summaries_index[record.uuid]
-        return summaries if summaries&.any?
-      end
-      []
     end
   end
 end
