@@ -49,8 +49,9 @@ then.
 ## Checking the format against reality
 
 The fixtures cannot catch Claude Code having moved on. `check-format` can: it
-reads every non-empty session file under `~/.claude/projects` and reports every
-line the parser could not account for, grouped by what went wrong.
+reads every non-empty session file under `~/.claude/projects`, subagent
+transcripts included, and reports every line the parser could not account for,
+grouped by what went wrong.
 
 ```bash
 claude-history check-format                 # all projects, ~20s for 4000 files

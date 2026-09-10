@@ -21,11 +21,18 @@ module ClaudeHistory
     end
 
     # Writes session files into a project directory under the temporary
-    # ~/.claude/projects stand-in.
+    # ~/.claude/projects stand-in. File names may be nested, which is how
+    # Claude Code stores a session's subagents:
+    #
+    #   build_project("proj", "s1.jsonl" => …, "s1/subagents/agent-a1.jsonl" => …)
     def build_project(name, files = {})
       project_path = File.join(@projects_path, name)
       FileUtils.mkdir_p(project_path)
-      files.each { |filename, content| File.write(File.join(project_path, filename), content) }
+      files.each do |filename, content|
+        path = File.join(project_path, filename)
+        FileUtils.mkdir_p(File.dirname(path))
+        File.write(path, content)
+      end
       Project.new(project_path)
     end
 

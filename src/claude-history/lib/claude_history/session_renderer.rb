@@ -29,6 +29,12 @@ module ClaudeHistory
       @output = +""
       @hidden_counts = Hash.new(0)
       @tool_names = {}
+      @subagent_calls = false
+    end
+
+    # Whether the transcript called a subagent, which has a transcript of its own
+    def subagent_calls?
+      @subagent_calls
     end
 
     def output
@@ -323,11 +329,17 @@ module ClaudeHistory
       "Task #{result[:taskId]} updated#{suffix}"
     end
 
+    # A subagent keeps its own transcript, so its id is worth printing: it is
+    # what opens that transcript.
     def format_agent_result(result)
-      text = result.dig(:content, 0, :text) || result[:content]
-      return format_text_result(text.to_s) if @verbose && text
+      agent_id = result[:agentId]
+      @subagent_calls = true if agent_id
 
-      [result[:status], result[:agentType]].compact.join(" ")
+      headline = [result[:status], result[:agentType], agent_id && "agent #{agent_id}"].compact.join(" · ")
+      text = result.dig(:content, 0, :text) || result[:content]
+      return headline unless @verbose && text
+
+      indent_lines([headline, *text.to_s.lines.map(&:chomp)])
     end
 
     def format_text_result(text)

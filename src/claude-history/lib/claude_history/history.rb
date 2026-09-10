@@ -20,12 +20,8 @@ module ClaudeHistory
       Project.new(File.join(@projects_path, project_id))
     end
 
-    def sessions(project_id:, agents: false)
-      project(project_id).sessions(agents: agents)
-    end
-
-    def all_sessions(agents: false)
-      projects.flat_map { |project| project.sessions(agents: agents) }
+    def sessions(project_id:)
+      project(project_id).sessions
     end
 
     def resolve_project_id(query)
@@ -48,11 +44,17 @@ module ClaudeHistory
       unique_match!(matches, query, "session", &:id)
     end
 
+    # A subagent is addressed through the session that spawned it, by the agent
+    # id that session's transcript reports.
+    def resolve_subagent(session, agent_id)
+      unique_match!(session.subagents_matching(agent_id), agent_id, "subagent of #{session.id}", &:id)
+    end
+
     # Sessions whose span of activity covers the date. The file's mtime rules
     # out most sessions without opening them.
-    def sessions_updated_on(date, agents: false)
+    def sessions_updated_on(date)
       projects.flat_map { |project|
-        project.sessions(agents: agents)
+        project.sessions
                .select { |session| touched_by?(session, date) && started_by?(session, date) }
                .map { |session| { project: project, session: session } }
       }.sort_by { |result| result[:session].last_updated_at }.reverse

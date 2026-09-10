@@ -7,8 +7,10 @@ module ClaudeHistory
   # print. The CLI forwards its parsed arguments here and prints the result.
   class Commands
     TITLE_WIDTH = 60
+    HEADER_TITLE_WIDTH = 100
     SHORT_ID_LENGTH = 8
     TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
+    RULE = "─" * 78
 
     def initialize(projects_path, color: false)
       @history = History.new(projects_path)
@@ -25,9 +27,9 @@ module ClaudeHistory
       table({ name: "PROJECT ID", color: :green }, { name: "LAST UPDATED AT", color: :grey }).render(rows)
     end
 
-    def sessions(project:, limit: 20, agents: false, full_ids: false)
+    def sessions(project:, limit: 20, full_ids: false)
       project_id = @history.resolve_project_id(project)
-      all = @history.sessions(project_id: project_id, agents: agents)
+      all = @history.sessions(project_id: project_id)
       shown = all.first(limit)
       return "No sessions found in #{project_id}." if shown.empty?
 
@@ -38,17 +40,20 @@ module ClaudeHistory
       ].join("\n")
     end
 
-    def show_session(session_id, project: nil, verbose: false)
+    def show_session(session_id, project: nil, subagent: nil, verbose: false)
       project_id = project && @history.resolve_project_id(project)
-      session = @history.resolve_session(session_id, project_id: project_id)
+      parent = @history.resolve_session(session_id, project_id: project_id)
+      session = subagent ? @history.resolve_subagent(parent, subagent) : parent
+
       renderer = SessionRenderer.new(verbose: verbose)
       session.render(renderer)
 
       [
-        session_header(session),
+        session_header(session, parent: (parent if subagent)),
         renderer.output,
         renderer.hidden_summary,
-        warning_report(session.warnings)
+        warning_report(session.warnings),
+        next_steps(parent, (session if subagent), renderer, verbose: verbose)
       ].compact.join("\n")
     end
 
@@ -122,21 +127,24 @@ module ClaudeHistory
     # Transcript header: what file this came from, so the answer can be checked
     # against the file itself.
 
-    def session_header(session)
-      [
-        "Session: #{session.id}",
-        "File:    #{session.path}",
-        "Title:   #{one_line(session.title)}",
-        ""
-      ].join("\n")
+    def session_header(session, parent: nil)
+      rows = { "Session" => session.id }
+      rows["Subagent of"] = parent.id if parent
+      rows["File"] = session.path
+      # A subagent's title is its task prompt, which runs to paragraphs
+      rows["Title"] = shorten(one_line(session.title), HEADER_TITLE_WIDTH)
+
+      label_width = rows.keys.map(&:length).max + 1
+      rows.map { |label, value| "#{"#{label}:".ljust(label_width)} #{value}" }.join("\n") + "\n"
     end
 
     # Format check
 
+    # Everything, subagent transcripts included: they are as likely to carry a
+    # record type nobody has taught the parser about as any other file.
     def sessions_to_check(project)
-      return @history.all_sessions(agents: true) unless project
-
-      @history.sessions(project_id: @history.resolve_project_id(project), agents: true)
+      checked = project ? [@history.project(@history.resolve_project_id(project))] : @history.projects
+      checked.flat_map(&:all_sessions)
     end
 
     # Grouped by what went wrong rather than by where: the same drift shows up
@@ -162,6 +170,22 @@ module ClaudeHistory
       findings.map { |finding| [finding[:count].to_s, finding[:type].to_s, finding[:example], one_line(finding[:message])] }
     end
 
+    # What this view left out, as commands that can be copied. A subagent is
+    # only offered from a parent session, since that is the only place its id
+    # resolves from.
+    def next_steps(parent, subagent, renderer, verbose:)
+      current = "claude-history show-session #{parent.id}"
+      current += " --subagent #{subagent.id.delete_prefix(Session::AGENT_PREFIX)}" if subagent
+
+      steps = []
+      steps << ["#{current} --verbose", "thinking, full tool output, bookkeeping records"] unless verbose
+      steps << ["#{current} --subagent <agent-id>", "one subagent's own transcript"] if renderer.subagent_calls? && !subagent
+      return nil if steps.empty?
+
+      width = steps.map { |command, _| command.length }.max
+      [RULE, *steps.map { |command, note| "#{command.ljust(width)}  # #{note}" }].join("\n")
+    end
+
     # Format drift is reported next to the transcript rather than kept in a
     # log: a line the tool could not read is a line the reader should not trust.
     def warning_report(warnings)
@@ -183,6 +207,12 @@ module ClaudeHistory
 
     def one_line(text)
       text.to_s.gsub(/\s+/, " ").strip
+    end
+
+    def shorten(text, columns)
+      return text if DisplayWidth.of(text) <= columns
+
+      "#{DisplayWidth.take(text, columns - 1)}…"
     end
 
     def format_time(time)

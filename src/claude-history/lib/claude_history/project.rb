@@ -19,10 +19,18 @@ module ClaudeHistory
       File.basename(path)
     end
 
-    def sessions(agents: false)
-      session_paths
-        .map { |path| Session.new(path) }
-        .reject { |session| session.agent? && !agents }
+    # The project's own sessions. A subagent transcript belongs to the session
+    # that spawned it, so it is reached through `Session#subagents` instead of
+    # being listed here.
+    def sessions
+      session_paths.map { |path| Session.new(path) }.reject(&:agent?)
+    end
+
+    # Every transcript under the project, subagents included. For checking, not
+    # for listing.
+    def all_sessions
+      top_level = session_paths.map { |path| Session.new(path) }
+      top_level + top_level.flat_map(&:subagents)
     end
 
     # Exact match on the file name, so "show me this session" is a stat, not a scan

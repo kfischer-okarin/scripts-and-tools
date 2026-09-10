@@ -60,6 +60,26 @@ decides how each looks. The `<command-name>` / `<local-command-stdout>` markup
 is parsed by `CommandMarkup`, shared with `SystemRecord` because built-in
 commands are now logged as system records.
 
+## Subagents belong to their parent
+
+A subagent keeps its own transcript, which Claude Code files under the session
+that spawned it:
+
+```text
+<project>/<session-id>.jsonl
+<project>/<session-id>/subagents/agent-<agent-id>.jsonl
+```
+
+So a subagent is reached through its parent, and the parent's transcript
+supplies the id: every Agent result prints the agent it ran. Listings stay about
+a project's own sessions; a subagent transcript on its own says little about the
+work it was part of.
+
+A subagent transcript is an ordinary session: the same record types, read the
+same way. Only its location differs, so `Session#subagents` is all the extra
+machinery it takes. Versions before ~2026-03 wrote these files into the project
+directory as `agent-<agent-id>.jsonl`, and a lookup by id checks there too.
+
 ## Listings read only the ends of a file
 
 Session files reach tens of megabytes, and `sessions-updated-on` looks at every
@@ -152,3 +172,8 @@ the call is for.
 Plain mode keeps the conversation and counts what it left out. `--verbose`
 keeps everything: thinking blocks, expanded command prompts, full tool output
 and every bookkeeping line.
+
+Under a rule at the end come the commands that open what the view left out —
+`--verbose` for this transcript in full, `--subagent <agent-id>` when the
+session called one — written out so they can be copied rather than assembled.
+A view that left nothing out gets no rule.

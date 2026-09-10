@@ -32,9 +32,7 @@ class RealSessionFilesTest < ClaudeHistory::TestCase
   private
 
   def fixture_sessions
-    ClaudeHistory::History.new(projects_fixture_path)
-                          .projects
-                          .flat_map { |project| project.sessions(agents: true) }
+    ClaudeHistory::History.new(projects_fixture_path).projects.flat_map(&:all_sessions)
   end
 
   def fixture_commands

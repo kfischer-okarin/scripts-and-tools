@@ -84,15 +84,19 @@ class SessionListingTest < ClaudeHistory::TestCase
     refute_includes output, "One"
   end
 
-  def test_leaves_out_agent_files_unless_asked
+  # A subagent transcript belongs to the session that spawned it, so it is
+  # reached with `show-session --subagent` rather than listed here.
+  def test_leaves_out_agent_files
     build_project(
       "project",
       "session.jsonl" => user_prompt("A main session"),
       "agent-a434715.jsonl" => user_prompt("A subagent task")
     )
 
-    refute_includes commands.sessions(project: "project"), "A subagent task"
-    assert_includes commands.sessions(project: "project", agents: true), "A subagent task"
+    output = commands.sessions(project: "project")
+
+    assert_includes output, "Showing 1 of 1 sessions"
+    refute_includes output, "A subagent task"
   end
 
   def test_leaves_out_empty_files_left_behind_by_resume

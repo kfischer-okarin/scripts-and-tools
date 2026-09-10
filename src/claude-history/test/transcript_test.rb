@@ -10,7 +10,7 @@ class TranscriptTest < ClaudeHistory::TestCase
       {"type":"assistant","uuid":"a1","parentUuid":"u1","timestamp":"2026-09-09T09:31:00.000Z","message":{"role":"assistant","content":[{"type":"text","text":"Hi there!"}]}}
     JSONL
 
-    assert_equal <<~OUTPUT, output
+    assert_equal <<~OUTPUT.chomp, output
       Session: session
       File:    #{session_file_path}
       Title:   Hello
@@ -18,6 +18,9 @@ class TranscriptTest < ClaudeHistory::TestCase
       [2026-09-09 18:30] <User> Hello
 
       [2026-09-09 18:31] <Assistant> Hi there!
+
+      ──────────────────────────────────────────────────────────────────────────────
+      claude-history show-session session --verbose  # thinking, full tool output, bookkeeping records
     OUTPUT
   end
 

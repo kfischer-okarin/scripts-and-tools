@@ -23,6 +23,7 @@ module ClaudeHistory
       "custom-title" => %i[customTitle],
       "file-history-delta" => %i[trackingPath],
       "file-history-snapshot" => %i[messageId],
+      "fork-context-ref" => %i[parentSessionId],
       "frame-link" => %i[frameUrl],
       "last-prompt" => %i[leafUuid],
       "mode" => %i[mode],

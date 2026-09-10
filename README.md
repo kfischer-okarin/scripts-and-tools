@@ -77,13 +77,15 @@ claude-history projects                              # List all projects
 claude-history sessions --project myproject          # List a project's session files
 claude-history show-session SESSION_ID               # Print a transcript
 claude-history show-session SESSION_ID --verbose     # …with thinking, full tool output, metadata
+claude-history show-session ID --subagent AGENT_ID   # Print a subagent's own transcript
 claude-history sessions-updated-on 2026-04-12        # Find sessions by date
 claude-history check-format                          # Report format drift across all files
 ```
 
 A session id is matched by prefix, and searched across all projects unless
-`--project` narrows it. `sessions --agents` includes `agent-*.jsonl` subagent
-transcripts.
+`--project` narrows it. Subagents are reached through the session that spawned
+them: every Agent call names the agent it ran, and each transcript ends with the
+commands that open what the view left out.
 
 ## `format-md`
 

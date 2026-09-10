@@ -20,23 +20,28 @@ module ClaudeHistory
     desc "sessions", "List the session files of a project, newest first"
     method_option :project, type: :string, required: true, desc: "Project ID (substring match)"
     method_option :limit, type: :numeric, default: 20, desc: "Number of sessions to show"
-    method_option :agents, type: :boolean, default: false, desc: "Include agent-*.jsonl session files"
     method_option :full_ids, type: :boolean, default: false, desc: "Show full session IDs"
     def sessions
       puts commands.sessions(
         project: options[:project],
         limit: options[:limit],
-        agents: options[:agents],
         full_ids: options[:full_ids]
       )
     end
 
     desc "show-session SESSION_ID", "Print one session file as a transcript"
     method_option :project, type: :string, desc: "Project ID to search (default: all projects)"
+    method_option :subagent, type: :string,
+                             desc: "Print this subagent's transcript instead; the id is in the parent's Agent results"
     method_option :verbose, type: :boolean, default: false,
                            desc: "Include thinking, full tool output and bookkeeping records"
     def show_session(session_id)
-      puts commands.show_session(session_id, project: options[:project], verbose: options[:verbose])
+      puts commands.show_session(
+        session_id,
+        project: options[:project],
+        subagent: options[:subagent],
+        verbose: options[:verbose]
+      )
     end
 
     desc "check-format", "Read every session file and report what the parser cannot account for"

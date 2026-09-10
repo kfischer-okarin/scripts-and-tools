@@ -6,8 +6,9 @@ module ClaudeHistory
   # arrive as separate user records on the following lines.
   class AssistantMessage < Record
     EXPECTED_ATTRIBUTES = %i[
-      message requestId effort apiBlockIndex truncatedAfterOutput
-      attributionMcpServer attributionMcpTool attributionPlugin attributionSkill
+      message requestId effort perTurnEffort apiBlockIndex truncatedAfterOutput
+      attributionAgent attributionMcpServer attributionMcpTool
+      attributionPlugin attributionSkill
       apiErrorStatus error errorDetails healsDistinctCarrier
       isApiErrorMessage isAbortedMidStream
     ].freeze

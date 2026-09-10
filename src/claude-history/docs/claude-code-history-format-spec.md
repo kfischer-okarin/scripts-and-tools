@@ -224,9 +224,21 @@ Contains only `type: "file-history-snapshot"` records.
 - No conversation content
 - Created during checkpoint operations
 
-### 4. Agent Files (`agent-{7-char-id}.jsonl`)
+### 4. Subagent Files
 
-Subagent conversation logs — see [Agent Files](#agent-files) for their fields.
+Since ~2026-03, a subagent's transcript is filed under the session that spawned
+it, named by the agent id that session's tool result reports:
+
+```
+{project}/{session-uuid}/subagents/agent-{agent-id}.jsonl
+{project}/{session-uuid}/subagents/agent-{agent-id}.meta.json
+```
+
+Older versions wrote them into the project directory as
+`agent-{7-char-id}.jsonl`. A session directory also holds `tool-results/`, and
+sometimes `workflows/`, `session-memory/` or `remote-agents/`.
+
+See [Agent Files](#agent-files) for the fields.
 
 ---
 
