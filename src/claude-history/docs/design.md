@@ -3,7 +3,10 @@
 ## The premise
 
 A session is one JSONL file. The tool resolves a session id to that file and
-prints every line of it, in the order Claude Code wrote it.
+prints every line of it, in the order Claude Code wrote it. Since the file is
+the whole session, `show-session` also takes a path to one directly: a file
+copied out of `~/.claude/projects` reads the same as one still in it, subagents
+included when its `<session-id>/subagents/` directory came along.
 
 File order is the whole model, and it is what makes the output trustworthy: the
 transcript holds what the file holds, so any line of it can be checked against

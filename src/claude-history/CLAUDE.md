@@ -7,7 +7,8 @@ code in this repository.
 
 A Ruby CLI tool for browsing Claude Code conversation histories from
 `~/.claude/projects/`. A session is one JSONL file: the tool resolves a session
-id to that file and prints every line of it, in the order Claude Code wrote it.
+id to that file, or takes a path to one directly, and prints every line of it,
+in the order Claude Code wrote it.
 
 ## Commands
 

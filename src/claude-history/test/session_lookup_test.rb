@@ -35,6 +35,43 @@ class SessionLookupTest < ClaudeHistory::TestCase
     assert_includes commands.show_session("agent-a434715", project: "project"), "A subagent task"
   end
 
+  def test_opens_a_session_file_given_by_path
+    path = File.join(@projects_path, "exported.jsonl")
+    File.write(path, user_prompt("From a file"))
+
+    output = commands.show_session(path)
+
+    assert_includes output, "File:    #{path}"
+    assert_includes output, "From a file"
+  end
+
+  def test_opens_a_session_file_given_by_relative_path
+    File.write(File.join(@projects_path, "exported.jsonl"), user_prompt("From a file"))
+
+    output = Dir.chdir(@projects_path) { commands.show_session("exported.jsonl") }
+
+    assert_includes output, "File:    #{File.realpath(File.join(@projects_path, "exported.jsonl"))}"
+  end
+
+  def test_repeats_a_file_path_in_the_next_steps
+    path = File.join(@projects_path, "exported.jsonl")
+    File.write(path, user_prompt("From a file"))
+
+    assert_includes commands.show_session(path), "claude-history show-session #{path} --verbose"
+  end
+
+  def test_finds_the_subagents_of_a_session_file_given_by_path
+    project = build_project(
+      "project",
+      "s1.jsonl" => user_prompt("Parent"),
+      "s1/subagents/agent-a434715.jsonl" => user_prompt("A subagent task")
+    )
+
+    output = commands.show_session(File.join(project.path, "s1.jsonl"), subagent: "a434715")
+
+    assert_includes output, "A subagent task"
+  end
+
   def test_matches_a_project_by_substring
     build_project("-Users-user-workspace-myproject", "session.jsonl" => user_prompt("Hello"))
 

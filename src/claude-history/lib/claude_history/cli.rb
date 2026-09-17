@@ -29,15 +29,15 @@ module ClaudeHistory
       )
     end
 
-    desc "show-session SESSION_ID", "Print one session file as a transcript"
-    method_option :project, type: :string, desc: "Project ID to search (default: all projects)"
+    desc "show-session SESSION_ID_OR_FILE", "Print one session file as a transcript, by id or by path to a JSONL file"
+    method_option :project, type: :string, desc: "Project ID to search for the session ID (default: all projects)"
     method_option :subagent, type: :string,
                              desc: "Print this subagent's transcript instead; the id is in the parent's Agent results"
     method_option :verbose, type: :boolean, default: false,
                            desc: "Include thinking, full tool output and bookkeeping records"
-    def show_session(session_id)
+    def show_session(session_ref)
       puts commands.show_session(
-        session_id,
+        session_ref,
         project: options[:project],
         subagent: options[:subagent],
         verbose: options[:verbose]

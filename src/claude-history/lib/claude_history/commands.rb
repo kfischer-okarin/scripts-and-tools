@@ -40,9 +40,8 @@ module ClaudeHistory
       ].join("\n")
     end
 
-    def show_session(session_id, project: nil, subagent: nil, verbose: false)
-      project_id = project && @history.resolve_project_id(project)
-      parent = @history.resolve_session(session_id, project_id: project_id)
+    def show_session(session_ref, project: nil, subagent: nil, verbose: false)
+      parent = open_session(session_ref, project)
       session = subagent ? @history.resolve_subagent(parent, subagent) : parent
 
       renderer = SessionRenderer.new(verbose: verbose)
@@ -53,7 +52,7 @@ module ClaudeHistory
         renderer.output,
         renderer.hidden_summary,
         warning_report(session.warnings),
-        next_steps(parent, (session if subagent), renderer, verbose: verbose)
+        next_steps(show_command(session_ref, parent, (session if subagent)), renderer, verbose: verbose, subagent: !subagent.nil?)
       ].compact.join("\n")
     end
 
@@ -82,6 +81,31 @@ module ClaudeHistory
     end
 
     private
+
+    # Opening a session
+
+    # A path to an existing file is that file, wherever it lives — a copy
+    # someone sent over reads the same as one under ~/.claude/projects.
+    # Anything else is a session id to look up in the history tree.
+    def open_session(session_ref, project)
+      return Session.new(File.expand_path(session_ref)) if session_file?(session_ref)
+
+      project_id = project && @history.resolve_project_id(project)
+      @history.resolve_session(session_ref, project_id: project_id)
+    end
+
+    def session_file?(session_ref)
+      File.file?(session_ref)
+    end
+
+    # The command that reopens the current view, in whichever form the session
+    # was given: a path stays a path, since an id alone would not find a file
+    # outside the history tree. An id becomes the full id it resolved to.
+    def show_command(session_ref, parent, subagent)
+      command = "claude-history show-session #{session_file?(session_ref) ? session_ref : parent.id}"
+      command += " --subagent #{subagent.id.delete_prefix(Session::AGENT_PREFIX)}" if subagent
+      command
+    end
 
     # Session listing
 
@@ -173,10 +197,7 @@ module ClaudeHistory
     # What this view left out, as commands that can be copied. A subagent is
     # only offered from a parent session, since that is the only place its id
     # resolves from.
-    def next_steps(parent, subagent, renderer, verbose:)
-      current = "claude-history show-session #{parent.id}"
-      current += " --subagent #{subagent.id.delete_prefix(Session::AGENT_PREFIX)}" if subagent
-
+    def next_steps(current, renderer, verbose:, subagent:)
       steps = []
       steps << ["#{current} --verbose", "thinking, full tool output, bookkeeping records"] unless verbose
       steps << ["#{current} --subagent <agent-id>", "one subagent's own transcript"] if renderer.subagent_calls? && !subagent
