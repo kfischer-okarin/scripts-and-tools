@@ -11,6 +11,7 @@ module ClaudeHistory
       preventedContinuation stopReason pendingBackgroundAgentCount
       pendingWorkflowCount microcompactMetadata compactMetadata
       logicalParentUuid cause error maxRetries retryAttempt retryInMs
+      commandRun
     ].freeze
 
     COMPACT_BOUNDARY_SUBTYPE = "compact_boundary"

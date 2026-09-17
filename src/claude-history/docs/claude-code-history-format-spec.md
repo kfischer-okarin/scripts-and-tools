@@ -1,7 +1,7 @@
 # Claude Code Conversation History Format Specification
 
-**Version**: 1.2 (Based on Claude Code v2.1.263)
-**Last Updated**: 2026-09-10
+**Version**: 1.3 (Based on Claude Code v2.1.263, with v2.1.274 web session additions)
+**Last Updated**: 2026-09-17
 **Author**: Research analysis of actual Claude Code session files
 
 > Sections below marked "as of v1.1" were written against v2.1.22 and have not
@@ -110,14 +110,18 @@ records the session and message a forked session branched from.
 `truncatedAfterOutput`, `attributionSkill`, `attributionPlugin`,
 `attributionMcpServer`, `attributionMcpTool`, `apiErrorStatus`, `error`,
 `errorDetails`, `healsDistinctCarrier`, `isApiErrorMessage`,
-`isAbortedMidStream`
+`isAbortedMidStream`, `wireToolInputs`, `wireIngestContext` (both seen in
+Claude Code on the web sessions, v2.1.274: maps keyed by `tool_use` id, the
+first a copy of each tool call's `input`, the second `{"cwd": …}` for Bash
+calls)
 
 **`system`**: `subtype`, `level`, `content`, `toolUseID`, `durationMs`,
 `messageCount`, `hasOutput`, `hookAdditionalContext`, `hookCount`, `hookErrors`,
 `hookInfos`, `preventedContinuation`, `stopReason`,
 `pendingBackgroundAgentCount`, `pendingWorkflowCount`, `compactMetadata`,
 `microcompactMetadata`, `logicalParentUuid`, `cause`, `error`, `maxRetries`,
-`retryAttempt`, `retryInMs`
+`retryAttempt`, `retryInMs`, `commandRun` (since v2.1.273: `{"command":
+"clear", "args": ""}` on a built-in slash command's output record)
 
 ### `system` subtypes
 
@@ -933,6 +937,9 @@ Common tool names observed:
 
 ## Changelog
 
+- **1.3** (2026-09-17): Added the `assistant` fields `wireToolInputs` and
+  `wireIngestContext`, found in a Claude Code on the web session file
+  (v2.1.274), and the `system` field `commandRun` (v2.1.273).
 - **1.2** (2026-09-10): Added the [Format coverage](#format-coverage) inventory
   verified against v2.1.263: 19 current record types (15 of them previously
   undocumented, `attachment` chief among them), the shared envelope field set,

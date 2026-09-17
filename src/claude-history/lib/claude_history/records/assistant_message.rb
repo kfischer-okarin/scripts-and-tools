@@ -11,6 +11,7 @@ module ClaudeHistory
       attributionPlugin attributionSkill
       apiErrorStatus error errorDetails healsDistinctCarrier
       isApiErrorMessage isAbortedMidStream
+      wireToolInputs wireIngestContext
     ].freeze
 
     def model
