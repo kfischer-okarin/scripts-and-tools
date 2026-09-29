@@ -621,6 +621,43 @@ class WorkingDayStatusTest < Minitest::Test
     assert_equal Time.new(2024, 12, 10, 18, 0, 0), status.projected_end_time
   end
 
+  def test_projected_end_times_skip_untaken_lunch_when_expected_hours_are_4_or_less
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: Time.new(2024, 12, 10, 9, 0, 0),
+      now: Time.new(2024, 12, 10, 10, 0, 0),
+      break_minutes: 0,
+      expected_minutes: 240,
+      lunch_taken: false,
+      other_days_overtime_minutes: 0,
+      remaining_lunch_break_minutes: 60,
+      last_event: :start,
+      last_event_time: "09:00"
+    )
+
+    # work_minutes = 1h, remaining = 4h - 1h = 3h, no lunch expected on a short day
+    assert_equal Time.new(2024, 12, 10, 13, 0, 0), status.projected_end_time
+    assert_equal Time.new(2024, 12, 10, 13, 0, 0), status.projected_end_time_for_zero_overtime
+  end
+
+  def test_projected_end_time_adds_hour_when_lunch_not_taken_and_expected_hours_above_4
+    status = Worktime::Tracker::WorkingDayStatus.new(
+      state: :working,
+      start_time: Time.new(2024, 12, 10, 9, 0, 0),
+      now: Time.new(2024, 12, 10, 10, 0, 0),
+      break_minutes: 0,
+      expected_minutes: 300,
+      lunch_taken: false,
+      other_days_overtime_minutes: 0,
+      remaining_lunch_break_minutes: 60,
+      last_event: :start,
+      last_event_time: "09:00"
+    )
+
+    # work_minutes = 1h, remaining = 5h - 1h = 4h, +1h lunch
+    assert_equal Time.new(2024, 12, 10, 15, 0, 0), status.projected_end_time
+  end
+
   def test_projected_end_time_for_zero_overtime_is_calculated
     start_time = Time.new(2024, 12, 10, 9, 0, 0)
     now = Time.new(2024, 12, 10, 13, 0, 0)

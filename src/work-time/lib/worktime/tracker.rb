@@ -26,6 +26,9 @@ module Worktime
   end
 
   class Tracker
+    LUNCH_MINUTES = 60
+    SHORT_DAY_MAX_MINUTES = 4 * 60
+
     UnstartedStatus = Data.define(:state, :month_overtime_minutes) do
       include DurationFormatting
 
@@ -69,17 +72,20 @@ module Worktime
 
       def projected_end_time
         remaining_work = expected_minutes - work_minutes
-        end_time = self.now + (remaining_work * 60)
-        end_time += (60 * 60) unless lunch_taken
-        end_time
+        self.now + ((remaining_work + untaken_lunch_minutes) * 60)
       end
 
       def projected_end_time_for_zero_overtime
         remaining_for_today = expected_minutes - work_minutes
         remaining_work = remaining_for_today - other_days_overtime_minutes
-        end_time = self.now + (remaining_work * 60)
-        end_time += (60 * 60) unless lunch_taken
-        end_time
+        self.now + ((remaining_work + untaken_lunch_minutes) * 60)
+      end
+
+      # Days of SHORT_DAY_MAX_MINUTES or less are worked without a lunch break
+      def untaken_lunch_minutes
+        return 0 if lunch_taken || expected_minutes <= SHORT_DAY_MAX_MINUTES
+
+        LUNCH_MINUTES
       end
 
       def to_json_hash

@@ -44,7 +44,7 @@ Break ended at 10:15
 
 - **State**: unstarted/working/on_break/on_lunch/stopped
 - **Remaining lunch**: Minutes left of the 60-minute lunch allowance (60 if not taken, decreases while on lunch, negative if exceeded)
-- **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken)
+- **Projected end**: Time to complete 8 hours (adds 1hr if lunch not taken, unless the day's expected hours are 4 or less)
 - **End for zero overtime**: Time to reach 0 month overtime (accounts for previous days)
 - **Month overtime**: Previous days only (excludes today's in-progress overtime)
 - **Last event line**: Context-dependent message showing the last event (not shown for `:start` since start time is already displayed):
