@@ -40,8 +40,9 @@ transcribe-audio path/to/audio.mp3 --lang ja
 ## `diarize-audio`
 
 Speaker diarization with `pyannote.audio` 4.x
-(`pyannote/speaker-diarization-community-1`). Prints `start  end  speaker`
-ranges to stdout and writes an `.rttm` file next to the input. Optional
+(`pyannote/speaker-diarization-community-1`). Writes the speaker timestamp
+ranges as an `.rttm` file next to the input, on the GPU where there is one
+(CUDA or Apple Silicon). Optional
 `--num-speakers` / `--min-speakers` / `--max-speakers` hints improve quality
 when the count is known. Requires accepting the model license on HuggingFace
 once and setting `HF_TOKEN` (or `HUGGINGFACE_TOKEN`) to a read token.
@@ -58,7 +59,7 @@ each original name's cues. Replacing the labels with names is left to you.
 export HF_TOKEN=hf_xxxxxxxxxxxx
 diarize-audio path/to/audio.mp3
 diarize-audio path/to/audio.mp3 --num-speakers 2
-diarize-audio meeting.mp4 --device mps --vtt meeting.transcript.vtt
+diarize-audio meeting.mp4 --vtt meeting.transcript.vtt
 ```
 
 ## `is-mic-on` / `is-camera-on`

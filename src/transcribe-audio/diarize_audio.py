@@ -34,8 +34,6 @@ def main():
     args = parse_args()
     log(f"input: {args.file}")
     annotation = run_diarization(load_audio(args.file), args)
-    log("writing outputs")
-    print_segments(annotation)
     write_rttm(annotation, args.file)
     if args.vtt:
         write_diarized_vtt(annotation, args.vtt)
@@ -45,14 +43,9 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Speaker diarization with pyannote.audio. "
-        "Prints speaker timestamp ranges to stdout and writes an .rttm file next to the input."
+        "Writes the speaker timestamp ranges as an .rttm file next to the input."
     )
     parser.add_argument("file", help="Path to the audio file")
-    parser.add_argument(
-        "--device",
-        default="cpu",
-        help="Torch device: cpu, mps, or cuda (default: cpu)",
-    )
     parser.add_argument("--num-speakers", type=int, help="Exact number of speakers, if known")
     parser.add_argument("--min-speakers", type=int, help="Minimum number of speakers")
     parser.add_argument("--max-speakers", type=int, help="Maximum number of speakers")
@@ -65,7 +58,7 @@ def parse_args():
 
 
 def run_diarization(audio, args):
-    pipeline = load_pipeline(args.device)
+    pipeline = load_pipeline()
     log("running diarization (segmentation → embeddings → clustering)")
     with ProgressHook() as hook:
         output = pipeline(audio, hook=hook, **speaker_hints(args))
@@ -91,7 +84,7 @@ def load_audio(input_path):
     return {"waveform": torch.from_numpy(samples).unsqueeze(0), "sample_rate": SAMPLE_RATE}
 
 
-def load_pipeline(device):
+def load_pipeline():
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
     if not token:
         sys.exit(
@@ -100,9 +93,18 @@ def load_pipeline(device):
         )
     log(f"loading pipeline {MODEL} (first run downloads weights to ~/.cache/huggingface)")
     pipeline = Pipeline.from_pretrained(MODEL, token=token)
+    device = best_device()
     log(f"moving pipeline to device={device}")
     pipeline.to(torch.device(device))
     return pipeline
+
+
+def best_device():
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
 
 
 def speaker_hints(args):
@@ -116,15 +118,11 @@ def speaker_hints(args):
     return hints
 
 
-def print_segments(annotation):
-    for segment, _, speaker in annotation.itertracks(yield_label=True):
-        print(f"{segment.start:7.2f}  {segment.end:7.2f}  {speaker}")
-
-
 def write_rttm(annotation, audio_path):
     rttm_path = pathlib.Path(audio_path).with_suffix(".rttm")
     with open(rttm_path, "w") as f:
         annotation.write_rttm(f)
+    log(f"wrote {rttm_path}")
 
 
 def write_diarized_vtt(annotation, vtt_path):
