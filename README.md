@@ -46,12 +46,19 @@ ranges to stdout and writes an `.rttm` file next to the input. Optional
 when the count is known. Requires accepting the model license on HuggingFace
 once and setting `HF_TOKEN` (or `HUGGINGFACE_TOKEN`) to a read token.
 
+`--vtt` takes a transcript of the same recording (e.g. Zoom's, where several
+people on one microphone share one name) and writes `<name>.diarized.vtt` next
+to it: each cue labelled `SPEAKER_nn`, or with each speaker's share where
+several talk during it, plus a header note showing which speakers fall inside
+each original name's cues. Replacing the labels with names is left to you.
+
 **Usage:**
 
 ```bash
 export HF_TOKEN=hf_xxxxxxxxxxxx
 diarize-audio path/to/audio.mp3
 diarize-audio path/to/audio.mp3 --num-speakers 2
+diarize-audio meeting.mp4 --device mps --vtt meeting.transcript.vtt
 ```
 
 ## `is-mic-on` / `is-camera-on`

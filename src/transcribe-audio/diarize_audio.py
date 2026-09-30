@@ -1,9 +1,11 @@
 import argparse
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import time
+from collections import Counter, defaultdict
 
 import numpy as np
 import torch
@@ -12,6 +14,13 @@ from pyannote.audio.pipelines.utils.hook import ProgressHook
 
 MODEL = "pyannote/speaker-diarization-community-1"
 SAMPLE_RATE = 16000
+
+# A cue whose main speaker has less of its speech than this is labelled as shared
+MIXED_BELOW = 0.8
+# Speakers with less of a shared cue's speech than this are left out of its label
+LISTED_FROM = 0.1
+# Zoom prefixes every cue with "Name: "
+SPEAKER_PREFIX = re.compile(r"([^\n:]{1,40}): (.*)", re.DOTALL)
 
 START = time.monotonic()
 
@@ -28,6 +37,8 @@ def main():
     log("writing outputs")
     print_segments(annotation)
     write_rttm(annotation, args.file)
+    if args.vtt:
+        write_diarized_vtt(annotation, args.vtt)
     log("done")
 
 
@@ -45,6 +56,11 @@ def parse_args():
     parser.add_argument("--num-speakers", type=int, help="Exact number of speakers, if known")
     parser.add_argument("--min-speakers", type=int, help="Minimum number of speakers")
     parser.add_argument("--max-speakers", type=int, help="Maximum number of speakers")
+    parser.add_argument(
+        "--vtt",
+        help="Transcript of the same recording. Writes a copy next to it, <name>.diarized.vtt, "
+        "with each cue labelled by the speakers heard during it",
+    )
     return parser.parse_args()
 
 
@@ -109,6 +125,87 @@ def write_rttm(annotation, audio_path):
     rttm_path = pathlib.Path(audio_path).with_suffix(".rttm")
     with open(rttm_path, "w") as f:
         annotation.write_rttm(f)
+
+
+def write_diarized_vtt(annotation, vtt_path):
+    turns = [(seg.start, seg.end, speaker) for seg, _, speaker in annotation.itertracks(yield_label=True)]
+    cues = [{**cue, "speakers": speaker_seconds(cue, turns)} for cue in parse_vtt(vtt_path)]
+    path = pathlib.Path(vtt_path)
+    out_path = path.with_name(f"{path.stem}.diarized.vtt")
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("WEBVTT\n\n")
+        f.write(summary_note(cues))
+        for cue in cues:
+            f.write("\n".join(cue["header"]) + "\n")
+            f.write(f"{cue_label(cue)}: {cue['text']}\n\n")
+    log(f"wrote {out_path}")
+
+
+def parse_vtt(path):
+    cues = []
+    for block in pathlib.Path(path).read_text(encoding="utf-8").split("\n\n"):
+        lines = block.strip("\n").splitlines()
+        timing = next((i for i, line in enumerate(lines) if "-->" in line), None)
+        if timing is None:
+            continue  # the WEBVTT header, NOTE and STYLE blocks
+        start, _, end = lines[timing].split()[:3]
+        name, text = split_speaker("\n".join(lines[timing + 1:]))
+        cues.append({
+            "header": lines[:timing + 1],
+            "start": vtt_seconds(start),
+            "end": vtt_seconds(end),
+            "name": name,
+            "text": text,
+        })
+    return cues
+
+
+def vtt_seconds(timestamp):
+    parts = reversed(timestamp.split(":"))
+    return sum(float(part) * 60**i for i, part in enumerate(parts))
+
+
+def split_speaker(text):
+    match = SPEAKER_PREFIX.fullmatch(text)
+    return (match[1], match[2]) if match else (None, text)
+
+
+def speaker_seconds(cue, turns):
+    seconds = Counter()
+    for start, end, speaker in turns:
+        shared = min(end, cue["end"]) - max(start, cue["start"])
+        if shared > 0:
+            seconds[speaker] += shared
+    return seconds
+
+
+def summary_note(cues):
+    """How the diarized speakers spread over the transcript's own speaker names,
+    the evidence for deciding who each SPEAKER_nn is."""
+    by_name = defaultdict(Counter)
+    for cue in cues:
+        by_name[cue["name"] or "(unnamed)"].update(cue["speakers"])
+    lines = [
+        "NOTE",
+        f"Speakers diarized with {MODEL}.",
+        "A label with percentages marks a cue shared by several speakers,",
+        "with each one's share of its speech.",
+        "Seconds of each speaker inside the cues of each original speaker:",
+    ]
+    for name, seconds in by_name.items():
+        lines.append(f"{name}: " + ", ".join(f"{sp} {s:.0f}s" for sp, s in seconds.most_common()))
+    return "\n".join(lines) + "\n\n"
+
+
+def cue_label(cue):
+    seconds = cue["speakers"]
+    total = sum(seconds.values())
+    if not total:
+        return "UNKNOWN"
+    shares = [(speaker, s / total) for speaker, s in seconds.most_common()]
+    if shares[0][1] >= MIXED_BELOW:
+        return shares[0][0]
+    return " / ".join(f"{speaker} {share:.0%}" for speaker, share in shares if share >= LISTED_FROM)
 
 
 if __name__ == "__main__":
