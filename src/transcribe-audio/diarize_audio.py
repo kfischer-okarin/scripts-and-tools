@@ -1,17 +1,17 @@
 import argparse
-import contextlib
 import os
 import pathlib
 import subprocess
 import sys
-import tempfile
 import time
 
+import numpy as np
 import torch
 from pyannote.audio import Pipeline
 from pyannote.audio.pipelines.utils.hook import ProgressHook
 
 MODEL = "pyannote/speaker-diarization-community-1"
+SAMPLE_RATE = 16000
 
 START = time.monotonic()
 
@@ -24,8 +24,7 @@ def log(msg):
 def main():
     args = parse_args()
     log(f"input: {args.file}")
-    with as_wav(args.file) as wav_path:
-        annotation = run_diarization(wav_path, args)
+    annotation = run_diarization(load_audio(args.file), args)
     log("writing outputs")
     print_segments(annotation)
     write_rttm(annotation, args.file)
@@ -49,31 +48,31 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_diarization(audio_path, args):
+def run_diarization(audio, args):
     pipeline = load_pipeline(args.device)
     log("running diarization (segmentation → embeddings → clustering)")
     with ProgressHook() as hook:
-        return pipeline(audio_path, hook=hook, **speaker_hints(args))
+        output = pipeline(audio, hook=hook, **speaker_hints(args))
+    # The variant without overlapping turns, meant for aligning with transcripts
+    return output.exclusive_speaker_diarization
 
 
-@contextlib.contextmanager
-def as_wav(input_path):
-    if pathlib.Path(input_path).suffix.lower() == ".wav":
-        yield input_path
-        return
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=True) as tmp:
-        log(f"extracting audio with ffmpeg → {tmp.name}")
-        extract_audio(input_path, tmp.name)
-        log("audio extracted")
-        yield tmp.name
+def load_audio(input_path):
+    """Decode with the ffmpeg CLI and hand pyannote the waveform in memory.
 
-
-def extract_audio(input_path, output_path):
-    subprocess.run(
-        ["ffmpeg", "-y", "-loglevel", "error", "-i", input_path,
-         "-vn", "-ac", "1", "-ar", "16000", output_path],
+    pyannote's own decoding goes through torchcodec, which only loads the
+    FFmpeg major versions it was built against and breaks on Homebrew upgrades.
+    """
+    log("decoding audio with ffmpeg")
+    pcm = subprocess.run(
+        ["ffmpeg", "-loglevel", "error", "-i", input_path,
+         "-vn", "-ac", "1", "-ar", str(SAMPLE_RATE), "-f", "s16le", "-"],
         check=True,
-    )
+        capture_output=True,
+    ).stdout
+    samples = np.frombuffer(pcm, dtype=np.int16).astype(np.float32) / 32768
+    log(f"audio decoded ({len(samples) / SAMPLE_RATE / 60:.1f} min)")
+    return {"waveform": torch.from_numpy(samples).unsqueeze(0), "sample_rate": SAMPLE_RATE}
 
 
 def load_pipeline(device):
