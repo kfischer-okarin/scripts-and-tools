@@ -69,8 +69,9 @@ def run_diarization(audio, args):
 def load_audio(input_path):
     """Decode with the ffmpeg CLI and hand pyannote the waveform in memory.
 
-    pyannote's own decoding goes through torchcodec, which only loads the
-    FFmpeg major versions it was built against and breaks on Homebrew upgrades.
+    Given a file, pyannote decodes it through torchcodec chunk by chunk, which
+    was ~30% slower on an hour-long meeting, and fails whenever torchcodec
+    can't load the installed FFmpeg (e.g. after Homebrew moves to a new major).
     """
     log("decoding audio with ffmpeg")
     pcm = subprocess.run(
