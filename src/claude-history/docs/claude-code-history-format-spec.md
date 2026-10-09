@@ -1,7 +1,7 @@
 # Claude Code Conversation History Format Specification
 
-**Version**: 1.3 (Based on Claude Code v2.1.263, with v2.1.274 web session additions)
-**Last Updated**: 2026-09-17
+**Version**: 1.4 (Based on Claude Code v2.1.263, with field additions through v2.1.295)
+**Last Updated**: 2026-10-09
 **Author**: Research analysis of actual Claude Code session files
 
 > Sections below marked "as of v1.1" were written against v2.1.22 and have not
@@ -104,7 +104,13 @@ records the session and message a forked session branched from.
 `interruptedMessageId`, `sourceToolAssistantUUID`, `sourceToolUseID`,
 `turnCompanion`, `toolDenialKind`, `mcpMeta`, `classifierMetaLines`,
 `planContent`, `userFeedback`, `isCompactSummary`, `summarizeMetadata`,
-`thinkingMetadata` (legacy), `todos` (legacy)
+`thinkingMetadata` (legacy), `todos` (legacy), `turnOrigin` (since v2.1.277,
+e.g. `"human"`), `turnPosition` (since v2.1.284, `{"promptIndex": …,
+"turnIndex": …}`), `toolEndsTurn`, `queueTranscriptOnly`, `remoteSourced`,
+`classifierBoundary`, `permissionDecision` (since v2.1.293, `{"decision":
+"accept", "source": "config", "reasonType": "classifier"}` on a tool result),
+`serverClassifierContext` (since v2.1.278, `{"request": …, "context": …}`, the
+`request` matching an assistant record's `serverClassifierRequest`)
 
 **`assistant`**: `message`, `requestId`, `effort`, `apiBlockIndex`,
 `truncatedAfterOutput`, `attributionSkill`, `attributionPlugin`,
@@ -113,7 +119,9 @@ records the session and message a forked session branched from.
 `isAbortedMidStream`, `wireToolInputs`, `wireIngestContext` (both seen in
 Claude Code on the web sessions, v2.1.274: maps keyed by `tool_use` id, the
 first a copy of each tool call's `input`, the second `{"cwd": …}` for Bash
-calls)
+calls), `requestedModel` and `advisorModel` (model ids, since v2.1.295 and
+v2.1.277), `thinkingDurationMs` (since v2.1.287), `serverClassifierRequest`
+(since v2.1.278, a request id), `remoteSourced`
 
 **`system`**: `subtype`, `level`, `content`, `toolUseID`, `durationMs`,
 `messageCount`, `hasOutput`, `hookAdditionalContext`, `hookCount`, `hookErrors`,
@@ -937,6 +945,13 @@ Common tool names observed:
 
 ## Changelog
 
+- **1.4** (2026-10-09): Added the `user` fields `turnOrigin`, `turnPosition`,
+  `toolEndsTurn`, `queueTranscriptOnly`, `remoteSourced`, `classifierBoundary`,
+  `permissionDecision` and `serverClassifierContext`, and the `assistant`
+  fields `requestedModel`, `advisorModel`, `thinkingDurationMs`,
+  `serverClassifierRequest` and `remoteSourced` (v2.1.277 – v2.1.295).
+  `remoteSourced` stays out of the envelope: `system` records in the same
+  sessions lack it.
 - **1.3** (2026-09-17): Added the `assistant` fields `wireToolInputs` and
   `wireIngestContext`, found in a Claude Code on the web session file
   (v2.1.274), and the `system` field `commandRun` (v2.1.273).

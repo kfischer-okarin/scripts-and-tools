@@ -12,6 +12,8 @@ module ClaudeHistory
       apiErrorStatus error errorDetails healsDistinctCarrier
       isApiErrorMessage isAbortedMidStream
       wireToolInputs wireIngestContext
+      requestedModel advisorModel thinkingDurationMs serverClassifierRequest
+      remoteSourced
     ].freeze
 
     def model

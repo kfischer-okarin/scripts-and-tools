@@ -17,6 +17,8 @@ module ClaudeHistory
       planContent queuePriority queueSkipAttachments sourceToolAssistantUUID
       sourceToolUseID thinkingMetadata todos toolDenialKind turnCompanion
       userFeedback isCompactSummary summarizeMetadata
+      turnOrigin turnPosition toolEndsTurn queueTranscriptOnly remoteSourced
+      permissionDecision classifierBoundary serverClassifierContext
     ].freeze
 
     attr_reader :content_type
