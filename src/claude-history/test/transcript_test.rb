@@ -162,6 +162,35 @@ class TranscriptTest < ClaudeHistory::TestCase
     assert_includes output, "<Interrupted>"
   end
 
+  def test_prints_a_monitor_event_as_coming_from_the_monitor
+    output = transcript(<<~JSONL)
+      {"type":"user","uuid":"u1","parentUuid":null,"origin":{"kind":"task-notification","producer":"session-task"},"promptSource":"system","turnOrigin":"task_notification","message":{"role":"user","content":"<task-notification>\\n<task-id>bo6whi39p</task-id>\\n<summary>Monitor event: \\"agenda inbox (FIFO)\\"</summary>\\n<event>hello &amp; welcome</event>\\n</task-notification>"}}
+    JSONL
+
+    assert_includes output, "<Monitor: agenda inbox (FIFO)> hello & welcome"
+    refute_includes output, "<User>"
+  end
+
+  def test_prints_the_summary_of_a_background_task_and_its_result_only_when_verbose
+    jsonl = <<~JSONL
+      {"type":"user","uuid":"u1","parentUuid":null,"origin":{"kind":"task-notification"},"message":{"role":"user","content":[{"type":"text","text":"[SYSTEM NOTIFICATION - NOT USER INPUT]\\nThis is an automated background-task event.\\n\\n<task-notification>\\n<task-id>a1</task-id>\\n<status>completed</status>\\n<summary>Agent \\"Research release notes\\" finished</summary>\\n<result>Nothing breaking.</result>\\n</task-notification>"}]}}
+    JSONL
+
+    plain = transcript(jsonl)
+    assert_includes plain, "<Notification> Agent \"Research release notes\" finished\n"
+    refute_includes plain, "Nothing breaking."
+    refute_includes plain, "SYSTEM NOTIFICATION"
+    assert_includes transcript(jsonl, verbose: true), "<Notification> Agent \"Research release notes\" finished\nNothing breaking."
+  end
+
+  def test_prints_a_notification_without_task_markup_as_it_is
+    output = transcript(<<~JSONL)
+      {"type":"user","uuid":"u1","parentUuid":null,"origin":{"kind":"task-notification"},"message":{"role":"user","content":"Check on the CI run."}}
+    JSONL
+
+    assert_includes output, "<Notification> Check on the CI run."
+  end
+
   def test_prints_a_summary_record
     output = transcript(<<~JSONL)
       {"type":"user","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"Hello"}}

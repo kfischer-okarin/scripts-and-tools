@@ -32,8 +32,9 @@ CLI (Thor: parses arguments, prints what Commands returns)
                           └── SessionOverview (title, branch, start time)
 ```
 
-`ToolResult` classifies one tool's output, and `CommandMarkup` the pseudo-XML
-of a slash command — both value objects the records hand out.
+`ToolResult` classifies one tool's output, `CommandMarkup` the pseudo-XML of a
+slash command, and `TaskNotification` the `<task-notification>` a background
+task reports back with — value objects the records hand out.
 
 `Commands` is the surface the tests drive; the Thor class holds no logic beyond
 argument parsing. `SessionRenderer` turns records into the transcript, and
@@ -58,10 +59,17 @@ still prints.
 
 `UserMessage` covers more than typed prompts, so it classifies itself into a
 `content_type` — `:text`, `:command`, `:command_output`, `:tool_result`,
-`:interrupt`, `:compact_summary`, `:meta` or `:unknown` — and the renderer
-decides how each looks. The `<command-name>` / `<local-command-stdout>` markup
-is parsed by `CommandMarkup`, shared with `SystemRecord` because built-in
-commands are now logged as system records.
+`:task_notification`, `:interrupt`, `:compact_summary`, `:meta` or `:unknown` —
+and the renderer decides how each looks. The `<command-name>` /
+`<local-command-stdout>` markup is parsed by `CommandMarkup`, shared with
+`SystemRecord` because built-in commands are now logged as system records.
+
+A background task — a Monitor, a background agent or command, a scheduled
+prompt — reports back through a user record whose `origin.kind` is
+`task-notification`. Nobody typed it, so it must not read as `<User>`: a Monitor
+event prints as `<Monitor: name>` with just the event, anything else as
+`<Notification>` with its summary, and the task's full `<result>` under
+`--verbose`.
 
 ## Subagents belong to their parent
 

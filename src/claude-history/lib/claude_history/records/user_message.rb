@@ -52,6 +52,12 @@ module ClaudeHistory
       @command ||= CommandMarkup.new(content)
     end
 
+    def task_notification
+      return nil unless content_type == :task_notification
+
+      @task_notification ||= TaskNotification.new(text)
+    end
+
     def tool_use_id
       tool_result_blocks.first&.dig(:tool_use_id)
     end
@@ -75,6 +81,7 @@ module ClaudeHistory
 
     def determine_content_type
       return :tool_result if tool_result_blocks.any?
+      return :task_notification if TaskNotification.origin?(raw_data[:origin])
       return :command if CommandMarkup.invocation?(content)
       return :command_output if CommandMarkup.output?(content)
       return :compact_summary if raw_data[:isCompactSummary]

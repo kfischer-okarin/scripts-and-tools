@@ -55,6 +55,7 @@ module ClaudeHistory
     def render_user_message(record)
       case record.content_type
       when :tool_result then render_tool_result(record)
+      when :task_notification then render_task_notification(record)
       when :command then emit(record, "<User>", record.command.invocation)
       when :command_output then render_command_output(record)
       when :interrupt then emit(record, "<Interrupted>", nil)
@@ -192,6 +193,18 @@ module ClaudeHistory
       when "Task", "Agent" then "#{input[:subagent_type] || "Agent"}: #{@verbose ? input[:prompt] : input[:description]}"
       else input.map { |key, value| "#{key}: #{format_field(value)}" }.join(", ")
       end
+    end
+
+    # Background task notifications
+
+    # Nobody typed these, so they get a label of their own rather than <User>.
+    # A Monitor event is the content itself; for anything else the summary says
+    # what happened, and the task's full result is detail for --verbose.
+    def render_task_notification(record)
+      notification = record.task_notification
+      return emit(record, "<Monitor: #{notification.monitor}>", notification.event) if notification.monitor
+
+      emit(record, "<Notification>", [notification.headline, (notification.result if @verbose)].compact.join("\n"))
     end
 
     # Tool results and command output
