@@ -25,8 +25,23 @@ class FormatCheckTest < ClaudeHistory::TestCase
 
     assert_includes output, "Checked 2 session files, 2 warnings:"
     assert_includes output, "unexpected_attributes"
-    assert_includes output, "Unexpected attributes: newField"
+    assert_includes output, "Unexpected attribute on user: newField"
     assert_match(/^2\s+unexpected_attributes/, output.lines.last)
+  end
+
+  def test_counts_each_unexpected_attribute_once_per_record_type
+    build_project("project", "session.jsonl" => <<~JSONL)
+      {"type":"user","uuid":"u1","parentUuid":null,"message":{"role":"user","content":"Hi"},"newField":1}
+      {"type":"user","uuid":"u2","parentUuid":null,"message":{"role":"user","content":"Hi"},"newField":2,"otherField":3}
+      {"type":"assistant","uuid":"a1","parentUuid":null,"message":{"role":"assistant","content":[]},"newField":4}
+    JSONL
+
+    output = commands.check_format
+
+    assert_includes output, "Checked 1 session files, 4 warnings:"
+    assert_match(/^2\s+unexpected_attributes\s+session\.jsonl:1\s+Unexpected attribute on user: newField$/, output)
+    assert_match(/^1\s+unexpected_attributes\s+session\.jsonl:2\s+Unexpected attribute on user: otherField$/, output)
+    assert_match(/^1\s+unexpected_attributes\s+session\.jsonl:3\s+Unexpected attribute on assistant: newField$/, output)
   end
 
   def test_names_the_first_file_and_line_a_finding_came_from

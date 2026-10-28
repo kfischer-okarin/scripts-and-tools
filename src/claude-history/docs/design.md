@@ -153,7 +153,10 @@ its shapes are Claude Code's own bookkeeping and change often.
 `show-session` prints them under the transcript, so drift is visible at the
 point where it might mislead a reader. `check-format` reports them across the
 whole history, which is how the format is verified against reality rather than
-against fixtures.
+against fixtures. It counts an unexpected attribute per field and record type
+rather than per combination a line happened to carry: the decision to make is
+which list one field belongs in, and a new field otherwise shows up in as many
+rows as there are combinations it appears in.
 
 ## Rendering
 

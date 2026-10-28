@@ -59,20 +59,22 @@ module ClaudeHistory
     # A record class with no attribute list opts out: metadata records hold
     # Claude Code's own bookkeeping, whose shapes change often and carry no
     # conversation content.
+    #
+    # One warning per field, so that check-format counts each field once
+    # however many other new fields happen to share its lines.
     def validate_attributes
       expected = self.class::EXPECTED_ATTRIBUTES
       return if expected.empty?
 
-      unexpected = raw_data.keys - expected - ENVELOPE_ATTRIBUTES
-      return if unexpected.empty?
-
-      add_warning(Warning.new(
-        type: :unexpected_attributes,
-        message: "Unexpected attributes: #{unexpected.join(", ")}",
-        line_number: line_number,
-        filename: filename,
-        raw_data: raw_data
-      ))
+      (raw_data.keys - expected - ENVELOPE_ATTRIBUTES).each do |attribute|
+        add_warning(Warning.new(
+          type: :unexpected_attributes,
+          message: "Unexpected attribute on #{type}: #{attribute}",
+          line_number: line_number,
+          filename: filename,
+          raw_data: raw_data
+        ))
+      end
     end
   end
 end
