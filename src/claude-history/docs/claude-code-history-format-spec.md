@@ -67,6 +67,11 @@ union of record types and top-level fields per type.
 | `frame-link` | current | — | published Artifact URL |
 | `artifact-comment-monitor` | current | — | Artifact comment watch state |
 | `artifact-autoreact-ledger` | current | — | Artifact auto-reply state |
+| `api-request` | current | 2.1.300 – | one API request: `querySource`, `shapeHash`, `params`, `requestDigest` and the hashes of its message blobs; an assistant record's `requestRef` points here |
+| `api-request-shape` | current | 2.1.300 – | request scaffolding (system prompt, tools) keyed by `shapeHash` |
+| `api-request-blob` | current | — | one message as sent to the API, keyed by `hash` — e.g. a task notification wrapped in its system reminder |
+| `isolation-latch` | current | — | `side` the session was isolated to, e.g. `"web"` |
+| `tools-used` | current | — | JSON list of the tool names the session used |
 | `summary` | **retired** | last written ~2026-02 | branch summary keyed by `leafUuid`; superseded by `ai-title` |
 | `progress` | **retired** | 2.1.9 – 2.1.83 | subagent/hook progress; superseded by `attachment` |
 
@@ -110,7 +115,23 @@ e.g. `"human"`), `turnPosition` (since v2.1.284, `{"promptIndex": …,
 `classifierBoundary`, `permissionDecision` (since v2.1.293, `{"decision":
 "accept", "source": "config", "reasonType": "classifier"}` on a tool result),
 `serverClassifierContext` (since v2.1.278, `{"request": …, "context": …}`, the
-`request` matching an assistant record's `serverClassifierRequest`)
+`request` matching an assistant record's `serverClassifierRequest`),
+`toolResultRemedy` (since v2.1.296, e.g. `{"kind": "mcp_needs_auth"}`),
+`scheduledTaskId` and `scheduledFireId` (since v2.1.296, on a prompt a
+scheduled task fired), `queueSkipSlashCommands`, `stackedOriginalInput` and
+`stackedExpansion` (since v2.1.299), `isVisibleInTranscriptOnly` (since
+v2.1.302), `joinedNoticeLengths`, `joinedNoticeOwn` and `joinedNoticeRunIds`
+(since v2.1.304), `sandboxed` (since v2.1.308, on a tool result)
+
+A background task reporting back — a Monitor event, a background agent or
+command finishing, a scheduled prompt — is a `user` record with
+`origin.kind: "task-notification"` (plus `promptSource: "system"`, `turnOrigin:
+"task_notification"`). Its content is usually a `<task-notification>` block
+(`<task-id>`, `<status>`, `<summary>`, and `<event>` for a Monitor or
+`<result>` for an agent, values HTML-escaped), sometimes behind a `[SYSTEM
+NOTIFICATION - NOT USER INPUT]` preamble, and sometimes a plain prompt with no
+block. A Monitor's summary reads `Monitor event: "<name>"`. The same text also
+appears in a `queue-operation` enqueue record and in an `api-request-blob`.
 
 **`assistant`**: `message`, `requestId`, `effort`, `apiBlockIndex`,
 `truncatedAfterOutput`, `attributionSkill`, `attributionPlugin`,
@@ -121,7 +142,9 @@ Claude Code on the web sessions, v2.1.274: maps keyed by `tool_use` id, the
 first a copy of each tool call's `input`, the second `{"cwd": …}` for Bash
 calls), `requestedModel` and `advisorModel` (model ids, since v2.1.295 and
 v2.1.277), `thinkingDurationMs` (since v2.1.287), `serverClassifierRequest`
-(since v2.1.278, a request id), `remoteSourced`
+(since v2.1.278, a request id), `remoteSourced`, `thinkingDisplay` (since
+v2.1.296, e.g. `"summarized"`), `requestRef` (since v2.1.300, the `id` of the
+`api-request` record behind the message)
 
 **`system`**: `subtype`, `level`, `content`, `toolUseID`, `durationMs`,
 `messageCount`, `hasOutput`, `hookAdditionalContext`, `hookCount`, `hookErrors`,
@@ -129,7 +152,9 @@ v2.1.277), `thinkingDurationMs` (since v2.1.287), `serverClassifierRequest`
 `pendingBackgroundAgentCount`, `pendingWorkflowCount`, `compactMetadata`,
 `microcompactMetadata`, `logicalParentUuid`, `cause`, `error`, `maxRetries`,
 `retryAttempt`, `retryInMs`, `commandRun` (since v2.1.273: `{"command":
-"clear", "args": ""}` on a built-in slash command's output record)
+"clear", "args": ""}` on a built-in slash command's output record), `taskId`,
+`cron`, `prompt`, `taskKind` and `cronKind` (since v2.1.296, on subtype
+`scheduled_task_fire`, e.g. `taskKind: "loop"`)
 
 ### `system` subtypes
 
@@ -140,6 +165,7 @@ v2.1.277), `thinkingDurationMs` (since v2.1.287), `serverClassifierRequest`
 | `local_command` | a built-in slash command's invocation markup, or its `<local-command-stdout>` |
 | `compact_boundary` | where the context was compacted; `compactMetadata` holds trigger, token counts and preserved message uuids |
 | `away_summary` | summary written while the user was away |
+| `scheduled_task_fire` | a scheduled task (`/loop`, cron) firing its `prompt` |
 
 ### `attachment` subtypes
 
@@ -945,6 +971,12 @@ Common tool names observed:
 
 ## Changelog
 
+- **1.5** (2026-10-28): Added the record types `api-request`,
+  `api-request-shape`, `api-request-blob`, `isolation-latch` and `tools-used`,
+  the `assistant` fields `thinkingDisplay` and `requestRef`, eleven `user`
+  fields, and the `system` subtype `scheduled_task_fire` with its fields
+  (v2.1.296 – v2.1.312). Documented how background-task notifications are
+  marked on `user` records.
 - **1.4** (2026-10-09): Added the `user` fields `turnOrigin`, `turnPosition`,
   `toolEndsTurn`, `queueTranscriptOnly`, `remoteSourced`, `classifierBoundary`,
   `permissionDecision` and `serverClassifierContext`, and the `assistant`

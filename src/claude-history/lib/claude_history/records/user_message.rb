@@ -19,6 +19,10 @@ module ClaudeHistory
       userFeedback isCompactSummary summarizeMetadata
       turnOrigin turnPosition toolEndsTurn queueTranscriptOnly remoteSourced
       permissionDecision classifierBoundary serverClassifierContext
+      sandboxed queueSkipSlashCommands isVisibleInTranscriptOnly
+      joinedNoticeLengths joinedNoticeOwn joinedNoticeRunIds
+      scheduledTaskId scheduledFireId stackedOriginalInput stackedExpansion
+      toolResultRemedy
     ].freeze
 
     attr_reader :content_type

@@ -13,7 +13,7 @@ module ClaudeHistory
       isApiErrorMessage isAbortedMidStream
       wireToolInputs wireIngestContext
       requestedModel advisorModel thinkingDurationMs serverClassifierRequest
-      remoteSourced
+      remoteSourced requestRef thinkingDisplay
     ].freeze
 
     def model

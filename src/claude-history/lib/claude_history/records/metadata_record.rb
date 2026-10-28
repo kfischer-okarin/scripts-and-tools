@@ -15,6 +15,9 @@ module ClaudeHistory
     DETAIL_PATHS = {
       "agent-name" => %i[agentName],
       "ai-title" => %i[aiTitle],
+      "api-request" => %i[querySource],
+      "api-request-blob" => nil,
+      "api-request-shape" => nil,
       "artifact-autoreact-ledger" => nil,
       "artifact-comment-monitor" => nil,
       "attachment" => %i[attachment type],
@@ -25,12 +28,14 @@ module ClaudeHistory
       "file-history-snapshot" => %i[messageId],
       "fork-context-ref" => %i[parentSessionId],
       "frame-link" => %i[frameUrl],
+      "isolation-latch" => %i[side],
       "last-prompt" => %i[leafUuid],
       "mode" => %i[mode],
       "permission-mode" => %i[permissionMode],
       "pr-link" => %i[prUrl],
       "progress" => %i[data type],
-      "queue-operation" => %i[operation]
+      "queue-operation" => %i[operation],
+      "tools-used" => %i[tools]
     }.freeze
 
     def self.known_type?(type)
